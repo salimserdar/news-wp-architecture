@@ -1,0 +1,47 @@
+# MariaDB 11.4 tuning for WordPress on 8 vCPU / 32 GB (container limit 11 GB).
+# The Redis object cache absorbs most reads; this is sized so the whole
+# working set (a typical news DB is 2-6 GB) stays in the buffer pool.
+[mysqld]
+# --- InnoDB ---
+# innodb_buffer_pool_size is set from docker-compose.yml (DB_BUFFER_POOL, default 8G)
+innodb_log_file_size           = 1G
+innodb_log_buffer_size         = 64M
+innodb_flush_log_at_trx_commit = 2      # up to 1 s of writes at risk on crash: fine for a news site
+innodb_flush_method            = O_DIRECT
+innodb_io_capacity             = 2000   # NVMe
+innodb_io_capacity_max         = 4000
+innodb_read_io_threads         = 4
+innodb_write_io_threads        = 4
+innodb_stats_on_metadata       = 0
+
+# --- Connections: 48 + 12 FPM children + cron + cli + headroom ---
+max_connections        = 150
+thread_cache_size      = 64
+wait_timeout           = 120
+interactive_timeout    = 120
+max_allowed_packet     = 256M         # big post_content / imports
+
+# --- Tables / temp ---
+table_open_cache       = 4000
+table_definition_cache = 4000
+tmp_table_size         = 256M
+max_heap_table_size    = 256M
+join_buffer_size       = 2M
+sort_buffer_size       = 2M
+
+# --- Query cache is off (Redis does this job) ---
+query_cache_type = 0
+query_cache_size = 0
+
+# --- Character set (WordPress default) ---
+character-set-server = utf8mb4
+collation-server     = utf8mb4_unicode_ci
+
+# --- Logging ---
+slow_query_log       = 1
+long_query_time      = 1
+slow_query_log_file  = /var/lib/mysql/slow.log
+log_warnings         = 2
+
+# --- Performance schema off: saves ~400 MB, not needed day-to-day ---
+performance_schema = OFF

@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Runtime data (site tree, DB dumps, media, backups, logs)
+wordpress/
+import/*
+!import/.gitkeep
+backups/*
+!backups/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# TLS material
+config/nginx/certs/*
+!config/nginx/certs/.gitkeep
+!config/nginx/certs/README.md
+
+# OS / editor
+.DS_Store
+*.swp

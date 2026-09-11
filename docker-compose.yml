@@ -1,0 +1,194 @@
+# High-traffic WordPress news stack — single VPS (8 vCPU / 32 GB)
+#
+#   Cloudflare -> nginx (FastCGI cache) -> php / php-admin (FPM) -> redis, mariadb
+#
+# See docs/08-docker-implementation-guide.md for the step-by-step procedure.
+
+# Environment shared by every container that boots WordPress (php, php-admin,
+# cron, wpcli). The official image's wp-config.php reads these at runtime, so
+# they must be identical everywhere.
+x-wp-env: &wp-env
+  WORDPRESS_DB_HOST: mariadb
+  WORDPRESS_DB_NAME: ${DB_NAME}
+  WORDPRESS_DB_USER: ${DB_USER}
+  WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+  WORDPRESS_TABLE_PREFIX: ${DB_TABLE_PREFIX:-wp_}
+  WORDPRESS_CONFIG_EXTRA: |
+    /* --- generated from docker-compose.yml (x-wp-env) --- */
+    define('WP_HOME',             'https://${SITE_DOMAIN}');
+    define('WP_SITEURL',          'https://${SITE_DOMAIN}');
+    define('FORCE_SSL_ADMIN',     true);
+    define('DISABLE_WP_CRON',     true);
+    define('DISALLOW_FILE_EDIT',  true);
+    define('WP_POST_REVISIONS',   10);
+    define('EMPTY_TRASH_DAYS',    7);
+    define('WP_MEMORY_LIMIT',     '256M');
+    define('WP_MAX_MEMORY_LIMIT', '512M');
+    /* Redis object cache (Redis Object Cache plugin) */
+    define('WP_CACHE',            true);
+    define('WP_REDIS_HOST',       'redis');
+    define('WP_REDIS_PORT',       6379);
+    define('WP_REDIS_PREFIX',     '${SITE_DOMAIN}');
+    define('WP_REDIS_MAXTTL',     86400);
+    define('WP_REDIS_IGBINARY',   true);
+    /* Cache purge — wp/mu-plugins/cache-purge.php */
+    define('NEWS_NGINX_CACHE_PATH', '/var/cache/nginx/wp');
+    define('NEWS_CF_ZONE_ID',       '${CF_ZONE_ID:-}');
+    define('NEWS_CF_API_TOKEN',     '${CF_API_TOKEN:-}');
+    define('NEWS_WARM_URL',         'https://nginx');
+
+# Volumes shared by every container that touches the WordPress tree.
+x-wp-volumes: &wp-volumes
+  - ./wordpress:/var/www/html
+  - ./wp/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+  - nginx-cache:/var/cache/nginx/wp
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "50m", max-file: "5" }
+
+services:
+  nginx:
+    build: ./config/nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./wordpress:/var/www/html:ro
+      - ./wp/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - nginx-cache:/var/cache/nginx/wp
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./config/nginx/snippets:/etc/nginx/snippets:ro
+      - ./config/nginx/certs:/etc/nginx/certs
+      - ./logs/nginx:/var/log/nginx
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    depends_on: [php, php-admin]
+    deploy:
+      resources:
+        limits: { cpus: "${NGINX_CPUS:-2}", memory: "${NGINX_MEM:-1g}" }
+    logging: *logging
+
+  # Public FPM pool: renders cache misses for anonymous readers. pm=static.
+  php:
+    build: ./config/php
+    restart: unless-stopped
+    environment: *wp-env
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./wp/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - nginx-cache:/var/cache/nginx/wp
+      - ./config/php/conf.d/zz-wp.ini:/usr/local/etc/php/conf.d/zz-wp.ini:ro
+      - ./config/php/pool-www.conf:/usr/local/etc/php-fpm.d/zz-pool.conf:ro
+    depends_on:
+      mariadb: { condition: service_healthy }
+      redis:   { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "${PHP_CPUS:-5}", memory: "${PHP_MEM:-5g}" }
+    logging: *logging
+
+  # Admin FPM pool: logged-in users, wp-admin, REST writes, uploads.
+  # Same image, different pool limits, so editors can never starve readers.
+  php-admin:
+    build: ./config/php
+    restart: unless-stopped
+    environment: *wp-env
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./wp/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - nginx-cache:/var/cache/nginx/wp
+      - ./config/php/conf.d/zz-wp.ini:/usr/local/etc/php/conf.d/zz-wp.ini:ro
+      - ./config/php/conf.d/zz-admin.ini:/usr/local/etc/php/conf.d/zz-admin.ini:ro
+      - ./config/php/pool-admin.conf:/usr/local/etc/php-fpm.d/zz-pool.conf:ro
+    depends_on:
+      mariadb: { condition: service_healthy }
+      redis:   { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "${PHP_ADMIN_CPUS:-2}", memory: "${PHP_ADMIN_MEM:-2g}" }
+    logging: *logging
+
+  mariadb:
+    image: mariadb:11.4
+    restart: unless-stopped
+    # Buffer pool must fit inside DB_MEM (leave ~3 GB for the rest of mysqld).
+    command: ["--innodb-buffer-pool-size=${DB_BUFFER_POOL:-8G}"]
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_AUTO_UPGRADE: "1"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./config/mariadb/zz-tuning.cnf:/etc/mysql/conf.d/zz-tuning.cnf:ro
+      - ./import:/import:ro          # SQL dumps for scripts/import-db.sh
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { cpus: "${DB_CPUS:-4}", memory: "${DB_MEM:-11g}" }
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits: { cpus: "${REDIS_CPUS:-1}", memory: "${REDIS_MEM:-2560m}" }
+    logging: *logging
+
+  # WP-Cron replacement: run due events every 60 s via WP-CLI.
+  cron:
+    image: wordpress:cli-php8.3
+    restart: unless-stopped
+    user: "82:82"
+    environment: *wp-env
+    volumes: *wp-volumes
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "cron runner started";
+        while true; do
+          wp cron event run --due-now --quiet 2>&1 | grep -v '^$$' || true;
+          sleep 60;
+        done
+    depends_on: [php]
+    deploy:
+      resources:
+        limits: { cpus: "${CRON_CPUS:-1}", memory: "${CRON_MEM:-512m}" }
+    logging: *logging
+
+  # One-off tool container:   docker compose run --rm wpcli <wp subcommand>
+  wpcli:
+    image: wordpress:cli-php8.3
+    profiles: ["tools"]
+    user: "82:82"
+    environment: *wp-env
+    volumes:
+      - ./wordpress:/var/www/html
+      - ./wp/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - nginx-cache:/var/cache/nginx/wp
+      - ./import:/import:ro
+      - ./backups:/backups
+    depends_on: [mariadb, redis]
+
+volumes:
+  mariadb-data:
+  nginx-cache:
