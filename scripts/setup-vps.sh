@@ -2,6 +2,8 @@
 # One-time VPS preparation for Ubuntu 24.04 LTS. Run as root:
 #   bash scripts/setup-vps.sh
 #
+# Native (no Docker, no cache) alternative: scripts/setup-vps-native.sh
+#
 # - installs Docker Engine + Compose plugin
 # - kernel/network tuning for a busy web origin
 # - 2 GB swap (emergency buffer only)
