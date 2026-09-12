@@ -164,7 +164,11 @@ cat > /etc/mysql/mariadb.conf.d/zz-buffer-pool.cnf <<EOF
 [mysqld]
 innodb_buffer_pool_size = ${DB_BUFFER_POOL}
 EOF
-systemctl restart mariadb
+if ! systemctl restart mariadb; then
+  echo "    MariaDB rejected the tuning file — starting with distro defaults"
+  rm -f /etc/mysql/mariadb.conf.d/zz-tuning.cnf /etc/mysql/mariadb.conf.d/zz-buffer-pool.cnf
+  systemctl restart mariadb
+fi
 mysql -e "DELETE FROM mysql.user WHERE User=''; DROP DATABASE IF EXISTS test; DELETE FROM mysql.db WHERE Db='test' OR Db='test\\\\_%'; FLUSH PRIVILEGES;" || true
 PASS_ESC="${DB_PASSWORD//\'/\'\'}"
 mysql <<SQL
@@ -179,13 +183,51 @@ echo "==> nginx configs (no FastCGI cache)"
 if [[ "${WP_ROOT}" != "/var/www/html" ]]; then
   echo "    warning: nginx root is /var/www/html; WP_ROOT=${WP_ROOT} is not used by site.conf"
 fi
-mkdir -p /etc/nginx/snippets /etc/nginx/certs /etc/nginx/conf.d
-if [[ -f /etc/nginx/nginx.conf && ! -L /etc/nginx/nginx.conf ]]; then
-  mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.dist
+mkdir -p /etc/nginx/snippets /etc/nginx/certs /etc/nginx/conf.d \
+  /etc/nginx/sites-available /etc/nginx/sites-enabled
+
+# First version of this script replaced Ubuntu's nginx.conf with one that used
+# `http2 on;` (invalid on nginx 1.24), so `nginx -t` failed and reload never ran.
+# Put the distro file back and use sites-enabled like a normal Ubuntu install.
+if [[ -f /etc/nginx/nginx.conf.dist ]]; then
+  echo "    restoring distro /etc/nginx/nginx.conf"
+  mv -f /etc/nginx/nginx.conf.dist /etc/nginx/nginx.conf
 fi
-cp -a "${REPO_DIR}/config/nginx/native/nginx.conf" /etc/nginx/nginx.conf
-cp -a "${REPO_DIR}/config/nginx/native/site.conf" /etc/nginx/conf.d/site.conf
+if ! grep -q 'include /etc/nginx/sites-enabled' /etc/nginx/nginx.conf; then
+  echo "    writing a stock Ubuntu-style nginx.conf"
+  cat > /etc/nginx/nginx.conf <<'EOF'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+error_log /var/log/nginx/error.log;
+include /etc/nginx/modules-enabled/*.conf;
+events {
+    worker_connections 4096;
+    multi_accept on;
+}
+http {
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+    gzip on;
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+EOF
+fi
+
+rm -f /etc/nginx/conf.d/site.conf
+cp -a "${REPO_DIR}/config/nginx/native/http.conf" /etc/nginx/conf.d/00-news-wp.conf
+cp -a "${REPO_DIR}/config/nginx/native/site.conf" /etc/nginx/sites-available/wordpress
+ln -sfn /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/wordpress
 rm -f /etc/nginx/sites-enabled/default
+
 # Snippets stay symlinked so scripts/cloudflare-ips.sh --nginx updates take effect.
 for snippet in fastcgi-php.conf security-headers.conf wordpress-hardening.conf tls.conf cloudflare-realip.conf; do
   ln -sfn "${REPO_DIR}/config/nginx/snippets/${snippet}" "/etc/nginx/snippets/${snippet}"
@@ -211,6 +253,8 @@ if [[ ! -f "${WP_ROOT}/wp-load.php" ]]; then
   rsync -a /tmp/wordpress/ "${WP_ROOT}/"
   rm -rf /tmp/wordpress
 fi
+# Ubuntu's welcome page lives here and wins if index.html is served.
+rm -f "${WP_ROOT}/index.nginx-debian.html" "${WP_ROOT}/index.html"
 chown -R www-data:www-data "${WP_ROOT}"
 
 if [[ ! -f "${WP_ROOT}/wp-config.php" ]]; then
@@ -251,7 +295,19 @@ echo "==> Enable services"
 systemctl enable --now php8.3-fpm nginx
 systemctl restart php8.3-fpm
 nginx -t
-systemctl reload nginx
+systemctl restart nginx
+
+echo "==> Verify"
+if [[ ! -f "${WP_ROOT}/index.php" ]]; then
+  echo "    ERROR: ${WP_ROOT}/index.php is missing — WordPress did not unpack"
+  exit 1
+fi
+echo "    $(curl -sS -o /dev/null -w 'http  %{http_code}  redirect=%{redirect_url}\n' http://127.0.0.1/ || true)"
+echo "    $(curl -skS -o /dev/null -w 'https %{http_code}  redirect=%{redirect_url}\n' https://127.0.0.1/ || true)"
+if curl -sS http://127.0.0.1/ | grep -q 'Welcome to nginx'; then
+  echo "    ERROR: still serving the Ubuntu welcome page. Check: nginx -t && ls -l /etc/nginx/sites-enabled"
+  exit 1
+fi
 
 cred_file="/root/news-wp-native-credentials"
 umask 077
