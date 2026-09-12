@@ -222,11 +222,17 @@ http {
 EOF
 fi
 
-rm -f /etc/nginx/conf.d/site.conf
+rm -f /etc/nginx/conf.d/site.conf /etc/nginx/conf.d/default.conf
 cp -a "${REPO_DIR}/config/nginx/native/http.conf" /etc/nginx/conf.d/00-news-wp.conf
 cp -a "${REPO_DIR}/config/nginx/native/site.conf" /etc/nginx/sites-available/wordpress
-ln -sfn /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/wordpress
-rm -f /etc/nginx/sites-enabled/default
+# 000- so this vhost is loaded before Ubuntu's "default" if it comes back.
+rm -f /etc/nginx/sites-enabled/default \
+      /etc/nginx/sites-enabled/default.conf \
+      /etc/nginx/sites-enabled/wordpress
+if [[ -f /etc/nginx/sites-available/default ]]; then
+  mv -f /etc/nginx/sites-available/default /etc/nginx/sites-available/default.disabled
+fi
+ln -sfn /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/000-wordpress
 
 # Snippets stay symlinked so scripts/cloudflare-ips.sh --nginx updates take effect.
 for snippet in fastcgi-php.conf security-headers.conf wordpress-hardening.conf tls.conf cloudflare-realip.conf; do
@@ -247,15 +253,24 @@ else
 fi
 
 echo "==> WordPress core"
+# Root shells often use umask 077; that would extract 600 files and 403 nginx.
+umask 022
 mkdir -p "${WP_ROOT}"
 if [[ ! -f "${WP_ROOT}/wp-load.php" ]]; then
   curl -fsSL https://wordpress.org/latest.tar.gz | tar xz -C /tmp
   rsync -a /tmp/wordpress/ "${WP_ROOT}/"
   rm -rf /tmp/wordpress
 fi
-# Ubuntu's welcome page lives here and wins if index.html is served.
+# Ubuntu welcome page would otherwise be served instead of index.php.
 rm -f "${WP_ROOT}/index.nginx-debian.html" "${WP_ROOT}/index.html"
 chown -R www-data:www-data "${WP_ROOT}"
+find "${WP_ROOT}" -type d -exec chmod 755 {} +
+find "${WP_ROOT}" -type f -exec chmod 644 {} +
+chmod 755 "${WP_ROOT}"
+if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
+  chmod 640 "${WP_ROOT}/wp-config.php"
+  chown www-data:www-data "${WP_ROOT}/wp-config.php"
+fi
 
 if [[ ! -f "${WP_ROOT}/wp-config.php" ]]; then
   echo "==> wp-config.php"
@@ -302,10 +317,19 @@ if [[ ! -f "${WP_ROOT}/index.php" ]]; then
   echo "    ERROR: ${WP_ROOT}/index.php is missing — WordPress did not unpack"
   exit 1
 fi
+echo "    sites-enabled: $(ls -1 /etc/nginx/sites-enabled 2>/dev/null | tr '\n' ' ')"
 echo "    $(curl -sS -o /dev/null -w 'http  %{http_code}  redirect=%{redirect_url}\n' http://127.0.0.1/ || true)"
 echo "    $(curl -skS -o /dev/null -w 'https %{http_code}  redirect=%{redirect_url}\n' https://127.0.0.1/ || true)"
-if curl -sS http://127.0.0.1/ | grep -q 'Welcome to nginx'; then
+http_body="$(curl -sS http://127.0.0.1/ || true)"
+if echo "${http_body}" | grep -q 'Welcome to nginx'; then
   echo "    ERROR: still serving the Ubuntu welcome page. Check: nginx -t && ls -l /etc/nginx/sites-enabled"
+  exit 1
+fi
+http_code="$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1/ || true)"
+if [[ "${http_code}" == "403" ]]; then
+  echo "    ERROR: HTTP 403. Last nginx errors:"
+  tail -n 20 /var/log/nginx/error.log || true
+  ls -ld "${WP_ROOT}" "${WP_ROOT}/index.php" || true
   exit 1
 fi
 
