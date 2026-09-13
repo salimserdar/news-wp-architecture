@@ -151,8 +151,15 @@ sed -E "s/^pm.max_children = .*/pm.max_children = ${PHP_MAX_CHILDREN}/" \
   "${REPO_DIR}/config/php/pool-www-native.conf" \
   > /etc/php/8.3/fpm/pool.d/www.conf
 # Redis extension is not installed; drop its ini keys to avoid warnings.
-grep -v -E '^[[:space:]]*redis\.' "${REPO_DIR}/config/php/conf.d/zz-wp.ini" \
+# JIT is off on native: it hangs/kills wp-admin/load-styles.php with Newspaper.
+grep -v -E '^[[:space:]]*redis\.|^[[:space:]]*opcache\.jit' "${REPO_DIR}/config/php/conf.d/zz-wp.ini" \
   > /etc/php/8.3/fpm/conf.d/99-wp.ini
+cat >> /etc/php/8.3/fpm/conf.d/99-wp.ini <<'EOF'
+
+; Native override: disable JIT (see pool-www-native.conf).
+opcache.jit = disable
+opcache.jit_buffer_size = 0
+EOF
 touch /var/log/php8.3-fpm-slow.log
 chown www-data:www-data /var/log/php8.3-fpm-slow.log
 
@@ -277,6 +284,9 @@ if [[ ! -f "${WP_ROOT}/wp-config.php" ]]; then
   extra_php="$(cat <<PHP
 define('DISALLOW_FILE_EDIT', true);
 define('FORCE_SSL_ADMIN', true);
+define('FS_METHOD', 'direct');
+define('CONCATENATE_SCRIPTS', false);
+define('DISABLE_WP_CRON', true);
 define('WP_POST_REVISIONS', 10);
 define('EMPTY_TRASH_DAYS', 7);
 define('WP_MEMORY_LIMIT', '256M');
@@ -305,6 +315,29 @@ PHP
   chown www-data:www-data "${WP_ROOT}/wp-config.php"
   chmod 640 "${WP_ROOT}/wp-config.php"
 fi
+
+# Re-runs (wp-config already exists) still need these. CONCATENATE_SCRIPTS
+# false skips wp-admin/load-styles.php, which hangs on Newspaper / tagDiv.
+if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
+  echo "==> wp-config admin-safe constants"
+  sudo -u www-data wp config set CONCATENATE_SCRIPTS false --raw --type=constant --path="${WP_ROOT}"
+  sudo -u www-data wp config set FS_METHOD direct --type=constant --path="${WP_ROOT}"
+  sudo -u www-data wp config set DISABLE_WP_CRON true --raw --type=constant --path="${WP_ROOT}"
+fi
+
+if [[ -n "${SITE_DOMAIN}" ]]; then
+  # Loopback to the public hostname (no NAT hairpin). Avoids wp-cron / Site Health
+  # hanging on a request that goes out to Cloudflare and never comes back.
+  if ! grep -qE "[[:space:]]${SITE_DOMAIN}([[:space:]]|$)" /etc/hosts; then
+    echo "127.0.0.1 ${SITE_DOMAIN}" >> /etc/hosts
+  fi
+fi
+
+echo "==> System cron (wp-cron over HTTP is disabled)"
+cat > /etc/cron.d/wordpress <<EOF
+* * * * * www-data /usr/bin/php /usr/local/bin/wp cron event run --due-now --path=${WP_ROOT} >/dev/null 2>&1
+EOF
+chmod 644 /etc/cron.d/wordpress
 
 echo "==> Enable services"
 systemctl enable --now php8.3-fpm nginx
