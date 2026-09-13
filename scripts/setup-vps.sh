@@ -14,12 +14,18 @@ set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "run as root"; exit 1; }
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "${REPO_DIR}/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${REPO_DIR}/.env"
+  set +a
+fi
 SSH_PORT="${SSH_PORT:-22}"
 
 echo "==> Base packages"
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg ufw fail2ban \
-  unattended-upgrades apt-listchanges htop iotop ncdu jq rsync zstd
+  unattended-upgrades apt-listchanges htop iotop ncdu jq rsync zstd unzip rclone
 
 echo "==> Docker Engine"
 if ! command -v docker >/dev/null; then
@@ -125,6 +131,13 @@ mkdir -p "${REPO_DIR}"/{wordpress,import,backups,logs/nginx}
 # uid/gid 82 = www-data inside the alpine-based containers
 chown -R 82:82 "${REPO_DIR}/wordpress"
 
+if [[ -n "${GCS_BUCKET:-}" ]]; then
+  echo "==> Cloud Storage tools (rclone env_auth + gcsfuse)"
+  bash "${REPO_DIR}/scripts/gcs.sh" install
+  bash "${REPO_DIR}/scripts/gcs.sh" rclone-config || true
+fi
+
 echo
 echo "Done. Next:  cp .env.example .env && edit it, then  docker compose up -d --build"
+echo "GCS upload/download: set GCS_BUCKET in .env, then  scripts/gcs.sh smoke"
 echo "See docs/08-docker-implementation-guide.md"

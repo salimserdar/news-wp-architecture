@@ -219,7 +219,7 @@ error (usually token permissions or wrong zone ID).
 
 - [ ] `scripts/cache-stats.sh` shows > 90 % HIT on HTML after a few hours of traffic
 - [ ] `docker stats` — php container well below its 5 GB limit; mariadb below 11 GB
-- [ ] `scripts/backup.sh` ran once manually; `backups/db/*.sql.zst` exists; optional `BACKUP_RCLONE_REMOTE` set
+- [ ] `scripts/backup.sh` ran once manually; `backups/db/*.sql.zst` exists; optional `GCS_BUCKET` / `BACKUP_RCLONE_REMOTE` set
 - [ ] Cloudflare Origin CA cert in place, SSL mode Full (strict)
 - [ ] Old server kept read-only for a week as a fallback
 - [ ] Uptime monitor pointed at `https://SITE_DOMAIN/-/health` (nginx-only, no PHP)
@@ -240,6 +240,7 @@ error (usually token permissions or wrong zone ID).
 | Update images (nginx, PHP, MariaDB minor, Redis) | `docker compose build --pull && docker compose up -d` |
 | WordPress core / plugin updates | wp-admin as usual, or `scripts/wp.sh core update && scripts/wp.sh plugin update --all` |
 | Backup now | `make backup` |
+| GCS upload / download | `make gcs ARGS="check"` · `smoke` · `upload FILE` · `download PATH` |
 | Restore DB | `zstd -dc backups/db/FILE.sql.zst \| docker compose exec -T mariadb sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$MARIADB_DATABASE"'` |
 
 ### Where the knobs are

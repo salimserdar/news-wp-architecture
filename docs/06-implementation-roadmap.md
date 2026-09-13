@@ -13,7 +13,7 @@ plus the procedure in **doc 08**. This page tracks what exists and what remains.
 | nginx + FastCGI cache | Cache zone, key with tracking-param stripping, cookie/path/method bypass maps, lock + stale-while-revalidate + stale-on-error, pool routing, static immutable headers, hardening, rate limits, Cloudflare real IP, TLS with self-signed fallback | `config/nginx/` |
 | Cache control & purge | Per-page-type TTLs via `X-Accel-Expires`/`s-maxage`; purge-on-publish (nginx files + Cloudflare API), warmer, admin-bar button, `wp news-cache` CLI | `wp/mu-plugins/` |
 | Migration tooling | DB import with MySQL-8 → MariaDB fixes and domain rewrite; wp-content import; post-import cleanup (deactivate old cache plugins, enable Redis Object Cache) | `scripts/import-db.sh`, `scripts/import-wp-content.sh`, `scripts/post-import.sh` |
-| Ops tooling | backup (DB zstd + uploads rsync + optional rclone offsite), cache statistics, WP-CLI wrapper, Makefile | `scripts/`, `Makefile` |
+| Ops tooling | backup (DB zstd + uploads rsync + GCS `gcloud storage` / rclone / gcsfuse), cache statistics, WP-CLI wrapper, Makefile | `scripts/`, `Makefile` |
 | Local verification | Full stack booted; HIT/MISS/BYPASS matrix, purge → warm → fresh HIT, pool routing, PhpRedis + igbinary confirmed | see doc 08 "Things that will bite you" for the two bugs found and fixed |
 
 ## Next (on the VPS) — follow doc 08

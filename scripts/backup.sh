@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Nightly backup: database dump (zstd) + uploads sync. Optional offsite copy
-# with rclone (set BACKUP_RCLONE_REMOTE in .env, e.g. "r2:news-backups").
+# with rclone (BACKUP_RCLONE_REMOTE) and/or gcloud storage (GCS_BUCKET).
 #
 #   scripts/backup.sh            # run now
 # Installed as a cron job by scripts/setup-vps.sh (03:30 daily).
@@ -26,9 +26,14 @@ echo "[$(date -Is)] pruning DB dumps older than ${KEEP_DAYS} days"
 find backups/db -name '*.sql.zst' -mtime +"$KEEP_DAYS" -delete
 
 if [[ -n "${BACKUP_RCLONE_REMOTE:-}" ]] && command -v rclone >/dev/null; then
-  echo "[$(date -Is)] offsite -> ${BACKUP_RCLONE_REMOTE}"
+  echo "[$(date -Is)] offsite rclone -> ${BACKUP_RCLONE_REMOTE}"
   rclone copy backups/db "${BACKUP_RCLONE_REMOTE}/db" --max-age 2d -q
   rclone sync backups/uploads "${BACKUP_RCLONE_REMOTE}/uploads" -q
+fi
+
+if [[ -n "${GCS_BUCKET:-}" ]] && command -v gcloud >/dev/null; then
+  echo "[$(date -Is)] offsite gcs -> gs://${GCS_BUCKET#gs://}"
+  bash scripts/gcs.sh backup
 fi
 
 echo "[$(date -Is)] done"

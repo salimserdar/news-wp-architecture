@@ -54,13 +54,55 @@ Weekly review: top slow queries, plugins updated, disk growth trend, cache ratio
 
 | What | How | When | Retention | Where |
 |------|-----|------|-----------|-------|
-| Database | `mariabackup` (hot, consistent) or `mysqldump --single-transaction --quick` piped to `zstd` | Nightly + before every deploy | 14 daily, 8 weekly | Cloudflare R2 / Backblaze B2 (offsite, versioned bucket) |
-| Uploads | `rclone sync` incremental | Nightly | Mirror + 30-day version history in bucket | Same bucket |
+| Database | `mariabackup` (hot, consistent) or `mysqldump --single-transaction --quick` piped to `zstd` | Nightly + before every deploy | 14 daily, 8 weekly | Cloud Storage (`GCS_BUCKET`) and/or rclone (`BACKUP_RCLONE_REMOTE`: R2 / B2) |
+| Uploads | `gcloud storage rsync` and/or `rclone sync` incremental | Nightly | Mirror + 30-day version history in bucket | Same bucket |
 | Code + config | git (this repo + site repo) | On change | — | Git remote |
 | Server config | `/etc` snapshot via `etckeeper` | On change | — | Git |
 
 Restore drill: quarterly, into the staging vhost, timed. A backup that has never been
 restored is a hope, not a backup.
+
+### Google Cloud Storage (upload / download)
+
+On a GCE VM the instance service account is enough — no JSON key. Grant that account
+`roles/storage.objectAdmin` on the bucket, set the VM scope to `cloud-platform`, then:
+
+```bash
+# .env
+GCS_BUCKET=your-bucket-name
+
+scripts/gcs.sh check                         # list the bucket (proves IAM + scopes)
+scripts/gcs.sh upload ./file.txt             # VM -> bucket
+scripts/gcs.sh download file.txt ./          # bucket -> VM
+scripts/gcs.sh backup                        # push backups/db + backups/uploads
+scripts/gcs.sh restore-db FILE.sql.zst       # pull one dump
+scripts/gcs.sh restore-uploads               # pull media mirror
+```
+
+Nightly `scripts/backup.sh` calls `gcs.sh backup` when `GCS_BUCKET` is set.
+
+Optional paths (still no JSON key — GCE metadata / ADC):
+
+```bash
+sudo bash scripts/gcs.sh install          # rclone (env_auth) + gcsfuse
+scripts/gcs.sh rclone-config
+scripts/gcs.sh rclone-upload ./file.txt
+scripts/gcs.sh rclone-download file.txt ./
+
+scripts/gcs.sh mount                      # folder at GCS_MOUNT (/mnt/gcs)
+# cp ./file.txt /mnt/gcs/file.txt         # upload
+# cp /mnt/gcs/file.txt ./file.txt         # download
+scripts/gcs.sh unmount
+# persist:  sudo bash scripts/gcs.sh fstab
+```
+
+Do not put MariaDB data or live `wp-content/uploads` on the gcsfuse mount.
+
+From a machine that can change IAM (often your laptop, not the VM):
+
+```bash
+scripts/gcs.sh grant-vm VM_NAME ZONE
+```
 
 ## Deploy flow
 

@@ -56,7 +56,7 @@ fi
 echo "==> Base packages"
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg ufw fail2ban \
-  unattended-upgrades apt-listchanges htop iotop ncdu jq rsync zstd unzip openssl
+  unattended-upgrades apt-listchanges htop iotop ncdu jq rsync zstd unzip openssl rclone
 
 echo "==> nginx + PHP 8.3-FPM + MariaDB"
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -348,6 +348,12 @@ EOF
 chmod 600 "${cred_file}"
 
 mkdir -p "${REPO_DIR}"/{import,backups,logs}
+
+if [[ -n "${GCS_BUCKET:-}" ]]; then
+  echo "==> Cloud Storage tools (rclone env_auth + gcsfuse)"
+  bash "${REPO_DIR}/scripts/gcs.sh" install
+  bash "${REPO_DIR}/scripts/gcs.sh" rclone-config || true
+fi
 
 echo
 echo "Done (native WordPress: nginx + PHP-FPM + MariaDB, no cache, no Docker)."
