@@ -4,12 +4,12 @@
  * Description: When content changes, purges the nginx FastCGI cache (by deleting cache files), purges Cloudflare by URL, then re-warms the affected pages. Adds a "Purge cache" admin-bar button and `wp news-cache` CLI commands.
  * Version:     1.0.0
  *
- * Configuration (constants, set via WORDPRESS_CONFIG_EXTRA in docker-compose.yml):
- *   NEWS_NGINX_CACHE_PATH  directory of fastcgi_cache_path (shared volume, levels=1:2)
+ * Configuration (constants, set in wp-config.php by scripts/setup-vps.sh):
+ *   NEWS_NGINX_CACHE_PATH  directory of fastcgi_cache_path (levels=1:2)
  *   NEWS_CF_ZONE_ID / NEWS_CF_API_TOKEN   Cloudflare purge credentials (optional)
- *   NEWS_WARM_URL          internal base URL of nginx used for warming (default https://nginx)
+ *   NEWS_WARM_URL          loopback URL used for warming (default https://127.0.0.1)
  *
- * nginx cache key (nginx.conf):  "$scheme$host$cache_uri"  -> md5 -> levels=1:2
+ * nginx cache key (http.conf):  "$scheme$host$cache_uri"  -> md5 -> levels=1:2
  * e.g. https://www.example.com/2026/09/story/  =>  <dir>/<md5[-1]>/<md5[-3:-1]>/<md5>
  */
 
@@ -138,7 +138,7 @@ function default_warm_urls(): array {
 }
 
 // ---------------------------------------------------------------------------
-// nginx: delete cache files directly (shared volume, same uid as nginx workers)
+// nginx: delete cache files directly (www-data owns the cache dir and FPM)
 // ---------------------------------------------------------------------------
 
 function nginx_cache_dir(): string {
@@ -243,8 +243,8 @@ function cloudflare_purge_everything(): void {
 
 // ---------------------------------------------------------------------------
 // Warming: refill nginx (and, through it, the next Cloudflare miss) before a
-// real reader pays for the render. Requests go straight to the nginx
-// container with the public Host header, so the cache key matches.
+// real reader pays for the render. Requests go to NEWS_WARM_URL (loopback)
+// with the public Host header, so the cache key matches.
 // ---------------------------------------------------------------------------
 
 function warm( array $urls ): void {
@@ -261,7 +261,7 @@ function warm( array $urls ): void {
 		wp_remote_get( $base . $path, [
 			'timeout'     => 15,
 			'blocking'    => false,
-			'sslverify'   => false,            // origin cert is for the public host, not "nginx"
+			'sslverify'   => false,            // origin cert is for the public host, not 127.0.0.1
 			'redirection' => 0,
 			'headers'     => [ 'Host' => $p['host'], 'User-Agent' => 'news-cache-warmer/1.0' ],
 		] );

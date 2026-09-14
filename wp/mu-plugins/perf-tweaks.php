@@ -26,7 +26,7 @@ add_action( 'init', function (): void {
 } );
 
 // Heartbeat: 60 s in the editor, off elsewhere in wp-admin. Dozens of editors
-// polling admin-ajax every 15 s is a real load on the admin pool.
+// polling admin-ajax every 15 s is a real load on PHP-FPM.
 add_filter( 'heartbeat_settings', function ( array $settings ): array {
 	$settings['interval'] = 60;
 	return $settings;

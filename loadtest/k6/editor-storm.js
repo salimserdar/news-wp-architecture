@@ -1,9 +1,6 @@
 // Scenario C — readers on the hot set at 500 HTML req/s while a few VUs save a DRAFT
-// via REST (Application Password). Do not publish. REST is origin-rate-limited at
-// 20 r/s per IP — keep editor VUs tiny so we test the php / php-admin split, not 429s.
-//
-// A dummy wordpress_logged_in_* cookie is sent only on editor requests so nginx
-// routes them to php-admin; WordPress auth is the Application Password.
+// via REST (Application Password). Do not publish. Keep editor VUs tiny so we
+// test reader HIT ratio under a little write load, not REST rate limits.
 //
 //   k6 run -e HOST=www.example.com -e ORIGIN=203.0.113.10 \
 //     -e EDITOR_USER=loadtest -e EDITOR_PASS='xxxx xxxx xxxx xxxx' \
@@ -86,7 +83,6 @@ export function editor(data) {
         Authorization: `Basic ${auth}`,
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        Cookie: 'wordpress_logged_in_loadtest=1',
         'User-Agent': 'news-wp-k6/1.0',
       },
       tags: { name: '/wp-json/wp/v2/posts/{id}' },

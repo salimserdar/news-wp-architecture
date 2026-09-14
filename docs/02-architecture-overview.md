@@ -13,10 +13,9 @@ flowchart TB
     end
 
     subgraph VPS[Single VPS - 8 vCPU / 32 GB - Ubuntu 24.04 LTS]
-        NG[Nginx<br/>TLS origin cert, HTTP/2<br/>FastCGI full-page cache<br/>brotli/gzip, rate limits]
-        FPM[PHP-FPM 8.3<br/>OPcache + JIT<br/>separate pools: public / admin]
-        RD[(Redis 7<br/>persistent object cache<br/>internal network only)]
-        DB[(MariaDB 11 LTS<br/>InnoDB, tuned buffer pool)]
+        NG[Nginx<br/>TLS origin cert, HTTP/2<br/>FastCGI full-page cache<br/>gzip, rate limits]
+        FPM[PHP-FPM 8.3<br/>OPcache, one pool]
+        DB[(MariaDB<br/>InnoDB, tuned buffer pool)]
         CRON[System cron<br/>wp-cron via WP-CLI]
         MON[Monitoring<br/>Netdata + logs]
     end
@@ -24,13 +23,12 @@ flowchart TB
     R --> DNS --> WAF --> EC
     EC -- "miss / bypass" --> NG
     NG -- "miss / bypass" --> FPM
-    FPM <--> RD
     FPM <--> DB
     CRON --> FPM
 ```
 
-Only origin ports 80/443 are reachable, and only from Cloudflare IP ranges. Everything
-else (SSH, DB, Redis) is firewalled or reachable only on the internal Docker network.
+Only origin ports 80/443 are reachable from the internet (lock them to Cloudflare IP
+ranges after cut-over). MariaDB listens on localhost. SSH is rate-limited.
 
 ## Request flow — anonymous reader (the 99 % case)
 
@@ -40,7 +38,6 @@ sequenceDiagram
     participant CF as Cloudflare
     participant NG as Nginx
     participant PHP as PHP-FPM
-    participant RD as Redis
     participant DB as MariaDB
 
     U->>CF: GET /2026/09/breaking-story/
@@ -51,10 +48,8 @@ sequenceDiagram
         alt FastCGI cache HIT
             NG-->>CF: 200 (x-fastcgi-cache: HIT)
         else FastCGI cache MISS (first request after publish/expiry)
-            NG->>PHP: FastCGI
-            PHP->>RD: get options / posts / queries
-            RD-->>PHP: hit (most objects)
-            PHP->>DB: only uncached queries
+            NG->>PHP: FastCGI (unix socket)
+            PHP->>DB: uncached queries
             DB-->>PHP: rows
             PHP-->>NG: HTML (rendered once, stored in cache)
             NG-->>CF: 200 (x-fastcgi-cache: MISS)
@@ -79,8 +74,8 @@ Editors have a `wordpress_logged_in_*` cookie. That cookie:
 
 1. Makes Cloudflare **bypass** its HTML cache (Cache Rule: bypass when cookie matches).
 2. Makes Nginx **bypass** the FastCGI cache (`fastcgi_cache_bypass` / `fastcgi_no_cache`).
-3. Routes to a **dedicated PHP-FPM pool** (`admin`) so a heavy admin operation cannot
-   starve the public pool that handles cache misses.
+3. Hits the **same PHP-FPM pool** as cache misses. Editor load is small; keep plugin
+   count and heartbeat in check so a heavy admin action cannot starve a purge storm.
 
 wp-admin, wp-login.php, REST API writes, and `POST` requests are never cached.
 
@@ -89,10 +84,9 @@ wp-admin, wp-login.php, REST API writes, and `POST` requests are never cached.
 | Component | Responsible for | Explicitly NOT responsible for |
 |-----------|-----------------|-------------------------------|
 | **Cloudflare** | DNS, DDoS absorption, WAF, bot mitigation, TLS to readers, caching static assets ~forever, caching HTML briefly, image resizing (Polish/Mirage optional) | Being the source of truth for cache state |
-| **Nginx** | TLS from Cloudflare (origin cert), full-page cache, gzip/brotli, static file serving, rate limiting on `wp-login.php` / `xmlrpc.php`, blocking non-Cloudflare traffic | Running any application logic |
+| **Nginx** | TLS from Cloudflare (origin cert), full-page cache, gzip, static file serving, rate limiting on `wp-login.php` / `xmlrpc.php` | Running any application logic |
 | **PHP-FPM** | Rendering the pages that missed both caches; wp-admin; REST API | Serving static files |
-| **Redis** | WordPress object cache (queries, options, transients), reducing DB load 70–90 % | Full-page cache (we deliberately keep that in Nginx) |
-| **MariaDB** | Source of truth | Handling read traffic that Redis or page cache could absorb |
+| **MariaDB** | Source of truth | Handling read traffic that the page cache could absorb |
 | **System cron** | Running `wp cron event run --due-now` every minute; cache warmers; backups | — |
 
 ## Why this shape and not something else
@@ -103,10 +97,9 @@ wp-admin, wp-login.php, REST API writes, and `POST` requests are never cached.
 - **Nginx FastCGI cache instead of Varnish** because it removes a whole process and hop,
   is trivially reliable, and WordPress doesn't need ESI when dynamic fragments are done
   client-side. Full comparison in doc 05.
-- **Redis object cache in addition to page cache** because cache misses and editor
-  requests still hit PHP, and WordPress makes 50–200 queries per uncached page.
-  Redis turns those into microsecond lookups.
-- **Docker Compose** for the whole stack (decided, doc 05 Q5). Cache hits never leave
-  nginx, so the container network hop only affects the ~1–5 % of requests that reach PHP.
-  nginx workers and PHP-FPM share the same uid (82), which lets WordPress purge the nginx
-  cache by deleting files on a shared volume — no custom nginx module needed.
+- **No Redis object cache.** Cache hits never reach PHP. Misses and editors still hit
+  MariaDB, but the volume is small enough that a tuned InnoDB buffer pool is enough.
+  Object cache remains an option later if miss TTFB is the bottleneck (doc 05 Q3).
+- **Native packages** (doc 05 Q5). Unix sockets (nginx ↔ PHP-FPM, PHP ↔ MariaDB),
+  Ubuntu's nginx/PHP/MariaDB, and `www-data` owning both the cache dir and FPM so the
+  purge plugin can delete cache files with no extra module.

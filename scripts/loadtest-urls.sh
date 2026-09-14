@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Export real permalinks for k6. Run on the VPS (needs WP-CLI / compose).
+# Export real permalinks for k6. Run on the VPS (needs WP-CLI).
 #
 #   scripts/loadtest-urls.sh
 #   scripts/loadtest-urls.sh --create-draft
@@ -7,7 +7,9 @@
 #
 # Copy loadtest/urls.json to the generator (or share the repo working copy).
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+# shellcheck source=lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+cd "${REPO_DIR}"
 
 HOT="${HOT:-20}"
 LONGTAIL="${LONGTAIL:-80}"
@@ -28,15 +30,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-WP="docker compose run --rm -T wpcli wp"
 TOTAL=$((HOT + LONGTAIL))
 
 echo "==> Reading published permalinks (hot=$HOT longtail=$LONGTAIL)" >&2
-HOME_URL="$($WP option get home | tr -d '\r')"
+HOME_URL="$(wp_cli option get home | tr -d '\r')"
 HOME_URL="${HOME_URL%/}/"
-FEED_URL="$($WP eval 'echo get_feed_link();' | tr -d '\r')"
+FEED_URL="$(wp_cli eval 'echo get_feed_link();' | tr -d '\r')"
 
-mapfile -t ALL < <($WP post list \
+mapfile -t ALL < <(wp_cli post list \
   --post_type=post \
   --post_status=publish \
   --orderby=date \
@@ -56,7 +57,7 @@ fi
 EDITOR_POST_ID=""
 if [[ "$CREATE_DRAFT" -eq 1 ]]; then
   echo "==> Creating draft fixture post (do not publish)" >&2
-  EDITOR_POST_ID="$($WP post create \
+  EDITOR_POST_ID="$(wp_cli post create \
     --post_type=post \
     --post_status=draft \
     --post_title='k6 loadtest fixture (do not publish)' \

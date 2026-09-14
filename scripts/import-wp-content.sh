@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
-# Copy an existing site's wp-content (uploads, themes, plugins) into ./wordpress.
+# Copy an existing site's wp-content (uploads, themes, plugins) into WP_ROOT.
 #
 #   scripts/import-wp-content.sh /path/to/old/wp-content            # uploads + themes + plugins
 #   scripts/import-wp-content.sh /path/to/old/wp-content --uploads-only
 #   scripts/import-wp-content.sh import/wp-content.tar.gz           # archive containing wp-content/
 #
 # What is deliberately NOT copied:
-#   - mu-plugins/           -> ours are mounted from ./wp/mu-plugins
-#   - object-cache.php, advanced-cache.php, db.php  -> old caching drop-ins; Redis Object
-#                              Cache will install its own object-cache.php
+#   - mu-plugins/           -> ours are installed from ./wp/mu-plugins
+#   - object-cache.php, advanced-cache.php, db.php  -> old caching drop-ins
 #   - cache/, wp-rocket-config/, w3tc-config/, et_cache, litespeed/  -> old page caches
 #   - upgrade/, upgrade-temp-backup/
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+# shellcheck source=lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+cd "${REPO_DIR}"
 
 SRC="${1:-}"; MODE="${2:-all}"
 [[ -n "$SRC" ]] || { echo "usage: $0 <old-wp-content-dir | archive.tar.gz|.zip> [--uploads-only]"; exit 1; }
-DEST="wordpress/wp-content"
-[[ -d wordpress/wp-includes ]] || { echo "./wordpress has no WordPress core yet — run 'docker compose up -d' first and wait ~30 s"; exit 1; }
+DEST="${WP_ROOT}/wp-content"
+[[ -d "${WP_ROOT}/wp-includes" ]] || { echo "${WP_ROOT} has no WordPress core yet — run 'sudo bash scripts/setup-vps.sh' first"; exit 1; }
 
 TMP=""
 if [[ -f "$SRC" ]]; then
@@ -54,8 +55,8 @@ if [[ "$MODE" != "--uploads-only" ]]; then
   done
 fi
 
-echo "==> Ownership -> 82:82 (www-data inside the containers)"
-if [[ "$(id -u)" -eq 0 ]]; then chown -R 82:82 "$DEST"; else sudo chown -R 82:82 "$DEST"; fi
+echo "==> Ownership -> www-data"
+if [[ "$(id -u)" -eq 0 ]]; then chown -R www-data:www-data "$DEST"; else sudo chown -R www-data:www-data "$DEST"; fi
 find "$DEST" -type d -exec chmod 755 {} + 2>/dev/null || true
 find "$DEST" -type f -exec chmod 644 {} + 2>/dev/null || true
 

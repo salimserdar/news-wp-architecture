@@ -1,14 +1,13 @@
 # 03 — Caching Strategy
 
-Five cache layers, from the reader inward. Each one exists to shield the next.
+Four cache layers, from the reader inward. Each one exists to shield the next.
 
 | Layer | Where | What it caches | TTL | Hit target |
 |-------|-------|----------------|-----|------------|
 | 1. Browser | Reader's device | Static assets | 1 year (fingerprinted URLs) | — |
 | 2. Cloudflare edge | ~300 PoPs | Static assets, HTML for anonymous users | Static: 1 year · HTML: 60–300 s | > 80 % HTML, > 99 % static |
 | 3. Nginx FastCGI | Origin | Full HTML pages for anonymous users | 5–15 min + serve-stale | > 95 % of what reaches origin |
-| 4. Redis object cache | Origin | WP queries, options, transients, post objects | Until invalidated by WP | > 90 % |
-| 5. OPcache | PHP-FPM | Compiled PHP bytecode | Until deploy | ~100 % |
+| 4. OPcache | PHP-FPM | Compiled PHP bytecode | Until deploy | ~100 % |
 
 Combined effect: for every 1 000 HTML requests during a spike, roughly **≤ 5 reach PHP**.
 
@@ -51,10 +50,8 @@ On `publish_post`, `edit_post`, `delete_post`, `transition_comment_status`:
 - Purge-everything is reserved for theme deploys and emergencies (it will cause a spike of
   origin misses — the Nginx layer absorbs that).
 
-Implemented via the official **Cloudflare WordPress plugin** (has "auto purge on update") or a
-small custom plugin calling the `purge_cache` API with `files: [...]`. Recommendation: custom
-20-line plugin so it purges exactly the URLs we want and can also purge the Nginx cache in the
-same hook.
+Implemented in `wp/mu-plugins/cache-purge.php`: purge exactly the URLs we want, then purge
+the Nginx cache in the same hook, then warm.
 
 ---
 
@@ -77,7 +74,7 @@ fastcgi_cache_path /var/cache/nginx/wp
 
 ### Cache key
 ```
-fastcgi_cache_key "$scheme$request_method$host$request_uri";
+fastcgi_cache_key "$scheme$host$cache_uri";
 ```
 Mobile/desktop use the same responsive HTML, so **no** device-based key variation
 (if the theme serves different HTML per device, we add a `$mobile` variable — avoid this).
@@ -107,28 +104,30 @@ fastcgi_cache_use_stale error timeout invalid_header updating
                         http_500 http_503 http_429;   # fastcgi has no http_502/504
 fastcgi_cache_background_update on;    # stale-while-revalidate
 fastcgi_cache_min_uses 1;
-fastcgi_ignore_headers Cache-Control Expires Set-Cookie;
+fastcgi_ignore_headers Cache-Control Expires;
 ```
 `use_stale ... updating` + `background_update` means a reader never waits for PHP if *any*
 copy exists. `use_stale error/5xx` means a PHP or DB outage does not take the public site down.
 
-### Response headers
-- `X-FastCGI-Cache: HIT|MISS|BYPASS|STALE|UPDATING` for debugging and monitoring.
-- Strip `Set-Cookie` from cacheable responses (WordPress sometimes sets test cookies).
+Set-Cookie is **not** ignored: a response that sets a cookie is never cached (nginx default),
+so cookies cannot leak between readers. A plugin that sets a cookie on anonymous pages will
+show up as a climbing MISS/BYPASS ratio.
+
+`X-FastCGI-Cache: HIT|MISS|BYPASS|STALE|UPDATING` is added on every PHP response for
+debugging and `scripts/cache-stats.sh`.
 
 ### Purge
 Nginx open-source has no purge module built in. Options:
 1. `ngx_cache_purge` module (requires a custom nginx build) + Nginx Helper plugin.
 2. **Compute the MD5 of the cache key and delete the file** — *implemented* in
    `wp/mu-plugins/cache-purge.php`. Zero dependencies; works because nginx workers and
-   PHP-FPM run as the same uid on a shared volume, and because `open_file_cache` is
+   PHP-FPM run as `www-data` on the same cache directory, and because `open_file_cache` is
    disabled for cached responses (otherwise nginx keeps serving a deleted file).
 3. Short TTL only (no purge) — editors wait up to 10 min. Not acceptable for news.
 
 Purge fan-out on publish mirrors the Cloudflare list: article URL, homepage, category, tag,
 author, day archive, feed. Order: **purge Nginx first, then Cloudflare, then warm** so an
-edge miss re-fills from fresh origin content. Verified locally: article updated → nginx file
-gone → warmer re-renders → next reader gets `HIT` with the new title.
+edge miss re-fills from fresh origin content.
 
 ### Microcaching for "uncacheable" pages
 Search results (`/?s=`) and paginated archives get a **1 s – 10 s** cache. Even 1 second
@@ -136,38 +135,20 @@ collapses a burst of 500 identical requests into 1 PHP render.
 
 ---
 
-## Layer 4 — Redis object cache
-
-- Plugin: **Redis Object Cache** (free, by Till Krüss) with the `object-cache.php` drop-in.
-  Object Cache Pro (paid) if we want relay/async and better analytics — optional.
-- Connection over the private compose network (`redis:6379`); the port is not published on the host.
-- `maxmemory 2gb`, `maxmemory-policy allkeys-lru`, persistence **off** (`save ""`,
-  `appendonly no`) — it's a cache; cold start just means a few seconds of DB load.
-- Use `igbinary` serializer + `zstd`/`lz4` compression (phpredis) to fit more in memory.
-- Separate Redis **database index** or key prefix per environment (staging vs production).
-
-What it saves: WordPress does ~50–200 SQL queries per uncached page (options, term
-relationships, post meta, menus). With Redis, ~90 % of those never reach MariaDB, so
-cache-miss renders drop from ~300–600 ms to ~80–150 ms.
-
-Also used for: transients (`set_transient` → Redis instead of `wp_options`), which matters on
-news sites where plugins store "trending posts" data every few minutes.
-
----
-
-## Layer 5 — OPcache (+ JIT)
+## Layer 4 — OPcache
 
 ```
 opcache.enable=1
 opcache.memory_consumption=256
 opcache.interned_strings_buffer=32
 opcache.max_accelerated_files=50000
-opcache.validate_timestamps=0     # production: reset on deploy (opcache_reset / FPM reload)
-opcache.jit=tracing
-opcache.jit_buffer_size=128M
+opcache.validate_timestamps=1
+opcache.revalidate_freq=60
+opcache.jit=disable                 # Newspaper / tagDiv hangs wp-admin with tracing JIT
 ```
-`validate_timestamps=0` means PHP never stat()s files — a measurable win under load. The
-deploy script reloads PHP-FPM to pick up code changes.
+`revalidate_freq=60` means PHP stats files at most once a minute. Reload PHP-FPM after a
+deploy to pick up code immediately. JIT stays off: tracing JIT segfaults
+`wp-admin/load-styles.php` with this theme.
 
 ---
 
@@ -201,5 +182,5 @@ Track daily (see doc 07):
 - Cloudflare: cache hit ratio for HTML content type, origin requests/s, bandwidth saved.
 - Nginx: count of `X-FastCGI-Cache` values from the access log (`HIT/MISS/BYPASS/STALE`).
   A rising BYPASS ratio usually means a plugin started setting cookies on anonymous users.
-- Redis: `INFO stats` → `keyspace_hits / (hits+misses)`, evicted keys (increase memory if > 0).
 - MariaDB: queries/s vs PHP renders/s — should be low and flat during traffic spikes.
+- PHP-FPM: active children and listen queue during a purge storm.

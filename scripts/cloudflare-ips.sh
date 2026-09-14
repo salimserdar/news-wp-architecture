@@ -3,10 +3,8 @@
 # list in sync with Cloudflare's published ranges.
 #
 #   scripts/cloudflare-ips.sh --nginx      rewrite config/nginx/snippets/cloudflare-realip.conf
-#   scripts/cloudflare-ips.sh --ufw        ufw allow 80,443 from each range (host-level services)
-#   scripts/cloudflare-ips.sh --iptables   DOCKER-USER chain: the rule that actually protects
-#                                          Docker-published ports (Docker bypasses ufw!)
-# Flags can be combined. Run as root for --ufw / --iptables.
+#   scripts/cloudflare-ips.sh --ufw        ufw allow 80,443 from each range
+# Flags can be combined. Run as root for --ufw.
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -41,28 +39,14 @@ do_ufw() {
   echo "ufw: allowed 80/443 from $(echo "$V4 $V6" | wc -w) Cloudflare ranges"
 }
 
-do_iptables() {
-  # Docker inserts its own ACCEPT rules ahead of ufw for published ports.
-  # DOCKER-USER is evaluated first and is never touched by Docker, so we
-  # filter there: allow Cloudflare -> 80/443, drop everything else to 80/443.
-  for cmd in iptables ip6tables; do
-    list="$V4"; [[ $cmd == ip6tables ]] && list="$V6"
-    $cmd -N CF-ONLY 2>/dev/null || $cmd -F CF-ONLY
-    for ip in $list; do $cmd -A CF-ONLY -s "$ip" -j RETURN; done
-    $cmd -A CF-ONLY -j DROP
-    # ensure exactly one jump rule exists in DOCKER-USER
-    while $cmd -D DOCKER-USER -p tcp -m multiport --dports 80,443 -m conntrack --ctstate NEW -j CF-ONLY 2>/dev/null; do :; done
-    $cmd -I DOCKER-USER 1 -p tcp -m multiport --dports 80,443 -m conntrack --ctstate NEW -j CF-ONLY
-  done
-  echo "iptables: DOCKER-USER now only accepts new 80/443 connections from Cloudflare"
-}
-
-[[ $# -gt 0 ]] || { echo "usage: $0 [--nginx] [--ufw] [--iptables]"; exit 1; }
+[[ $# -gt 0 ]] || { echo "usage: $0 [--nginx] [--ufw]"; exit 1; }
 for arg in "$@"; do
   case "$arg" in
-    --nginx)    do_nginx ;;
-    --ufw)      do_ufw ;;
-    --iptables) do_iptables ;;
+    --nginx) do_nginx ;;
+    --ufw)   do_ufw ;;
+    --iptables)
+      echo "skipping --iptables (ufw handles 80/443 on this stack)" >&2
+      ;;
     *) echo "unknown flag $arg"; exit 1 ;;
   esac
 done

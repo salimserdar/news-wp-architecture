@@ -9,7 +9,7 @@
 #   scripts/gcs.sh check | smoke | ls [PREFIX]
 #   scripts/gcs.sh upload LOCAL_PATH [REMOTE_PATH]
 #   scripts/gcs.sh download REMOTE_PATH [LOCAL_PATH]
-#   scripts/gcs.sh backup | restore-db FILE | restore-uploads
+#   scripts/gcs.sh backup | restore-db FILE | restore-uploads | pull
 #   scripts/gcs.sh install | rclone-config
 #   scripts/gcs.sh rclone-upload LOCAL_PATH [REMOTE_PATH]
 #   scripts/gcs.sh rclone-download REMOTE_PATH [LOCAL_PATH]
@@ -44,8 +44,7 @@ need_gcsfuse() {
 }
 
 bucket_name() {
-  local b="${GCS_BUCKET:-}"
-  [[ -n "$b" ]] || { echo "Set GCS_BUCKET in .env (bucket name, no trailing slash)." >&2; exit 1; }
+  local b="${GCS_BUCKET:-tr724-backup}"
   b="${b#gs://}"
   b="${b%/}"
   printf '%s' "$b"
@@ -118,10 +117,8 @@ case "$cmd" in
     echo "ok — list succeeded."
     echo "next:  scripts/gcs.sh smoke"
     echo
-    echo "If list failed with 403, from an admin account:"
-    echo "  gcloud storage buckets add-iam-policy-binding $(uri) \\"
-    echo "    --member='serviceAccount:$(sa_email)' \\"
-    echo "    --role='roles/storage.objectAdmin'"
+    echo "If list failed with 403, from an admin account (laptop, not the VM):"
+    echo "  scripts/gcs.sh grant-vm VM_NAME ZONE"
     ;;
   ls)
     need_gcloud
@@ -199,7 +196,7 @@ case "$cmd" in
     echo "download $(uri)/db/$file -> backups/db/"
     gcloud storage cp "$(uri)/db/$file" "backups/db/$file"
     echo "restore with:"
-    echo "  zstd -dc backups/db/$file | docker compose exec -T mariadb sh -c 'mariadb -uroot -p\"\$MARIADB_ROOT_PASSWORD\" \"\$MARIADB_DATABASE\"'"
+    echo "  zstd -dc backups/db/$file | mysql \"${DB_NAME:-wordpress}\""
     ;;
   restore-uploads)
     need_gcloud
@@ -208,7 +205,11 @@ case "$cmd" in
     echo "sync $(uri)/uploads -> backups/uploads/"
     gcloud storage rsync "$(uri)/uploads" backups/uploads --recursive
     echo "copy into WordPress with:"
-    echo "  rsync -a backups/uploads/ wordpress/wp-content/uploads/"
+    echo "  rsync -a backups/uploads/ ${WP_ROOT:-/var/www/html}/wp-content/uploads/"
+    echo "  chown -R www-data:www-data ${WP_ROOT:-/var/www/html}/wp-content/uploads"
+    ;;
+  pull)
+    exec bash scripts/pull-gcs-backup.sh "$@"
     ;;
   install)
     [[ $EUID -eq 0 ]] || { echo "run as root:  sudo bash scripts/gcs.sh install" >&2; exit 1; }
@@ -339,7 +340,7 @@ case "$cmd" in
       --role='roles/storage.objectAdmin'
     if gcloud compute instances set-service-account "$vm" --zone="$zone" \
          --service-account="$sa" --scopes=cloud-platform; then
-      echo "ok — SSH to the VM and run:  scripts/gcs.sh smoke"
+      echo "ok — SSH to the VM and run:  scripts/gcs.sh check && scripts/pull-gcs-backup.sh"
     else
       echo "IAM is set. Access scopes can only change while the VM is stopped:"
       echo "  gcloud compute instances stop $vm --zone=$zone"
@@ -357,6 +358,10 @@ usage: $0 COMMAND
     upload LOCAL_PATH [REMOTE_PATH]
     download REMOTE_PATH [LOCAL_PATH]
     backup | restore-db FILE.sql.zst | restore-uploads
+    pull [--check|--db-only|--content-only]
+
+  admin (from a machine that can change IAM):
+    grant-vm VM_NAME ZONE
 
   optional rclone (no JSON key, env_auth):
     install | rclone-config
@@ -365,9 +370,6 @@ usage: $0 COMMAND
 
   optional gcsfuse (folder mount; not for DB or live uploads):
     mount | unmount | fstab
-
-  admin (from a machine that can change IAM):
-    grant-vm VM_NAME ZONE
 EOF
     exit 1
     ;;

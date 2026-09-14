@@ -15,6 +15,8 @@ export const cacheHitRatio = new Rate('cache_hit_ratio');
 export const cacheBypassRatio = new Rate('cache_bypass_ratio');
 export const cacheMissRatio = new Rate('cache_miss_ratio');
 export const cacheStatus = new Counter('cache_status');
+export const cfHitRatio = new Rate('cf_hit_ratio');
+export const cfStatus = new Counter('cf_status');
 
 export function env(name, fallback) {
   const v = __ENV[name];
@@ -51,10 +53,20 @@ export function loadUrls() {
   const data = JSON.parse(open(path));
   const hot = [data.home, ...(data.hot || []), data.feed].filter(Boolean);
   const longtail = data.longtail || [];
+  const weighted =
+    data.weighted && data.weighted.length
+      ? data.weighted.map((item) =>
+          typeof item === 'string' ? { url: item, weight: 1 } : { url: item.url, weight: Number(item.weight) || 1 },
+        )
+      : [...(data.hot || []), ...longtail].map((url) => ({ url, weight: 1 }));
   if (hot.length < 2) {
     throw new Error(`${path} needs home + hot article URLs — run scripts/loadtest-urls.sh on the VPS`);
   }
-  return { home: data.home, feed: data.feed, hot, longtail, editorPostId: data.editorPostId };
+  return { home: data.home, feed: data.feed, hot, longtail, weighted, editorPostId: data.editorPostId };
+}
+
+export function allPages(urls) {
+  return [...urls.hot, ...urls.longtail].filter(Boolean);
 }
 
 export function pathOf(absolute) {
@@ -74,6 +86,9 @@ export function recordCache(res) {
   cacheHitRatio.add(status === 'HIT');
   cacheBypassRatio.add(status === 'BYPASS');
   cacheMissRatio.add(status === 'MISS' || status === 'EXPIRED');
+  const cf = String(res.headers['CF-Cache-Status'] || res.headers['Cf-Cache-Status'] || '').toUpperCase() || 'NONE';
+  cfStatus.add(1, { status: cf });
+  cfHitRatio.add(cf === 'HIT');
 }
 
 export function htmlHeaders() {
@@ -113,6 +128,25 @@ export function pick(list) {
 export function pickMixed(urls) {
   if (urls.longtail.length > 0 && Math.random() < 0.2) return pick(urls.longtail);
   return pick(urls.hot);
+}
+
+/**
+ * Realistic news mix: ~40% homepage, remaining traffic weighted by article popularity.
+ * `urls.weighted` uses {url, weight} (your view counts). Falls back to pickMixed.
+ */
+export function pickNews(urls) {
+  const homeShare = Number(env('HOME_SHARE', '0.4'));
+  if (urls.home && Math.random() < homeShare) return urls.home;
+  const items = urls.weighted || [];
+  if (items.length === 0) return pickMixed(urls);
+  let total = 0;
+  for (const item of items) total += item.weight || 1;
+  let x = Math.random() * total;
+  for (const item of items) {
+    x -= item.weight || 1;
+    if (x <= 0) return item.url;
+  }
+  return items[items.length - 1].url;
 }
 
 export function abortingFailureThreshold(rate = 0.01) {

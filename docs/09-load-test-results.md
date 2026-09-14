@@ -2,11 +2,10 @@
 
 Harness for Phase 7 in [doc 06](06-implementation-roadmap.md). This test hits the
 **origin VPS directly** (Cloudflare bypassed) so the numbers are nginx FastCGI + PHP-FPM
-+ Redis + MariaDB — not the edge cache.
++ MariaDB — not the edge cache.
 
-Do **not** run k6 on the origin. Do **not** use this laptop's Docker Compose as a stand-in
-for the 8 vCPU / 32 GB box. Do **not** hammer `/wp-login.php` (5 r/m) or anonymous
-`/wp-json/` (20 r/s per IP) as the main RPS source.
+Do **not** run k6 on the origin. Do **not** hammer `/wp-login.php` (5 r/m) as the main
+RPS source.
 
 Scripts:
 
@@ -24,10 +23,11 @@ Fill in the results tables at the bottom after a run. Do not change `pm.max_chil
 
 | Scenario | Load | Must hold |
 |----------|------|-----------|
-| A. Cache-hit storm (`hit-storm.js`) | Ramp to **500 HTML req/s**, then 1000 / 2000 to find the ceiling | `X-FastCGI-Cache: HIT` ≥ 99%, p95 TTFB **< 50 ms** at 500 rps, HTTP 5xx **< 0.1%**, public FPM almost idle |
+| A. Cache-hit storm (`hit-storm.js`) | Ramp to **500 HTML req/s**, then 1000 / 2000 to find the ceiling | `X-FastCGI-Cache: HIT` ≥ 99%, p95 TTFB **< 50 ms** at 500 rps, HTTP 5xx **< 0.1%**, FPM almost idle |
 | B. Post-purge storm (`purge-storm.js`) | `make purge` then 500 req/s for 2 min | 5xx **< 0.5%**, no sustained FPM listen queue, p95 TTFB **< 500 ms**, BYPASS ≈ 0 |
-| C. Editors during storm (`editor-storm.js`) | 500 HTML req/s readers + 3 draft saves | Readers stay on HIT; only `php-admin` gets busy |
+| C. Editors during storm (`editor-storm.js`) | 500 HTML req/s readers + 3 draft saves | Readers stay on HIT; FPM absorbs the writes |
 | Mixed (`mixed.js`) | Same ramp, 80% hot / 20% long-tail | 5xx **< 0.1%** at 500 rps, HIT ≥ 90%, p95 **< 100 ms** |
+| Concurrent browsers (`realistic-users.js`) | Ramp VUs with think time; homepage-heavy mix | 5xx **< 1%**, p95 TTFB **< 2 s** |
 | SLO peak | 500+ HTML req/s once warm | Origin PHP **< 20 renders/s** |
 
 Stop the run if 5xx > 1% (k6 aborts) or the box swaps / OOM. Record the first RPS where
@@ -58,16 +58,17 @@ Note the generator's public IPv4: `curl -4 -s ifconfig.me`
 
 ## 2. Open the origin firewall (temporary)
 
-Production `DOCKER-USER` / `CF-ONLY` only accepts Cloudflare ranges
-([doc 08](08-docker-implementation-guide.md) step 1). Allow the generator:
+If 80/443 are locked to Cloudflare (`WEB_OPEN=0`), allow the generator:
 
 ```bash
 # on the VPS
-iptables -I CF-ONLY 1 -s LOADGEN.IP -j RETURN
-iptables -L CF-ONLY -n | head
+ufw allow from LOADGEN.IP to any port 443 proto tcp comment 'k6-generator'
+ufw status numbered | head
 ```
 
-Remove the rule when finished (`iptables -D CF-ONLY 1` if it is still the first rule, or reboot).
+Remove the rule when finished (`ufw delete <number>`).
+
+If `WEB_OPEN=1` (ports open to the world), skip this step.
 
 ## 3. Smoke curl (must be HIT before any storm)
 
@@ -81,7 +82,7 @@ curl -sk --resolve $SITE_DOMAIN:443:ORIGIN_IP \
 On the VPS, if the homepage is cold: `make warm` then curl again.
 
 Expect `200` and `HIT`. If you see `BYPASS`, a plugin is setting cookies on anonymous traffic
-— fix that before load testing or the 48 public PHP children will melt.
+— fix that before load testing or the PHP children will melt.
 
 ## 4. Export URLs (VPS)
 
@@ -105,8 +106,8 @@ fixture post **draft**. Do not publish spam.
 On the VPS, in a dedicated shell:
 
 ```bash
-make loadtest-observe
-# CSV → loadtest/results/observe-*.csv  (HIT/MISS/BYPASS, docker stats, FPM, Redis, MariaDB)
+sudo make loadtest-observe
+# CSV → loadtest/results/observe-*.csv  (HIT/MISS/BYPASS, FPM, MariaDB, load)
 ```
 
 On the generator (replace HOST / ORIGIN):
@@ -123,6 +124,9 @@ k6 run -e HOST="$HOST" -e ORIGIN="$ORIGIN" loadtest/k6/purge-storm.js
 # Mixed Pareto (optional, after A)
 k6 run -e HOST="$HOST" -e ORIGIN="$ORIGIN" loadtest/k6/mixed.js
 
+# Concurrent browsers with think time (homepage-heavy)
+k6 run -e HOST="$HOST" -e ORIGIN="$ORIGIN" loadtest/k6/realistic-users.js
+
 # C — readers at 500 rps + 3 VUs PATCHing the draft
 k6 run -e HOST="$HOST" -e ORIGIN="$ORIGIN" \
   -e EDITOR_USER=EDITOR_USER \
@@ -134,15 +138,13 @@ k6 run -e HOST="$HOST" -e ORIGIN="$ORIGIN" \
 k6 sends `Host: $HOST` to `ORIGIN` with TLS verify off (Origin CA or nginx self-signed).
 HTML requests use `User-Agent: news-wp-k6/1.0`.
 
-Scenario C sends a dummy `wordpress_logged_in_*` cookie **only on editor requests** so nginx
-routes them to `php-admin`. WordPress auth is the Application Password. Editor VUs sleep 2 s
-between writes so they stay under the `/wp-json/` 20 r/s limiter.
+Scenario C authenticates with an Application Password. Editor VUs sleep 2 s between writes.
 
 ## 6. Cleanup
 
 ```bash
 # VPS
-iptables -D CF-ONLY -s LOADGEN.IP -j RETURN   # or reboot
+ufw status numbered            # delete the k6-generator rule
 # optional: scripts/wp.sh post delete EDITOR_POST_ID --force
 ```
 
@@ -165,8 +167,8 @@ Paste k6 summaries + a few CSV rows into the tables below.
 
 ### A — hit-storm
 
-| Stage (rps) | p50 TTFB | p95 TTFB | p99 TTFB | 5xx % | HIT % | public FPM active | php CPU % | nginx CPU % | pass? |
-|-------------|----------|----------|----------|-------|-------|-------------------|-----------|-------------|-------|
+| Stage (rps) | p50 TTFB | p95 TTFB | p99 TTFB | 5xx % | HIT % | FPM active | php RSS | nginx CPU % | pass? |
+|-------------|----------|----------|----------|-------|-------|------------|---------|-------------|-------|
 | 50 | | | | | | | | | |
 | 200 | | | | | | | | | |
 | **500 (SLO)** | | | | | | | | | |
@@ -182,7 +184,7 @@ Ceiling (first stage that fails p95 / errors):
 | 5xx % | |
 | p95 TTFB | |
 | HIT / MISS / STALE / UPDATING mix | |
-| Peak public FPM active / listen queue | |
+| Peak FPM active / listen queue | |
 | Time until HIT dominates | |
 | pass? | |
 
@@ -191,8 +193,7 @@ Ceiling (first stage that fails p95 / errors):
 | Metric | Value |
 |--------|-------|
 | Reader p95 TTFB / HIT % / 5xx % | |
-| Peak `php-admin` active | |
-| Peak public FPM active | |
+| Peak FPM active | |
 | Editor HTTP 200 vs 429 | |
 | pass? | |
 
@@ -206,9 +207,8 @@ Ceiling (first stage that fails p95 / errors):
 
 | Knob | File | Observed problem that would justify changing it |
 |------|------|--------------------------------------------------|
-| `pm.max_children` (public) | `config/php/pool-www.conf` | Sustained listen queue on purge-storm, HIT storm still idle |
-| `PHP_CPUS` / `PHP_MEM` | `.env` | Container CPU throttle / OOM during miss wave |
-| `DB_BUFFER_POOL` / `DB_MEM` | `.env` | `Threads_running` high, Redis hit ratio not the issue |
+| `pm.max_children` | `config/php/pool-www.conf` / `PHP_MAX_CHILDREN` | Sustained listen queue on purge-storm, HIT storm still idle |
+| `DB_BUFFER_POOL` | `.env` | `Threads_running` high on misses |
 | Page TTL | `wp/mu-plugins/cache-control.php` | Miss storm lasts longer than lock/stale can hide |
 | BYPASS | plugins / nginx maps | Anonymous `BYPASS` > ~1% — do not raise PHP, fix cookies |
 

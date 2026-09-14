@@ -7,12 +7,13 @@ Each item states the options, the recommendation, and whether it is **settled** 
 
 | Date | Decision |
 |------|----------|
-| 2026-09-11 | **Docker Compose in production** (Q5 → B). Fastest path; the whole stack is `docker compose up`. Overhead mitigated: nginx workers and PHP share uid 82 so the purge plugin can delete cache files directly, resource limits per container, host networking not needed. |
+| 2026-09-14 | **Native packages in production** (Q5 → A). Ubuntu 24.04 nginx + PHP 8.3-FPM + MariaDB; unix sockets; `www-data` owns the FastCGI cache so the purge plugin can delete files directly. |
+| 2026-09-14 | **No Redis object cache** (Q3 → none). Page cache hits never reach PHP; miss volume is small enough for MariaDB. Revisit if miss TTFB is the bottleneck. |
 | 2026-09-11 | **Existing site is migrated**: DB dump imported with `scripts/import-db.sh` (domain rewrite included), `wp-content` copied with `scripts/import-wp-content.sh`. Old caching plugins are deactivated by `scripts/post-import.sh`. |
 | 2026-09-11 | **Cloudflare via Cache Rules + custom mu-plugin purge** (Q1 → A). Edge TTL follows the origin `s-maxage`; purge-by-URL on publish. |
 | 2026-09-11 | Media stays on **local disk** for now (Q6 → A); served under the site domain. R2 offload remains a later option. |
-| 2026-09-11 | **MariaDB 11.4** (Q4). |
-| 2026-09-11 | Nginx purge implemented by **deleting cache files** from PHP (same uid, shared volume) instead of compiling `ngx_cache_purge` — no custom nginx build needed. `open_file_cache` is therefore restricted to static assets. |
+| 2026-09-11 | **MariaDB** (Q4). Distro package on Ubuntu 24.04. |
+| 2026-09-11 | Nginx purge implemented by **deleting cache files** from PHP (same uid) instead of compiling `ngx_cache_purge` — no custom nginx build needed. `open_file_cache` is therefore restricted to static assets. |
 
 Still open: Q7 (image optimisation beyond core WebP), Q8 (comments), Q12 (staging).
 
@@ -38,35 +39,32 @@ bypass-cache-on-cookie is available on all plans via Cache Rules.)
 | Varnish | Excellent, but adds a hop and a process, needs TLS termination in front, and ESI is not needed when dynamic fragments are JS-loaded. Justified only for very complex fragment caching. |
 | Plugin-based page cache | Still boots PHP + WordPress on every request (except with `advanced-cache.php` tricks). 10–50× slower than Nginx serving a file. Fine for small sites, wrong tool for spikes. |
 
-## Q3 — Object cache: Redis vs Memcached vs none  · settled → **Redis**
+## Q3 — Object cache: Redis vs Memcached vs none  · settled → **none**
 
-Redis supports the data structures WordPress's cache API needs (`wp_cache_get_multiple`,
-`flush_group`), has a first-class plugin, and can double as a rate-limit / queue store later.
-Memcached is fine but has no advantage here. Valkey (Redis fork) is a drop-in if licensing
+Anonymous HTML never reaches PHP, so an object cache does not help the spike path.
+Misses and editors still run 50–200 SQL queries; MariaDB with an 8 GB buffer pool
+absorbs that at our target of < 20 renders/s.
+
+Redis remains a later option if load-test miss TTFB is dominated by SQL. Memcached
+has no advantage here. Valkey is a drop-in if we add Redis later and licensing
 becomes a concern.
 
-## Q4 — Database: MariaDB vs MySQL vs Percona  · settled → **MariaDB 11.4**
+## Q4 — Database: MariaDB vs MySQL vs Percona  · settled → **MariaDB (Ubuntu package)**
 
 | Option | Notes |
 |--------|-------|
-| **MariaDB 11.4 LTS** — *recommended* | Ubuntu-native, WordPress officially supports it, slightly faster on WP workloads, simple. |
+| **MariaDB (distro)** — *chosen* | Ubuntu-native, WordPress officially supports it, simple. |
 | MySQL 8.4 LTS | Also fine. Marginally better JSON functions (irrelevant for WP). |
 | Percona Server | Best tooling (`xtrabackup`), overkill for a 5 GB DB. |
 
-Pick MariaDB unless you have an existing preference or migration from MySQL 8 with
-incompatible features (unlikely for WordPress).
-
-## Q5 — Deployment model: native packages vs Docker Compose  · settled → **Docker Compose**
+## Q5 — Deployment model: native packages vs Docker Compose  · settled → **native packages**
 
 | Option | Pros | Cons |
 |--------|------|------|
-| A. Native packages (apt) + shell/Ansible provisioning | Best raw performance; unix sockets everywhere | Reproducibility depends on provisioning scripts; slower to get right |
-| **B. Docker Compose** — *chosen* | Reproducible; one command to start; easy version bumps; identical stack locally and on the VPS | Bridge-network hop between nginx↔PHP↔DB (~1–3 % on cache misses, irrelevant for cache hits); resource limits must be set per container |
+| **A. Native packages (apt) + this repo's setup script** — *chosen* | Unix sockets; no bridge-network hop; ufw actually protects 80/443; one `www-data` uid for cache purge | Reproducibility depends on `scripts/setup-vps.sh` |
+| B. Docker Compose | Reproducible images; easy version bumps | Docker bypasses ufw; extra hop on misses; uid mapping for cache purge |
 
-Chosen for speed of implementation. Mitigations built in: two FPM containers with
-per-container CPU/memory limits (`.env`), nginx cache on a named volume shared with PHP,
-log rotation via the json-file driver, `DOCKER-USER` firewall rules because Docker
-bypasses ufw. See doc 08.
+Chosen for origin performance and operational simplicity on a single VPS.
 
 ## Q6 — Media storage: local disk vs Cloudflare R2  · settled → **A (local disk), R2 later**
 
@@ -108,7 +106,7 @@ Prevents random readers from triggering slow cron work in their request.
 
 ## Q12 — Staging environment  · **OPEN**
 
-Same VPS (separate vhost, DB, PHP pool, Redis DB index — cheap, but shares resources) vs a
+Same VPS (separate vhost, DB, PHP pool — cheap, but shares resources) vs a
 separate small VPS (clean, costs money). Recommendation: same VPS, resource-limited via
 systemd, behind Cloudflare Access.
 
@@ -119,6 +117,5 @@ systemd, behind Cloudflare Access.
 1. **Q7** — Image optimisation: core WebP is enabled in `perf-tweaks.php`; add Cloudflare Polish if on Pro.
 2. **Q8** — Comments: off, native (JS-loaded), or third-party? Native comments set a
    `comment_author_*` cookie which bypasses both caches for that reader.
-3. **Q12** — Staging: a second compose project on the same VPS (different ports, behind
-   Cloudflare Access) is the cheap option.
+3. **Q12** — Staging: a second vhost on the same VPS (behind Cloudflare Access) is the cheap option.
 4. Confirm assumptions in doc 01 (traffic targets, disk size, editor count).

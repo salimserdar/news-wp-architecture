@@ -3,17 +3,17 @@
 ## Security hardening
 
 ### Network
-- `ufw`: default deny incoming; allow SSH (custom port, rate-limited); allow 80/443 **only**
-  from Cloudflare IPv4/IPv6 ranges (cron job refreshes the list weekly from
-  `https://www.cloudflare.com/ips-v4` / `ips-v6`).
+- `ufw`: default deny incoming; allow SSH (custom port, rate-limited); allow 80/443
+  from anywhere on first boot (`WEB_OPEN=1`), then **only** Cloudflare IPv4/IPv6 ranges
+  (`WEB_OPEN=0`). Cron refreshes the list weekly from
+  `https://www.cloudflare.com/ips-v4` / `ips-v6`.
 - Authenticated Origin Pulls: Nginx requires Cloudflare's client cert → even if someone
   finds the origin IP, they can't complete a TLS handshake.
-- MariaDB and Redis: no published ports; reachable only on the internal Docker network.
+- MariaDB: localhost only (unix socket / 127.0.0.1).
 
 ### WordPress
-- `DISALLOW_FILE_EDIT`, `DISALLOW_FILE_MODS` in production (deploys via git/WP-CLI, not the admin UI).
-- File permissions: code owned by deploy user, read-only for `www-data`; only `uploads/` and
-  `cache/` writable.
+- `DISALLOW_FILE_EDIT` in production (deploys via git/WP-CLI, not the admin UI).
+- File permissions: WordPress tree owned by `www-data`; `wp-config.php` mode 640.
 - Block PHP execution in `uploads/` at the Nginx level.
 - `xmlrpc.php` disabled (or allow-listed for Jetpack IPs if used).
 - Login: Cloudflare rate limit + WAF rule on `/wp-login.php`; consider Cloudflare Access
@@ -26,7 +26,7 @@
 
 ### Server
 - Unattended upgrades for security patches; monthly window for kernel reboots.
-- `fail2ban` on SSH and Nginx auth/limit logs.
+- `fail2ban` on SSH.
 - Auditd or at least `last`/`journalctl` review in the weekly ops checklist.
 
 ## Monitoring
@@ -38,11 +38,10 @@ cloud dashboard, or Prometheus exporters + Grafana Cloud free tier if we want lo
 |--------|--------|-----------------|
 | Nginx cache status distribution | access log `$upstream_cache_status` → GoAccess / Netdata log parser | BYPASS > 10 % or MISS > 20 % of HTML for 10 min |
 | Cloudflare cache hit ratio (HTML) | Cloudflare Analytics / GraphQL API | < 70 % for 30 min |
-| PHP-FPM active vs max children | FPM `/status` page (localhost only) | active ≥ 80 % of max for 2 min |
+| PHP-FPM active vs max children | FPM `/status` via `cgi-fcgi` | active ≥ 80 % of max for 2 min |
 | PHP-FPM listen queue | FPM status `listen queue` | > 0 sustained |
 | PHP slow log | `request_slowlog_timeout = 5s` | any entry → review |
 | MariaDB buffer pool hit rate, threads_running, slow queries | `SHOW GLOBAL STATUS`, slow log | hit rate < 99 %; threads_running > 8 |
-| Redis hit ratio, evicted keys, memory | `INFO` | hit ratio < 85 %; evictions > 0 |
 | Disk usage / inodes (uploads, cache, logs) | node metrics | > 80 % |
 | Load, CPU steal (VPS neighbours!), memory, OOM events | node metrics / `journalctl -k` | steal > 10 %; any OOM kill |
 | HTTP 5xx rate at origin and at edge | Nginx log + Cloudflare | > 0.5 % for 5 min |
@@ -54,9 +53,9 @@ Weekly review: top slow queries, plugins updated, disk growth trend, cache ratio
 
 | What | How | When | Retention | Where |
 |------|-----|------|-----------|-------|
-| Database | `mariabackup` (hot, consistent) or `mysqldump --single-transaction --quick` piped to `zstd` | Nightly + before every deploy | 14 daily, 8 weekly | Cloud Storage (`GCS_BUCKET`) and/or rclone (`BACKUP_RCLONE_REMOTE`: R2 / B2) |
+| Database | `mariadb-dump --single-transaction --quick` piped to `zstd` | Nightly + before every deploy | 14 daily | Cloud Storage (`GCS_BUCKET`) and/or rclone (`BACKUP_RCLONE_REMOTE`: R2 / B2) |
 | Uploads | `gcloud storage rsync` and/or `rclone sync` incremental | Nightly | Mirror + 30-day version history in bucket | Same bucket |
-| Code + config | git (this repo + site repo) | On change | — | Git remote |
+| Code + config | git (this repo + site tree) | On change | — | Git remote |
 | Server config | `/etc` snapshot via `etckeeper` | On change | — | Git |
 
 Restore drill: quarterly, into the staging vhost, timed. A backup that has never been
@@ -69,14 +68,18 @@ On a GCE VM the instance service account is enough — no JSON key. Grant that a
 
 ```bash
 # .env
-GCS_BUCKET=your-bucket-name
+GCS_BUCKET=tr724-backup
 
+# from a laptop that can change IAM (once per VM):
+scripts/gcs.sh grant-vm VM_NAME ZONE
+
+# on the VPS:
 scripts/gcs.sh check                         # list the bucket (proves IAM + scopes)
+scripts/pull-gcs-backup.sh --check           # see the dump + wp-content
+scripts/pull-gcs-backup.sh                   # -> import/wp_tr724.sql + import/wp-content/
 scripts/gcs.sh upload ./file.txt             # VM -> bucket
 scripts/gcs.sh download file.txt ./          # bucket -> VM
 scripts/gcs.sh backup                        # push backups/db + backups/uploads
-scripts/gcs.sh restore-db FILE.sql.zst       # pull one dump
-scripts/gcs.sh restore-uploads               # pull media mirror
 ```
 
 Nightly `scripts/backup.sh` calls `gcs.sh backup` when `GCS_BUCKET` is set.
@@ -107,25 +110,21 @@ scripts/gcs.sh grant-vm VM_NAME ZONE
 ## Deploy flow
 
 ```
-git push → deploy.sh on server:
-  1. git pull in release dir (or rsync from CI artifact)
-  2. composer install --no-dev (if used)
+git push → on the VPS:
+  1. git pull in this repo
+  2. sudo bash scripts/setup-vps.sh     (refreshes nginx/PHP/mu-plugins; does not wipe DB)
   3. wp core/plugin/theme verify-checksums
-  4. symlink swap  current → new release   (atomic)
-  5. systemctl reload php8.3-fpm           (clears OPcache, zero dropped requests)
-  6. wp cache flush                         (Redis) — only if data model changed
-  7. purge Nginx + Cloudflare cache for changed theme assets (or purge everything, off-peak)
-  8. smoke test: curl -sI https://site/ | grep -E 'HTTP|x-fastcgi-cache|cf-cache-status'
+  4. systemctl reload php8.3-fpm        (clears OPcache, zero dropped requests)
+  5. purge Nginx + Cloudflare cache for changed theme assets (or purge everything, off-peak)
+  6. smoke test: curl -skI -H "Host: $SITE_DOMAIN" https://127.0.0.1/ | grep -iE 'HTTP|x-fastcgi-cache'
 ```
-
-Rollback = point the symlink at the previous release + FPM reload. Keep 3 releases.
 
 ## Runbooks (to write during implementation)
 
 - Traffic spike checklist: check cache status ratio → check FPM queue → check DB threads →
   if PHP saturated, temporarily raise Nginx TTL & disable non-essential plugins via WP-CLI.
 - "Site shows stale content": purge single URL (Nginx then Cloudflare) → verify headers →
-  check purge plugin logs.
+  check purge plugin logs (`grep news-cache /var/log/php8.3-fpm.log` / syslog).
 - "Site down but Nginx up": confirm stale-serving is working (readers OK), then fix PHP/DB.
 - Emergency full cache purge and warm.
 - Restore from backup (DB, uploads, full).
