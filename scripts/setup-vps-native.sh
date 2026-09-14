@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# One-time VPS preparation for Ubuntu 24.04 LTS. Native packages — no Docker,
-# no Redis, no FastCGI cache. Run as root:
-#   bash scripts/setup-vps-native.sh
+# Native Ubuntu 24.04 VPS: nginx (FastCGI page cache) + PHP 8.3-FPM + MariaDB.
+# No Docker, no Redis. Idempotent — re-run after a git pull to refresh nginx,
+# PHP pool, MariaDB tuning, mu-plugins, and cache settings. It does not wipe
+# WordPress files or the database.
+#
+#   sudo bash scripts/setup-vps-native.sh
 #
 # Optional env (or a repo-root .env):
 #   SSH_PORT=22
@@ -12,6 +15,7 @@
 #   WEB_OPEN=1                 # 1 = 80/443 from anywhere (default, first boot)
 #                              # 0 = Cloudflare IP ranges only
 #   WP_ROOT=/var/www/html
+#   CF_ZONE_ID / CF_API_TOKEN  # optional; enables Cloudflare purge-on-publish
 #
 # Docker Compose alternative: scripts/setup-vps.sh
 set -euo pipefail
@@ -34,6 +38,14 @@ DB_USER="${DB_USER:-wordpress}"
 DB_TABLE_PREFIX="${DB_TABLE_PREFIX:-wp_}"
 PHP_MAX_CHILDREN="${PHP_MAX_CHILDREN:-20}"
 SITE_DOMAIN="${SITE_DOMAIN:-}"
+CRED_FILE="/root/news-wp-native-credentials"
+
+# Re-runs: never invent a new DB password if we already saved one.
+if [[ -z "${DB_PASSWORD:-}" && -f "${CRED_FILE}" ]]; then
+  # shellcheck disable=SC1090
+  DB_PASSWORD="$(awk -F= '/^DB_PASSWORD=/ { sub(/^DB_PASSWORD=/,""); print; exit }' "${CRED_FILE}")"
+  echo "    reusing DB_PASSWORD from ${CRED_FILE}"
+fi
 
 if [[ -z "${DB_PASSWORD:-}" ]]; then
   DB_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)"
@@ -186,12 +198,19 @@ GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 SQL
 
-echo "==> nginx configs (no FastCGI cache)"
+echo "==> nginx configs (FastCGI page cache)"
 if [[ "${WP_ROOT}" != "/var/www/html" ]]; then
   echo "    warning: nginx root is /var/www/html; WP_ROOT=${WP_ROOT} is not used by site.conf"
 fi
 mkdir -p /etc/nginx/snippets /etc/nginx/certs /etc/nginx/conf.d \
-  /etc/nginx/sites-available /etc/nginx/sites-enabled
+  /etc/nginx/sites-available /etc/nginx/sites-enabled \
+  /var/cache/nginx/wp
+chown www-data:www-data /var/cache/nginx/wp
+chmod 755 /var/cache/nginx/wp
+cat > /etc/tmpfiles.d/news-wp-nginx-cache.conf <<'EOF'
+d /var/cache/nginx/wp 0755 www-data www-data -
+EOF
+systemd-tmpfiles --create /etc/tmpfiles.d/news-wp-nginx-cache.conf >/dev/null 2>&1 || true
 
 # First version of this script replaced Ubuntu's nginx.conf with one that used
 # `http2 on;` (invalid on nginx 1.24), so `nginx -t` failed and reload never ran.
@@ -220,13 +239,20 @@ http {
     default_type application/octet-stream;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
-    access_log /var/log/nginx/access.log;
     error_log /var/log/nginx/error.log;
     gzip on;
     include /etc/nginx/conf.d/*.conf;
     include /etc/nginx/sites-enabled/*;
 }
 EOF
+fi
+
+# Distro nginx.conf logs combined format; 00-news-wp.conf uses `news` (cache=).
+# Comment the distro line so we do not double-log every request.
+if grep -qE '^[[:space:]]*access_log /var/log/nginx/access.log;' /etc/nginx/nginx.conf \
+   && ! grep -q '00-news-wp.conf (news format)' /etc/nginx/nginx.conf; then
+  sed -i -E 's|^([[:space:]]*)access_log /var/log/nginx/access.log;|# access_log moved to conf.d/00-news-wp.conf (news format)\n#\1access_log /var/log/nginx/access.log;|' \
+    /etc/nginx/nginx.conf
 fi
 
 rm -f /etc/nginx/conf.d/site.conf /etc/nginx/conf.d/default.conf
@@ -242,7 +268,7 @@ fi
 ln -sfn /etc/nginx/sites-available/wordpress /etc/nginx/sites-enabled/000-wordpress
 
 # Snippets stay symlinked so scripts/cloudflare-ips.sh --nginx updates take effect.
-for snippet in fastcgi-php.conf security-headers.conf wordpress-hardening.conf tls.conf cloudflare-realip.conf; do
+for snippet in fastcgi-php.conf fastcgi-cache.conf security-headers.conf wordpress-hardening.conf tls.conf cloudflare-realip.conf; do
   ln -sfn "${REPO_DIR}/config/nginx/snippets/${snippet}" "/etc/nginx/snippets/${snippet}"
 done
 
@@ -250,6 +276,8 @@ if [[ -s "${REPO_DIR}/config/nginx/certs/origin.pem" && -s "${REPO_DIR}/config/n
   cp -a "${REPO_DIR}/config/nginx/certs/origin.pem" /etc/nginx/certs/origin.pem
   cp -a "${REPO_DIR}/config/nginx/certs/origin.key" /etc/nginx/certs/origin.key
   chmod 600 /etc/nginx/certs/origin.key
+elif [[ -s /etc/nginx/certs/origin.pem && -s /etc/nginx/certs/origin.key ]]; then
+  echo "    keeping existing /etc/nginx/certs/origin.{pem,key}"
 else
   echo "    no Origin CA cert yet — generating a self-signed pair"
   openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
@@ -279,6 +307,14 @@ if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
   chown www-data:www-data "${WP_ROOT}/wp-config.php"
 fi
 
+echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks)"
+mkdir -p "${WP_ROOT}/wp-content/mu-plugins"
+for plugin in cache-control.php cache-purge.php perf-tweaks.php; do
+  install -m 0644 -o www-data -g www-data \
+    "${REPO_DIR}/wp/mu-plugins/${plugin}" \
+    "${WP_ROOT}/wp-content/mu-plugins/${plugin}"
+done
+
 if [[ ! -f "${WP_ROOT}/wp-config.php" ]]; then
   echo "==> wp-config.php"
   extra_php="$(cat <<PHP
@@ -291,6 +327,8 @@ define('WP_POST_REVISIONS', 10);
 define('EMPTY_TRASH_DAYS', 7);
 define('WP_MEMORY_LIMIT', '256M');
 define('WP_MAX_MEMORY_LIMIT', '512M');
+define('NEWS_NGINX_CACHE_PATH', '/var/cache/nginx/wp');
+define('NEWS_WARM_URL', 'https://127.0.0.1');
 if (isset(\$_SERVER['HTTP_X_FORWARDED_PROTO']) && \$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
     \$_SERVER['HTTPS'] = 'on';
 }
@@ -319,10 +357,18 @@ fi
 # Re-runs (wp-config already exists) still need these. CONCATENATE_SCRIPTS
 # false skips wp-admin/load-styles.php, which hangs on Newspaper / tagDiv.
 if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
-  echo "==> wp-config admin-safe constants"
+  echo "==> wp-config admin-safe + cache constants"
   sudo -u www-data wp config set CONCATENATE_SCRIPTS false --raw --type=constant --path="${WP_ROOT}"
   sudo -u www-data wp config set FS_METHOD direct --type=constant --path="${WP_ROOT}"
   sudo -u www-data wp config set DISABLE_WP_CRON true --raw --type=constant --path="${WP_ROOT}"
+  sudo -u www-data wp config set NEWS_NGINX_CACHE_PATH /var/cache/nginx/wp --type=constant --path="${WP_ROOT}"
+  sudo -u www-data wp config set NEWS_WARM_URL https://127.0.0.1 --type=constant --path="${WP_ROOT}"
+  if [[ -n "${CF_ZONE_ID:-}" ]]; then
+    sudo -u www-data wp config set NEWS_CF_ZONE_ID "${CF_ZONE_ID}" --type=constant --path="${WP_ROOT}"
+  fi
+  if [[ -n "${CF_API_TOKEN:-}" ]]; then
+    sudo -u www-data wp config set NEWS_CF_API_TOKEN "${CF_API_TOKEN}" --type=constant --path="${WP_ROOT}"
+  fi
 fi
 
 if [[ -n "${SITE_DOMAIN}" ]]; then
@@ -366,9 +412,14 @@ if [[ "${http_code}" == "403" ]]; then
   exit 1
 fi
 
-cred_file="/root/news-wp-native-credentials"
+echo "    FastCGI cache (https, Host=${SITE_DOMAIN:-localhost}):"
+host_hdr="${SITE_DOMAIN:-localhost}"
+miss="$(curl -skS -o /dev/null -w '%{http_code} %header{x-fastcgi-cache}' -H "Host: ${host_hdr}" https://127.0.0.1/ || true)"
+hit="$(curl -skS -o /dev/null -w '%{http_code} %header{x-fastcgi-cache}' -H "Host: ${host_hdr}" https://127.0.0.1/ || true)"
+echo "    1st ${miss}   2nd ${hit}   (expect 200 MISS then 200 HIT)"
+
 umask 077
-cat > "${cred_file}" <<EOF
+cat > "${CRED_FILE}" <<EOF
 # Written by scripts/setup-vps-native.sh on $(date -u +%F)
 SITE_DOMAIN=${SITE_DOMAIN}
 DB_NAME=${DB_NAME}
@@ -378,7 +429,7 @@ DB_TABLE_PREFIX=${DB_TABLE_PREFIX}
 DB_BUFFER_POOL=${DB_BUFFER_POOL}
 WP_ROOT=${WP_ROOT}
 EOF
-chmod 600 "${cred_file}"
+chmod 600 "${CRED_FILE}"
 
 mkdir -p "${REPO_DIR}"/{import,backups,logs}
 
@@ -389,14 +440,15 @@ if [[ -n "${GCS_BUCKET:-}" ]]; then
 fi
 
 echo
-echo "Done (native WordPress: nginx + PHP-FPM + MariaDB, no cache, no Docker)."
-echo "  credentials: ${cred_file}"
+echo "Done (native WordPress: nginx FastCGI cache + PHP-FPM + MariaDB, no Docker/Redis)."
+echo "  Re-run this script after git pull to refresh nginx/PHP/mu-plugins (DB and wp-content stay)."
+echo "  credentials: ${CRED_FILE}"
 [[ "${GENERATED_DB_PASSWORD}" == "1" ]] && echo "  generated DB_PASSWORD (saved in that file)"
 echo
 echo "Next:"
 echo "  1. Put a Cloudflare Origin CA cert in /etc/nginx/certs/origin.{pem,key} (optional but recommended)"
-echo "  2. Point DNS at this VPS and open https://${SITE_DOMAIN:-<your-domain>}/wp-admin/install.php"
-echo "  3. Settings → Permalinks → Post name"
+echo "  2. Cloudflare Cache Rules (doc 08 step 7) so HTML is HIT at the edge, not DYNAMIC"
+echo "  3. curl -sk -H 'Host: ${SITE_DOMAIN:-your-domain}' -o /dev/null -w 'fcgi=%header{x-fastcgi-cache}\\n' https://127.0.0.1/"
 echo
 echo "Lock 80/443 to Cloudflare later:"
 echo "  WEB_OPEN=0 bash scripts/setup-vps-native.sh"

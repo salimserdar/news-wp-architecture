@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Sample a *native* (no Docker, no Redis, no FastCGI cache) VPS while k6 runs.
+# Sample a *native* (no Docker, no Redis) VPS while k6 runs. After FastCGI cache
+# is on, access.log lines include cache=HIT|MISS|BYPASS (news log format).
 # Run on the VPS as root (or a user that can read nginx/php logs):
 #
 #   sudo bash scripts/loadtest-observe-native.sh
