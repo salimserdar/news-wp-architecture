@@ -4,21 +4,39 @@ Everything in this repo is ready to run. This guide takes a fresh Ubuntu 24.04 V
 live, cached WordPress site with **your existing database and `wp-content`** in roughly
 an hour, most of it waiting for transfers.
 
+Create the VM first: **[doc 00](00-create-gce-vm.md)** (`scripts/create-gce-vm.sh` grants
+`gs://tr724-backup` **before** the instance exists).
+
 ```
 Cloudflare ──> [VPS: native packages]
                  nginx ──(cache miss / logged-in)──> PHP-FPM ──> MariaDB
                  system cron (WP-CLI every 60 s)
 ```
 
+## Contents
+
+1. [What you need](#what-you-need-before-starting)
+2. [Step 1 — Prepare the VPS](#step-1--prepare-the-vps-1020-min)
+3. [Step 2 — Configure](#step-2--configure-5-min)
+4. [Step 3 — Confirm bucket access](#step-3--confirm-bucket-access)
+5. [Step 4 — Pull the backup from GCS](#step-4--pull-the-backup-from-gcs)
+6. [Step 5 — Import the database](#step-5--import-your-database-530-min-depending-on-size)
+7. [Step 6 — Import wp-content](#step-6--import-wp-content-uploads-themes-plugins)
+8. [Step 7 — Post-import](#step-7--post-import-2-min)
+9. [Step 8 — Cloudflare](#step-8--cloudflare-10-min)
+10. [Step 9 — Verify publish → purge](#step-9--verify-the-publish--purge-flow)
+11. [Step 10 — Go-live checklist](#step-10--go-live-checklist)
+12. [Day-to-day operations](#day-to-day-operations)
+
 ## What you need before starting
 
 | Item | Where it comes from |
 |------|--------------------|
-| VPS root SSH access, Ubuntu 24.04 LTS (GCE) | your provider |
+| VPS root SSH access, Ubuntu 24.04 LTS (GCE) | [doc 00](00-create-gce-vm.md) — `scripts/create-gce-vm.sh` |
 | Your domain on Cloudflare (orange-clouded later) | Cloudflare dashboard |
 | Cloudflare Origin CA certificate + key | SSL/TLS → Origin Server → Create Certificate |
 | Cloudflare API token, permission **Zone → Cache Purge → Purge**, scoped to the zone; and the Zone ID | My Profile → API Tokens; Zone overview (right column) |
-| Site backup in Cloud Storage | `gs://tr724-backup/wp_tr724.sql` and `gs://tr724-backup/wp-content/` |
+| Site backup in Cloud Storage | `gs://tr724-backup/db/wp_tr724.sql` and `gs://tr724-backup/wp-content/` |
 | The old site's table prefix and domain | old `wp-config.php` (`$table_prefix`) |
 
 ## Repository layout
@@ -31,8 +49,8 @@ config/
   mariadb/zz-tuning.cnf    InnoDB tuning
 wp/mu-plugins/             cache-control.php (TTL headers), cache-purge.php (nginx+Cloudflare purge,
                            warmer, admin-bar button, WP-CLI), perf-tweaks.php
-scripts/                   setup-vps.sh, pull-gcs-backup.sh, cloudflare-ips.sh, import-db.sh,
-                           import-wp-content.sh, post-import.sh, wp.sh, backup.sh, cache-stats.sh, gcs.sh
+scripts/                   create-gce-vm.sh, setup-vps.sh, gcs.sh, pull-gcs-backup.sh,
+                           import-db.sh, import-wp-content.sh, post-import.sh, wp.sh, backup.sh
 import/                    (git-ignored) drop DB dumps / archives here
 backups/  logs/            (git-ignored)
 ```
@@ -43,9 +61,18 @@ WordPress itself lives at `/var/www/html` on the VPS (not in this repo).
 
 ## Step 1 — Prepare the VPS (10–20 min)
 
+If you do not have a VM yet, create it with bucket access already granted:
+
 ```bash
-ssh root@VPS_IP
-apt-get update && apt-get install -y git
+# laptop
+scripts/create-gce-vm.sh
+gcloud compute ssh news-wp --zone=YOUR_ZONE
+```
+
+Then on the VM:
+
+```bash
+sudo apt-get update && sudo apt-get install -y git
 git clone <this-repo> /opt/news-wp && cd /opt/news-wp
 cp .env.example .env && nano .env     # SITE_DOMAIN, DB_*, CF_* (see Step 2)
 SSH_PORT=22 bash scripts/setup-vps.sh # change SSH_PORT if you use a custom port
@@ -89,33 +116,26 @@ curl -sk -o /dev/null -w "%{http_code} cache=%header{x-fastcgi-cache}\n" \
 You'll get a 302/200 to the WordPress installer at this point — expected; the DB is empty.
 A second curl of a renderable page should show `HIT`.
 
-## Step 3 — Allow the VM to read `gs://tr724-backup`
+## Step 3 — Confirm bucket access
 
-The pull uses the **Compute Engine service account** (no JSON key). Grant that account
-read/write on the bucket, and give the VM the `cloud-platform` access scope.
-
-When you create the VM, pick **Allow full access to all Cloud APIs**. If the VM already
-exists, run this from a machine that can change IAM (usually your laptop, not the VPS):
-
-```bash
-# laptop, with gcloud logged in as a project owner
-cd /path/to/news-wp-architecture
-# .env must contain GCS_BUCKET=tr724-backup  (already in .env.example)
-scripts/gcs.sh grant-vm VM_NAME ZONE
-```
-
-That binds `roles/storage.objectAdmin` on `gs://tr724-backup` to the VM's service
-account and sets `--scopes=cloud-platform`. If scopes cannot change while the VM is
-running, the script prints the stop / set-service-account / start commands.
-
-Then on the VPS:
+If you used [doc 00](00-create-gce-vm.md) / `scripts/create-gce-vm.sh`, IAM is already
+on the service account. On the VPS:
 
 ```bash
 scripts/gcs.sh check
 # expect: ok — list succeeded.
 ```
 
-If `check` returns 403, the IAM binding or the access scope is still missing.
+Skip `grant-vm`. Only run it for a VM that was created without `cloud-platform` scopes
+([doc 00 §7](00-create-gce-vm.md#7-existing-vm)).
+
+If `check` returns 403, from a laptop:
+
+```bash
+scripts/gcs.sh grant-sa
+# or, VM already exists:
+scripts/gcs.sh grant-vm VM_NAME ZONE
+```
 
 ## Step 4 — Pull the backup from GCS
 

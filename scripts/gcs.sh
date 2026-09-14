@@ -15,6 +15,7 @@
 #   scripts/gcs.sh rclone-download REMOTE_PATH [LOCAL_PATH]
 #   scripts/gcs.sh mount | unmount | fstab
 #   scripts/gcs.sh grant-vm VM_NAME ZONE
+#   scripts/gcs.sh grant-sa [SA_EMAIL]     # bucket IAM only, no VM needed
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 [[ -f .env ]] && { set -a; source .env; set +a; }
@@ -349,6 +350,26 @@ case "$cmd" in
       exit 1
     fi
     ;;
+  grant-sa)
+    need_gcloud
+    need_bucket
+    sa="${1:-}"
+    if [[ -z "$sa" ]]; then
+      project="$(gcloud config get-value project 2>/dev/null || true)"
+      [[ -n "$project" && "$project" != "(unset)" ]] || {
+        echo "usage: $0 grant-sa SA_EMAIL   (or set gcloud project for the default Compute SA)" >&2
+        exit 1
+      }
+      number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
+      sa="${number}-compute@developer.gserviceaccount.com"
+    fi
+    echo "granting roles/storage.objectAdmin on $(uri) to $sa"
+    gcloud storage buckets add-iam-policy-binding "$(uri)" \
+      --member="serviceAccount:${sa}" \
+      --role="roles/storage.objectAdmin"
+    echo "ok — any new VM using this SA with --scopes=cloud-platform can read the bucket immediately."
+    echo "create the VM with:  scripts/create-gce-vm.sh"
+    ;;
   *)
     cat >&2 <<EOF
 usage: $0 COMMAND
@@ -362,6 +383,7 @@ usage: $0 COMMAND
 
   admin (from a machine that can change IAM):
     grant-vm VM_NAME ZONE
+    grant-sa [SA_EMAIL]
 
   optional rclone (no JSON key, env_auth):
     install | rclone-config

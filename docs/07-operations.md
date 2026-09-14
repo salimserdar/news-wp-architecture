@@ -67,11 +67,12 @@ On a GCE VM the instance service account is enough — no JSON key. Grant that a
 `roles/storage.objectAdmin` on the bucket, set the VM scope to `cloud-platform`, then:
 
 ```bash
+# laptop, once per project (IAM before any VM):
+scripts/gcs.sh grant-sa
+scripts/create-gce-vm.sh
+
 # .env
 GCS_BUCKET=tr724-backup
-
-# from a laptop that can change IAM (once per VM):
-scripts/gcs.sh grant-vm VM_NAME ZONE
 
 # on the VPS:
 scripts/gcs.sh check                         # list the bucket (proves IAM + scopes)
@@ -104,7 +105,8 @@ Do not put MariaDB data or live `wp-content/uploads` on the gcsfuse mount.
 From a machine that can change IAM (often your laptop, not the VM):
 
 ```bash
-scripts/gcs.sh grant-vm VM_NAME ZONE
+scripts/gcs.sh grant-vm VM_NAME ZONE   # existing VM only
+scripts/gcs.sh grant-sa                # IAM in advance, no VM needed
 ```
 
 ## Deploy flow

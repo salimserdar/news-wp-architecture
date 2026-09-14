@@ -4,7 +4,7 @@
 #
 # Default layout (override in .env):
 #   GCS_BUCKET=tr724-backup
-#   GCS_DB_OBJECT=wp_tr724.sql          # gs://tr724-backup/wp_tr724.sql
+#   GCS_DB_OBJECT=db/wp_tr724.sql       # gs://tr724-backup/db/wp_tr724.sql
 #   GCS_WP_CONTENT=wp-content           # gs://tr724-backup/wp-content/
 #
 #   scripts/pull-gcs-backup.sh
@@ -17,7 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 cd "${REPO_DIR}"
 
 GCS_BUCKET="${GCS_BUCKET:-tr724-backup}"
-GCS_DB_OBJECT="${GCS_DB_OBJECT:-wp_tr724.sql}"
+GCS_DB_OBJECT="${GCS_DB_OBJECT:-db/wp_tr724.sql}"
 GCS_WP_CONTENT="${GCS_WP_CONTENT:-wp-content}"
 IMPORT_DIR="${REPO_DIR}/import"
 
@@ -38,23 +38,52 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+command -v gcloud >/dev/null || {
+  echo "gcloud not found. On a GCE Ubuntu image it is usually preinstalled." >&2
+  echo "Otherwise:  sudo snap install google-cloud-cli --classic" >&2
+  exit 1
+}
+
 bucket="${GCS_BUCKET#gs://}"
 bucket="${bucket%/}"
 uri="gs://${bucket}"
-db_src="${uri}/${GCS_DB_OBJECT#/}"
 content_src="${uri}/${GCS_WP_CONTENT#/}"
-db_dest="${IMPORT_DIR}/$(basename "${GCS_DB_OBJECT}")"
 content_dest="${IMPORT_DIR}/wp-content"
 
-need_gcloud() {
-  command -v gcloud >/dev/null || {
-    echo "gcloud not found. On a GCE Ubuntu image it is usually preinstalled." >&2
-    echo "Otherwise:  sudo snap install google-cloud-cli --classic" >&2
-    exit 1
-  }
+object_exists() {
+  gcloud storage ls "$1" >/dev/null 2>&1
 }
 
-need_gcloud
+resolve_db_src() {
+  local want="${uri}/${GCS_DB_OBJECT#/}"
+  if object_exists "$want"; then
+    printf '%s' "$want"
+    return
+  fi
+  local try
+  for try in \
+    "${uri}/db/wp_tr724.sql" \
+    "${uri}/wp_tr724.sql" \
+    "${uri}/db/wp_tr724.sql.gz" \
+    "${uri}/db/wp_tr724.sql.zst"
+  do
+    if object_exists "$try"; then
+      echo "    note: ${want} not found; using ${try}" >&2
+      printf '%s' "$try"
+      return
+    fi
+  done
+  echo "ERROR: dump not at ${want}" >&2
+  echo "Objects under ${uri}/ :" >&2
+  gcloud storage ls "${uri}/" >&2 || true
+  echo "SQL-looking objects:" >&2
+  gcloud storage ls "${uri}/db/" >&2 || true
+  echo "Set GCS_DB_OBJECT in .env to the path after gs://${bucket}/  (example: db/wp_tr724.sql)" >&2
+  exit 1
+}
+
+db_src="$(resolve_db_src)"
+db_dest="${IMPORT_DIR}/$(basename "${db_src}")"
 
 if [[ "$CHECK_ONLY" -eq 1 ]]; then
   echo "service account: $(curl -sf -H 'Metadata-Flavor: Google' \
@@ -66,8 +95,7 @@ if [[ "$CHECK_ONLY" -eq 1 ]]; then
   gcloud storage ls -l "${db_src}"
   echo
   echo "==> ${content_src}/  (first 20 objects)"
-  gcloud storage ls "${content_src}/**" 2>/dev/null | head -20 \
-    || gcloud storage ls "${content_src}" | head -20
+  gcloud storage ls "${content_src}" | head -20
   echo
   echo "ok — VM can read the backup. Pull with:  $0"
   exit 0

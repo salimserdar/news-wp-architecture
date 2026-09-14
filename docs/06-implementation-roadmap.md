@@ -17,8 +17,9 @@ plus the procedure in **doc 08**. This page tracks what exists and what remains.
 
 ## Next (on the VPS) — follow doc 08
 
-- [ ] Step 1–2: prepare VPS, `.env`, Origin CA cert, `sudo bash scripts/setup-vps.sh`
-- [ ] Step 3: `scripts/gcs.sh grant-vm VM_NAME ZONE` (laptop), then `scripts/gcs.sh check` on the VPS
+- [ ] [Doc 00](00-create-gce-vm.md): `scripts/create-gce-vm.sh` (bucket IAM, then Ubuntu VM)
+- [ ] Step 1–2: `.env`, Origin CA cert, `sudo bash scripts/setup-vps.sh`
+- [ ] Step 3: `scripts/gcs.sh check` on the VPS (skip `grant-vm` if you used doc 00)
 - [ ] Step 4: `scripts/pull-gcs-backup.sh`
 - [ ] Step 5–7: import DB, import wp-content, `scripts/post-import.sh`
 - [ ] Step 8: Cloudflare DNS, SSL Full (strict), Cache Rules, WAF, rate limit

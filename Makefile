@@ -1,4 +1,4 @@
-.PHONY: purge warm stats backup post-import reload-nginx gcs pull-gcs loadtest-urls loadtest-observe wp
+.PHONY: purge warm stats backup post-import reload-nginx gcs pull-gcs create-gce loadtest-urls loadtest-observe wp
 
 wp:            ## make wp ARGS="plugin list"
 	scripts/wp.sh $(ARGS)
@@ -10,8 +10,10 @@ stats:         ## cache hit ratios, top misses, FPM / MariaDB
 	scripts/cache-stats.sh
 backup:
 	scripts/backup.sh
-gcs:           ## make gcs ARGS="check|smoke|grant-vm VM ZONE|upload FILE"
+gcs:           ## make gcs ARGS="check|smoke|grant-sa|grant-vm VM ZONE"
 	scripts/gcs.sh $(ARGS)
+create-gce:    ## laptop: grant bucket IAM then create the Ubuntu VM
+	scripts/create-gce-vm.sh
 pull-gcs:      ## download DB + wp-content from gs://tr724-backup into import/
 	scripts/pull-gcs-backup.sh
 post-import:   ## after importing DB + wp-content
