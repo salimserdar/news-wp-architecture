@@ -1,0 +1,11 @@
+{
+  "home": "https://www.example.com/",
+  "feed": "https://www.example.com/feed/",
+  "hot": [
+    "https://www.example.com/2026/09/example-article/"
+  ],
+  "longtail": [
+    "https://www.example.com/2026/01/older-article/"
+  ],
+  "editorPostId": 0
+}

@@ -26,6 +26,7 @@ Reader ──> Cloudflare (edge cache, WAF, TLS)
 | 06 | [Implementation Roadmap](06-implementation-roadmap.md) | Phases; what is done, what is next |
 | 07 | [Operations](07-operations.md) | Monitoring, backups, security hardening, deploy flow |
 | **08** | [**Docker Implementation Guide**](08-docker-implementation-guide.md) | **Step-by-step: VPS → running site with your imported DB and wp-content** |
+| 09 | [Load test results](09-load-test-results.md) | Origin k6 runbook, SLOs, empty tables to fill after Phase 7 |
 
 ## Status
 
@@ -35,4 +36,4 @@ Reader ──> Cloudflare (edge cache, WAF, TLS)
       purge-on-publish → warm → fresh HIT, Redis object cache (PhpRedis + igbinary)
 - [ ] Deployed to the VPS, DB + wp-content imported (follow doc 08)
 - [ ] Cloudflare configured (doc 08, step 7)
-- [ ] Load test on the VPS (doc 06, phase 7)
+- [ ] Load test on the VPS (doc 06 phase 7, runbook in [doc 09](09-load-test-results.md))

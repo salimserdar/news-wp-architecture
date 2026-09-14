@@ -235,6 +235,7 @@ error (usually token permissions or wrong zone ID).
 | Purge everything (nginx + Cloudflare) | `make purge` or the admin-bar button |
 | Purge specific URLs | `scripts/wp.sh news-cache purge https://SITE_DOMAIN/some/url/` |
 | Cache statistics | `make stats` |
+| Origin load test (k6 runbook) | [doc 09](09-load-test-results.md) · `make loadtest-urls` · `make loadtest-observe` |
 | Reload nginx after config edits | `make reload-nginx` |
 | Apply PHP / pool config edits | `docker compose restart php php-admin` |
 | Update images (nginx, PHP, MariaDB minor, Redis) | `docker compose build --pull && docker compose up -d` |

@@ -1,4 +1,4 @@
-.PHONY: up down restart build logs ps wp purge warm stats backup post-import reload-nginx gcs
+.PHONY: up down restart build logs ps wp purge warm stats backup post-import reload-nginx gcs loadtest-urls loadtest-observe loadtest-observe-native
 
 up:            ## build + start everything
 	docker compose up -d --build
@@ -28,3 +28,9 @@ post-import:   ## after importing DB + wp-content
 	scripts/post-import.sh
 reload-nginx:  ## test + reload nginx config without dropping connections
 	docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload
+loadtest-urls: ## permalinks → loadtest/urls.json  (ARGS="--create-draft")
+	scripts/loadtest-urls.sh $(ARGS)
+loadtest-observe: ## sample origin metrics to CSV while k6 runs (Docker VPS)
+	scripts/loadtest-observe.sh
+loadtest-observe-native: ## sample nginx/php/mysql on a native (no Docker) VPS
+	scripts/loadtest-observe-native.sh

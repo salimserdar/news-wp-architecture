@@ -27,10 +27,14 @@ plus the procedure in **doc 08**. This page tracks what exists and what remains.
 ## After go-live
 
 ### Phase 7 — Load test & tune (½ day)
-- [ ] `k6`/`wrk` from another machine: (a) cache-hit storm on 20 URLs, (b) `make purge` then storm,
-      (c) editors saving posts during the storm
-- [ ] Watch `make stats`, `docker stats`, `docker compose logs php | grep slow`
-- [ ] Tune `pm.max_children`, `DB_BUFFER_POOL`, TTLs from evidence; record results in `docs/09-load-test-results.md`
+Harness is in `loadtest/k6/` + `scripts/loadtest-urls.sh` / `scripts/loadtest-observe.sh`.
+Runbook and empty results tables: **[doc 09](09-load-test-results.md)**. Origin-direct only
+(k6 on a second machine, Cloudflare bypassed).
+
+- [ ] Generator VM in the same region; temporarily allow its IP on `CF-ONLY`; smoke curl is `HIT`
+- [ ] (a) `hit-storm.js` (b) `make purge` then `purge-storm.js` (c) `editor-storm.js` draft saves
+- [ ] Watch `make loadtest-observe` (and `make stats` / `docker compose logs php | grep slow`)
+- [ ] Record numbers in doc 09; tune `pm.max_children`, `DB_BUFFER_POOL`, TTLs only from evidence
 
 ### Phase 8 — Observability (½ day)
 - [ ] Netdata (host install, sees Docker containers) or Prometheus exporters + Grafana Cloud

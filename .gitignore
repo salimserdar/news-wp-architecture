@@ -15,6 +15,11 @@ config/nginx/certs/*
 !config/nginx/certs/.gitkeep
 !config/nginx/certs/README.md
 
+# Load-test artefacts generated on the VPS / generator
+loadtest/urls.json
+loadtest/results/*
+!loadtest/results/.gitkeep
+
 # OS / editor
 .DS_Store
 *.swp
