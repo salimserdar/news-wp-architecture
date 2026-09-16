@@ -314,5 +314,10 @@ API error (usually token permissions or wrong zone ID).
   phpMyAdmin dumps add indexes after INSERTs; those queue tables often have several `id=0`
   rows and abort the rest of the dump. `import-db.sh` skips Action Scheduler row data
   (tables are still created empty). Set `IMPORT_ACTION_SCHEDULER=1` to keep the queue.
+- **Site returns 502 during `import-db.sh`.** The script stops PHP-FPM so `ALTER TABLE` can
+  lock; nginx stays up. FPM is started again when the script exits (success or failure).
+- **`ERROR 1146 Table 'wordpress.wp_posts' doesn't exist`** usually means a previous import
+  was still running (or PHP still querying) when this one dropped the database. The script
+  refuses to start a second copy and kills other sessions on the DB before it proceeds.
 - **Loopback to the public hostname.** Setup adds `127.0.0.1 SITE_DOMAIN` to `/etc/hosts` so wp-cron
   and Site Health do not hairpin out through Cloudflare.
