@@ -18,7 +18,7 @@ GCS_BUCKET="${GCS_BUCKET:-tr724-backup}"
 GCE_NAME="${GCE_NAME:-news-wp-2}"
 GCE_ZONE="${GCE_ZONE:-}"
 GCE_MACHINE="${GCE_MACHINE:-e2-standard-2}"   # 2 vCPU / 8 GB; e2-highmem-2 = 2 / 16 GB
-GCE_DISK_GB="${GCE_DISK_GB:-100}"
+GCE_DISK_GB="${GCE_DISK_GB:-300}"
 GCE_DISK_TYPE="${GCE_DISK_TYPE:-pd-standard}"  # pd-balanced counts against SSD quota
 GCE_SA="${GCE_SA:-}"                         # empty = project default Compute Engine SA
 GRANT_ONLY=0
@@ -41,7 +41,7 @@ while [[ $# -gt 0 ]]; do
 Usage: $0 [--grant-only] [--reuse|--recreate] [--name NAME] [--zone ZONE] [--machine TYPE] [--disk GB] [--sa EMAIL]
 
 Env (or .env):  GCS_BUCKET GCE_NAME GCE_ZONE GCE_MACHINE GCE_DISK_GB GCE_SA
-Defaults:       tr724-backup news-wp-2 (gcloud default zone) e2-standard-2 200 default-compute-SA
+Defaults:       tr724-backup news-wp-2 (gcloud default zone) e2-standard-2 300 default-compute-SA
 
   --reuse      if NAME already exists, keep it (do not create)
   --recreate   delete NAME then create it again (destroys the old disk)
