@@ -18,7 +18,9 @@ pull-gcs:      ## download DB + wp-content from gs://tr724-backup into import/
 	scripts/pull-gcs-backup.sh
 post-import:   ## after importing DB + wp-content
 	scripts/post-import.sh
-reload-nginx:  ## test + reload nginx config without dropping connections
+reload-nginx:  ## install http/site conf, test, reload without dropping connections
+	cp -a config/nginx/http.conf /etc/nginx/conf.d/00-news-wp.conf
+	cp -a config/nginx/site.conf /etc/nginx/sites-available/wordpress
 	nginx -t && nginx -s reload
 loadtest-urls: ## permalinks → loadtest/urls.json  (ARGS="--create-draft")
 	scripts/loadtest-urls.sh $(ARGS)

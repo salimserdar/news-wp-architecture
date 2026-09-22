@@ -189,6 +189,8 @@ for stmt in stmts:
 print("    indexes done", flush=True)
 PY
   rm -f "$tmp"
+  echo "==> ANALYZE TABLE so the planner uses the new indexes"
+  mysql "${DB_NAME}" -e "ANALYZE TABLE wp_posts, wp_postmeta, wp_options, wp_comments, wp_term_relationships;" >/dev/null || true
 }
 
 PREFIX_IN_DUMP="$($CAT "$DUMP" 2>/dev/null | grep -m1 -oE 'CREATE TABLE `?[A-Za-z0-9_]+_options`?' | sed -E 's/CREATE TABLE `?([A-Za-z0-9_]+_)options`?/\1/' || true)"

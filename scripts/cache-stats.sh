@@ -14,6 +14,14 @@ if [[ -s "$LOG" ]]; then
   echo
   echo "== Top MISS / BYPASS URLs (should be rare and explainable) =="
   tail -n "$LINES" "$LOG" | grep -E 'cache=(MISS|BYPASS|EXPIRED)' | awk '{print $7}' | sort | uniq -c | sort -rn | head -15
+  echo
+  echo "== Blocked bots (403, bot=1) =="
+  blocked=$(tail -n "$LINES" "$LOG" | awk '/ bot=1/ { n++ } END { print n+0 }')
+  echo "  ${blocked} requests"
+  if [[ "${blocked}" -gt 0 ]]; then
+    tail -n "$LINES" "$LOG" | awk -F'"' '/ bot=1/ { print $6 }' | sort | uniq -c | sort -rn | head -10 \
+      | awk '{ $1 = sprintf("  %6d", $1); print }'
+  fi
 else
   echo "  (no access log yet at $LOG)"
 fi

@@ -110,7 +110,7 @@ Applied by `scripts/setup-vps.sh`.
 - Rough usage: OS 10 GB · WordPress + uploads 20–100 GB (grows with media!) · DB 5–10 GB ·
   Nginx cache 4 GB · logs 5 GB · local backup staging 10 GB.
 - Uploads are the growth risk. Offloading media to **Cloudflare R2** (S3-compatible, zero egress
-  fees) is the natural escape valve — see doc 05, Q6.
+  fees) is the natural escape valve — see [doc 10](10-r2-media-offload.md) (decision: doc 05 Q6).
 
 ## What happens in a 10× spike (sanity check)
 

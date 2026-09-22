@@ -84,7 +84,7 @@ wp-admin, wp-login.php, REST API writes, and `POST` requests are never cached.
 | Component | Responsible for | Explicitly NOT responsible for |
 |-----------|-----------------|-------------------------------|
 | **Cloudflare** | DNS, DDoS absorption, WAF, bot mitigation, TLS to readers, caching static assets ~forever, caching HTML briefly, image resizing (Polish/Mirage optional) | Being the source of truth for cache state |
-| **Nginx** | TLS from Cloudflare (origin cert), full-page cache, gzip, static file serving, rate limiting on `wp-login.php` / `xmlrpc.php` | Running any application logic |
+| **Nginx** | TLS from Cloudflare (origin cert), full-page cache, gzip, static file serving, rate limiting on `wp-login.php` / `xmlrpc.php`, 403 for archive/AI crawler User-Agents | Running any application logic |
 | **PHP-FPM** | Rendering the pages that missed both caches; wp-admin; REST API | Serving static files |
 | **MariaDB** | Source of truth | Handling read traffic that the page cache could absorb |
 | **System cron** | Running `wp cron event run --due-now` every minute; cache warmers; backups | — |

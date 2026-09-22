@@ -15,6 +15,11 @@
 - `DISALLOW_FILE_EDIT` in production (deploys via git/WP-CLI, not the admin UI).
 - File permissions: WordPress tree owned by `www-data`; `wp-config.php` mode 640.
 - Block PHP execution in `uploads/` at the Nginx level.
+- Archive/AI/scanner User-Agents return 403 at Nginx (`map $http_user_agent $bad_bot`
+  in `config/nginx/http.conf`). Cloudflare still lets “verified” SEO crawlers
+  through; origin is what stops them hitting PHP. Search/social preview bots
+  (Googlebot, Bingbot, facebookexternalhit, Twitterbot, …) are not on the list.
+  Count: `grep 'bot=1' /var/log/nginx/access.log | awk '$9==403' | wc -l`.
 - `xmlrpc.php` disabled (or allow-listed for Jetpack IPs if used).
 - Login: Cloudflare rate limit + WAF rule on `/wp-login.php`; consider Cloudflare Access
   (Zero Trust, free for ≤ 50 users) in front of `/wp-admin` for editors — removes the whole
@@ -60,6 +65,11 @@ Weekly review: top slow queries, plugins updated, disk growth trend, cache ratio
 
 Restore drill: quarterly, into the staging vhost, timed. A backup that has never been
 restored is a hope, not a backup.
+
+After media cut-over ([doc 10](10-r2-media-offload.md)): stop the origin `uploads/`
+rsync in `scripts/backup.sh`. R2 object versioning is the media backup; restore with
+`rclone copy` from the **media** bucket (`news-media`), not from `BACKUP_RCLONE_REMOTE`.
+DB dumps and the commands below stay as they are until that day.
 
 ### Google Cloud Storage (upload / download)
 

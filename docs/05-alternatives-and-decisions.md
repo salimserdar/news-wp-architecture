@@ -74,7 +74,9 @@ Chosen for origin performance and operational simplicity on a single VPS.
 | **B. Offload to Cloudflare R2** (S3-compatible, no egress fees) via a media-offload plugin | Disk stays small; backups faster; effectively unlimited media. Adds a plugin dependency and some setup. |
 
 Recommendation: start with **A**, design the upload path so **B** can be switched on later
-without URL changes (serve media from a `media.` or `cdn.` subdomain from day one).
+without URL changes. The runbook is **[doc 10](10-r2-media-offload.md)**: copy `uploads/`
+to R2, serve reads via a Worker on `/wp-content/uploads/*`, keep public URLs on
+`SITE_DOMAIN`. Do not flip this log line until that cut-over actually happens.
 
 ## Q7 — Image optimisation: server-side vs Cloudflare  · **OPEN**
 

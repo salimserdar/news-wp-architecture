@@ -293,6 +293,7 @@ API error (usually token permissions or wrong zone ID).
 | Page TTL in nginx / Cloudflare | `wp/mu-plugins/cache-control.php` (`TTL_*` constants) |
 | Which URLs are purged on publish | `urls_for_post()` in `wp/mu-plugins/cache-purge.php`, or hook `news_cache_purge_urls` |
 | Cookie / path bypass rules | `map` blocks in `config/nginx/http.conf` |
+| Which bot User-Agents get 403 | `map $http_user_agent $bad_bot` in `config/nginx/http.conf` |
 | PHP workers | `config/php/pool-www.conf` (`pm.max_children`) or `.env` `PHP_MAX_CHILDREN` |
 | DB memory | `.env` → `DB_BUFFER_POOL` |
 | Upload size limit | `client_max_body_size` (`config/nginx/http.conf`) and `upload_max_filesize` (`config/php/conf.d/zz-wp.ini`) |
@@ -308,6 +309,10 @@ API error (usually token permissions or wrong zone ID).
 - **Plugin updates from wp-admin** are picked up within 60 s (`opcache.revalidate_freq = 60`).
   To force it: `systemctl reload php8.3-fpm`.
 - **Newspaper / tagDiv + PHP JIT** hangs `wp-admin/load-styles.php`. JIT is disabled in the pool config.
+- **wp-admin is a white screen after login, login itself works.** PHP-FPM is usually busy
+  (Yoast XML sitemaps + a cold `wp_postmeta` after import). `post-import.sh` turns sitemaps
+  off and deactivates the obsolete `rest-api` plugin (REST is in core). Re-enable sitemaps
+  in SEO → General → Features once the page cache is warm.
 - **Table prefix mismatch** → white screen / "install" page after import. `import-db.sh` refuses to run
   if the dump's prefix doesn't match `.env`.
 - **`ERROR 1062 Duplicate entry '0' for key PRIMARY`** on `wp_actionscheduler_*` during import.

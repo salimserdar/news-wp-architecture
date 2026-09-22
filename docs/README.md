@@ -40,6 +40,7 @@ Reader ──> Cloudflare (edge cache, WAF, TLS)
 | 07 | [Operations](07-operations.md) | Monitoring, backups, security hardening, deploy flow |
 | **08** | [**Implementation Guide**](08-implementation-guide.md) | **Step-by-step on the VPS: stack, import, Cloudflare** |
 | 09 | [Load test results](09-load-test-results.md) | Origin k6 runbook, SLOs, empty tables to fill after Phase 7 |
+| 10 | [R2 media offload](10-r2-media-offload.md) | Later: copy `uploads/` to Cloudflare R2, keep public URLs |
 
 ## Status
 

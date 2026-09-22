@@ -44,7 +44,7 @@ Runbook and empty results tables: **[doc 09](09-load-test-results.md)**. Origin-
 - [ ] External uptime check on `/-/health`
 
 ### Later options
-- Media offload to Cloudflare R2 (doc 05 Q6) once `uploads/` grows past ~50 GB
+- Media offload to Cloudflare R2 once `uploads/` grows past ~50 GB: **[doc 10](10-r2-media-offload.md)** (decision: doc 05 Q6)
 - Staging vhost (Q12)
 - Authenticated Origin Pulls (two lines in `config/nginx/snippets/tls.conf`)
 - Meilisearch if native search becomes a hotspot
