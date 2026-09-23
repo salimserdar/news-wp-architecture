@@ -10,7 +10,7 @@
 #   scripts/gcs.sh upload LOCAL_PATH [REMOTE_PATH]
 #   scripts/gcs.sh download REMOTE_PATH [LOCAL_PATH]
 #   scripts/gcs.sh backup | restore-db FILE | restore-uploads | pull
-#   scripts/gcs.sh install | rclone-config
+#   scripts/gcs.sh install | repair-apt | rclone-config
 #   scripts/gcs.sh rclone-upload LOCAL_PATH [REMOTE_PATH]
 #   scripts/gcs.sh rclone-download REMOTE_PATH [LOCAL_PATH]
 #   scripts/gcs.sh mount | unmount | fstab
@@ -42,6 +42,41 @@ need_gcsfuse() {
     echo "gcsfuse not found. Run:  scripts/gcs.sh install" >&2
     exit 1
   }
+}
+
+# Ubuntu 24.04 runs apt-key to read an armored signed-by key and dies with
+# "Unknown error executing apt-key", which fails every apt-get update.
+# A binary keyring skips apt-key. With no gpg yet, hide the repo so the
+# package update that installs gnupg can succeed.
+repair_gcsfuse_apt() {
+  local list=/etc/apt/sources.list.d/gcsfuse.list
+  local ensure="${1:-}"
+  [[ "$(uname -s)" == Linux ]] || return 0
+  if [[ "$ensure" != "ensure" && ! -f "$list" && ! -f "${list}.disabled" ]]; then
+    return 0
+  fi
+  if ! command -v gpg >/dev/null; then
+    if [[ -f "$list" ]]; then
+      mv "$list" "${list}.disabled"
+      echo "==> gcsfuse apt repo set aside until gnupg is installed"
+    fi
+    return 0
+  fi
+
+  install -d -m 0755 /usr/share/keyrings
+  local tmp
+  tmp="$(mktemp)"
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+    | gpg --batch --dearmor --yes -o "$tmp"
+  install -m 0644 "$tmp" /usr/share/keyrings/cloud.google.gpg
+  rm -f "$tmp"
+
+  local codename
+  codename="$(. /etc/os-release && echo "${VERSION_CODENAME}")"
+  echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt gcsfuse-${codename} main" \
+    >"$list"
+  rm -f "${list}.disabled" /usr/share/keyrings/cloud.google.asc
+  echo "==> gcsfuse apt repo uses /usr/share/keyrings/cloud.google.gpg"
 }
 
 bucket_name() {
@@ -212,12 +247,18 @@ case "$cmd" in
   pull)
     exec bash scripts/pull-gcs-backup.sh "$@"
     ;;
+  repair-apt)
+    [[ $EUID -eq 0 ]] || { echo "run as root:  sudo bash scripts/gcs.sh repair-apt" >&2; exit 1; }
+    repair_gcsfuse_apt
+    ;;
   install)
     [[ $EUID -eq 0 ]] || { echo "run as root:  sudo bash scripts/gcs.sh install" >&2; exit 1; }
     [[ "$(uname -s)" == Linux ]] || { echo "install is for Ubuntu/Debian VMs" >&2; exit 1; }
     export DEBIAN_FRONTEND=noninteractive
+    repair_gcsfuse_apt
     apt-get update -y
     apt-get install -y curl gnupg lsb-release unzip fuse3 || apt-get install -y curl gnupg lsb-release unzip fuse
+    repair_gcsfuse_apt ensure
 
     if ! command -v rclone >/dev/null || ! rclone help flags 2>/dev/null | grep -q -- '--gcs-env-auth'; then
       echo "==> rclone (official installer, needs env_auth for GCE)"
@@ -226,11 +267,6 @@ case "$cmd" in
 
     if ! command -v gcsfuse >/dev/null; then
       echo "==> gcsfuse"
-      GCSFUSE_REPO="gcsfuse-$(lsb_release -c -s)"
-      echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt ${GCSFUSE_REPO} main" \
-        >/etc/apt/sources.list.d/gcsfuse.list
-      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-        >/usr/share/keyrings/cloud.google.asc
       apt-get update -y
       apt-get install -y gcsfuse
     fi
@@ -386,7 +422,7 @@ usage: $0 COMMAND
     grant-sa [SA_EMAIL]
 
   optional rclone (no JSON key, env_auth):
-    install | rclone-config
+    install | repair-apt | rclone-config
     rclone-upload LOCAL_PATH [REMOTE_PATH]
     rclone-download REMOTE_PATH [LOCAL_PATH]
 

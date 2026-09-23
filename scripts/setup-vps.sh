@@ -62,11 +62,19 @@ if [[ -z "${DB_BUFFER_POOL:-}" ]]; then
   fi
 fi
 
+# A broken gcsfuse apt source (armored key → apt-key) fails this update on Ubuntu 24.04.
+if [[ -f /etc/apt/sources.list.d/gcsfuse.list || -f /etc/apt/sources.list.d/gcsfuse.list.disabled ]]; then
+  bash "${REPO_DIR}/scripts/gcs.sh" repair-apt
+fi
+
 echo "==> Base packages"
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl gnupg ufw fail2ban \
   unattended-upgrades apt-listchanges htop iotop ncdu jq rsync zstd unzip openssl rclone \
   libfcgi-bin
+if [[ -f /etc/apt/sources.list.d/gcsfuse.list.disabled ]]; then
+  bash "${REPO_DIR}/scripts/gcs.sh" repair-apt
+fi
 
 echo "==> nginx + PHP 8.3-FPM + MariaDB"
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
