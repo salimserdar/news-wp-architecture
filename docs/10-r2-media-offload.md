@@ -22,7 +22,7 @@ Readers
         ├── HTML / PHP  →  VPS (unchanged)
         └── /wp-content/uploads/*  →  R2  (Worker, same URL)
               ▲
-              └── PHP-FPM writes new files via S3 API (offload plugin)
+              └── PHP-FPM writes new files via S3 API (mu-plugin r2-offload.php)
 ```
 
 
@@ -80,7 +80,7 @@ Do **not** reuse `BACKUP_RCLONE_REMOTE` for live media. That remote is for
 | Two buckets, not one                          | `news-media` (public via Worker / custom domain) and the existing private backup remote       |
 | API token for S3                              | **Object Read & Write** on `news-media` only. Account ID + Access Key + Secret. Never commit. |
 | Disk snapshot or GCS `uploads/` mirror        | Take this **before** deleting local files                                                     |
-| Plugin budget                                 | [Doc 07](07-operations.md): keep under 15 active plugins. Offload is one more.                |
+| Plugin budget                                 | [Doc 07](07-operations.md): keep under 15 active plugins. Offload is a must-use plugin in this repo, not another wp-admin plugin. |
 
 
 Estimate size first:
@@ -324,47 +324,65 @@ the R2 custom domain from a **separate** hostname. This is strictly worse than 4
 ## Step 5 — Send new uploads to R2
 
 Image **generation** stays on the VM (GD/Imagick, `perf-tweaks.php`). Only the
-**bytes** leave.
+**bytes** leave, and they leave **before the upload request returns**. Otherwise
+the Worker 404s the photo (it never reads the VM disk).
 
-Install one offload plugin (S3-compatible). **WP Offload Media Lite** is the usual
-choice; Media Cloud also works. Configure:
+`wp/mu-plugins/r2-offload.php` does that PUT. `scripts/setup-vps.sh` installs it
+with the other mu-plugins. It does not appear in the wp-admin plugin list and
+does not rewrite attachment URLs.
 
-
-| Setting                         | Value                                                                                                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Provider                        | S3-compatible / Cloudflare R2                                                                                                                               |
-| Endpoint                        | `https://ACCOUNT_ID.r2.cloudflarestorage.com`                                                                                                               |
-| Bucket                          | `news-media`                                                                                                                                                |
-| Region                          | `auto`                                                                                                                                                      |
-| Path prefix                     | empty if the plugin already prefixes `wp-content/uploads/`                                                                                                  |
-| Delivery                        | **Keep the site domain** (Worker serves it). If the plugin demands a CDN hostname, set `media.SITE_DOMAIN` **and** keep the Worker so old HTML still works. |
-| Remove local file after offload | **off** until soak is done; **on** after Step 7                                                                                                             |
-| Copy existing files             | skip — rclone already did this                                                                                                                              |
+Credentials live in `.env`, not in the database and not in the plugin file.
+Setup copies non-empty values into `wp-config.php` (mode 640, `www-data`):
 
 
-Credentials in `.env` (or `wp-config.php` constants that read getenv), **not** the
-database. Exact constant names depend on the plugin; a typical shape:
+| `.env`                  | `wp-config.php`               |
+| ----------------------- | ----------------------------- |
+| `R2_ACCOUNT_ID`         | `NEWS_R2_ACCOUNT_ID`          |
+| `R2_ACCESS_KEY_ID`      | `NEWS_R2_ACCESS_KEY_ID`       |
+| `R2_SECRET_ACCESS_KEY`  | `NEWS_R2_SECRET_ACCESS_KEY`   |
+| `R2_BUCKET`             | `NEWS_R2_BUCKET` (`news-media`) |
 
-```php
-define( 'AS3CF_SETTINGS', serialize( array(
-  'provider' => 'aws',
-  'access-key-id' => getenv( 'R2_ACCESS_KEY_ID' ),
-  'secret-access-key' => getenv( 'R2_SECRET_ACCESS_KEY' ),
-  'bucket' => getenv( 'R2_BUCKET' ) ?: 'news-media',
-  'region' => 'auto',
-  'endpoint' => getenv( 'R2_ENDPOINT' ),
-  'use-server-roles' => false,
-) ) );
-```
 
-Acceptance:
+If any constant is missing, the mu-plugin does nothing and logs once. Endpoint
+is `https://ACCOUNT_ID.r2.cloudflarestorage.com/BUCKET/key`, region `auto`,
+SigV4 from PHP (no AWS SDK). The bucket stays private; the Worker is the reader.
 
-1. Upload a test image in wp-admin.
-2. Confirm the object exists: `rclone ls r2-media:news-media/wp-content/uploads/$(date +%Y/%m)/ | grep test`
-3. Confirm the article HTML still uses `/wp-content/uploads/...` on `SITE_DOMAIN`.
-4. `curl -sI` that URL → `cf-cache-status: HIT` on the second request.
-5. Confirm no new cookie on anonymous HTML (`make stats` BYPASS ratio unchanged).
-  Offload plugins that set cookies on the front end are a cache killer (doc 03).
+For each new or regenerated attachment it uploads:
+
+- the main file (`file`, including a `-scaled` original)
+- `original_image`, when WordPress kept the pre-scale file
+- every intermediate size, including WebP from `perf-tweaks.php`
+- any `sources` entries
+
+Object key = public path with the leading slash removed:
+
+`https://SITE_DOMAIN/wp-content/uploads/2026/09/photo.webp`
+→ `wp-content/uploads/2026/09/photo.webp`
+
+Local files stay on disk until Step 7. This mu-plugin never deletes them.
+Deleting an attachment deletes those keys in R2 (versioning can restore them).
+
+A failed PUT is logged, shown on the next wp-admin screen, and retried by the
+existing minutely system cron. After repeated failure the notice stays. The
+file is still on the VM, but readers miss it until a PUT succeeds.
+
+After a successful PUT or delete, the public URL is handed to `cache-purge.php`
+so a cached Worker 404 (or a deleted image) does not stick under the 1-year
+uploads cache rule.
+
+Historical files are not copied here — Step 3's rclone sync already did that.
+
+Acceptance, on the VM:
+
+1. Fill `R2_*` in `.env`, pull, re-run `sudo bash scripts/setup-vps.sh`.
+   That refreshes mu-plugins and constants. It does not wipe the database.
+2. Upload a test image in wp-admin. The media request should not return before
+   the objects exist.
+3. Confirm the objects: `rclone ls r2-media:news-media/wp-content/uploads/$(date +%Y/%m)/ | grep test`
+   — original and WebP sizes.
+4. Confirm the article HTML still uses `/wp-content/uploads/...` on `SITE_DOMAIN`.
+5. `curl -sI` that URL → `200`, and `cf-cache-status: HIT` on the second request.
+6. Confirm no new cookie on anonymous HTML (`make stats` BYPASS ratio unchanged).
 
 ---
 
@@ -374,13 +392,15 @@ Acceptance:
 
 Run both sources in parallel for **at least 7 days** (or one full publish week):
 
-- Nightly rclone sync still runs (catch anything the plugin missed)
+- `r2-offload.php` retries a failed PUT on the minutely system cron. A nightly
+  `rclone sync` of local `uploads/` to `r2-media` still catches anything that
+  retry gave up on
 - `scripts/backup.sh` still rsyncs local uploads
 - Compare: `rclone check` local vs R2
 - Watch R2 class A/B ops and 404s in Worker logs
 - Editors: media library, featured images, Newspaper galleries, PDF inserts if you use them
 
-Only then turn on “remove local file after offload”.
+Only then delete local files (Step 7). `r2-offload.php` never removes them.
 
 ---
 
@@ -471,8 +491,8 @@ rclone sync r2-media:news-media/wp-content/uploads/ \
 sudo chown -R www-data:www-data /var/www/html/wp-content/uploads
 ```
 
-Then remove the Worker route. The plugin can stay installed (it will write both
-places) or be deactivated.
+Then remove the Worker route. Leave `r2-offload.php` in place (new uploads keep
+going to R2 and to disk) or delete it from `wp-content/mu-plugins`.
 
 ---
 
