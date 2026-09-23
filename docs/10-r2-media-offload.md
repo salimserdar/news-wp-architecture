@@ -356,8 +356,12 @@ For each new or regenerated attachment it uploads:
 
 Object key = public path with the leading slash removed:
 
-`https://SITE_DOMAIN/wp-content/uploads/2026/09/photo.webp`
-→ `wp-content/uploads/2026/09/photo.webp`
+`https://SITE_DOMAIN/wp-content/uploads/2026/09/23/photo.webp`
+→ `wp-content/uploads/2026/09/23/photo.webp`
+
+The folder is today's date in the WordPress timezone (`YYYY/MM/DD`). WordPress
+would otherwise file the image under the article's publish date, so a photo
+added to yesterday's story would show up in yesterday's folder.
 
 Local files stay on disk until Step 7. This mu-plugin never deletes them.
 Deleting an attachment deletes those keys in R2 (versioning can restore them).

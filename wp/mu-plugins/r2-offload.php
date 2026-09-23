@@ -11,7 +11,10 @@
  *   NEWS_R2_BUCKET            e.g. news-media
  *
  * Object key = public path without the leading slash
- * (wp-content/uploads/2026/09/photo.webp), matching the Worker.
+ * (wp-content/uploads/2026/09/23/photo.webp), matching the Worker.
+ *
+ * New uploads are stored under today's date in the WordPress timezone
+ * (wp-content/uploads/YYYY/MM/DD/), not under the article's publish date.
  */
 
 namespace News\R2Offload;
@@ -29,12 +32,54 @@ const EMPTY_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b78
 /** @var array<string,true> Keys already handled in this request. */
 $GLOBALS['news_r2_attempted'] = [];
 
+add_filter( 'upload_dir', __NAMESPACE__ . '\use_today_folder', 999 );
 add_filter( 'wp_generate_attachment_metadata', __NAMESPACE__ . '\on_metadata', 999, 2 );
 add_filter( 'wp_update_attachment_metadata', __NAMESPACE__ . '\on_metadata', 999, 2 );
 add_action( 'delete_attachment', __NAMESPACE__ . '\on_delete' );
 add_action( 'news_r2_offload_retry', __NAMESPACE__ . '\drain_retry' );
 add_action( 'admin_init', __NAMESPACE__ . '\ensure_retry_scheduled' );
 add_action( 'admin_notices', __NAMESPACE__ . '\admin_notice' );
+
+/**
+ * WordPress picks the upload folder from the article date, so a photo added
+ * while editing yesterday's story lands in yesterday's folder. Put new uploads
+ * in today's folder instead. Reads of existing files use basedir + the stored
+ * relative path, which this does not change.
+ *
+ * @param array<string,mixed> $uploads
+ * @return array<string,mixed>
+ */
+function use_today_folder( array $uploads ): array {
+	if ( ! empty( $uploads['error'] ) || empty( $uploads['basedir'] ) || empty( $uploads['baseurl'] ) || ! is_new_upload() ) {
+		return $uploads;
+	}
+	$time = current_time( 'mysql' );
+	if ( ! is_string( $time ) || strlen( $time ) < 10 ) {
+		return $uploads;
+	}
+	$subdir = sprintf( '/%s/%s/%s', substr( $time, 0, 4 ), substr( $time, 5, 2 ), substr( $time, 8, 2 ) );
+	if ( ( $uploads['subdir'] ?? '' ) === $subdir ) {
+		return $uploads;
+	}
+	$updated           = $uploads;
+	$updated['subdir'] = $subdir;
+	$updated['path']   = rtrim( (string) $uploads['basedir'], '/\\' ) . $subdir;
+	$updated['url']    = rtrim( (string) $uploads['baseurl'], '/' ) . $subdir;
+	if ( ! wp_mkdir_p( $updated['path'] ) ) {
+		return $uploads;
+	}
+	return $updated;
+}
+
+function is_new_upload(): bool {
+	if ( empty( $_FILES ) || ! is_array( $_FILES ) ) {
+		return false;
+	}
+	if ( is_admin() || wp_doing_ajax() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+		return true;
+	}
+	return false;
+}
 
 /**
  * @param mixed $metadata
