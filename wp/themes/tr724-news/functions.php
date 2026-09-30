@@ -45,6 +45,7 @@ add_action( 'init', function (): void {
 
 	register_block_type( get_template_directory() . '/blocks/site-header' );
 	register_block_type( get_template_directory() . '/blocks/spotlight' );
+	register_block_type( get_template_directory() . '/blocks/authors-recent-post' );
 } );
 
 add_filter(
@@ -74,6 +75,10 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-spotlight-editor-style'    => '/blocks/spotlight/editor.css',
 		'tr724-spotlight-editor-script'   => '/blocks/spotlight/edit.js',
 		'tr724-spotlight-script'          => '/blocks/spotlight/view.js',
+		'tr724-authors-recent-post-style'         => '/blocks/authors-recent-post/style.css',
+		'tr724-authors-recent-post-editor-style'  => '/blocks/authors-recent-post/editor.css',
+		'tr724-authors-recent-post-editor-script' => '/blocks/authors-recent-post/edit.js',
+		'tr724-authors-recent-post-script'        => '/blocks/authors-recent-post/view.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {

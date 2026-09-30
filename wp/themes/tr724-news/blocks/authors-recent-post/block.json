@@ -1,0 +1,32 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/authors-recent-post",
+	"title": "Authors Recent Post",
+	"category": "theme",
+	"description": "Yazarlar list. Shows each Author-role user with their latest post.",
+	"keywords": [ "authors", "yazarlar", "columnists" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"heading": {
+			"type": "string",
+			"default": "YAZARLAR"
+		},
+		"postsToShow": {
+			"type": "number",
+			"default": 8
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js",
+	"script": "file:./view.js"
+}
