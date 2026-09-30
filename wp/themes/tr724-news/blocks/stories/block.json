@@ -1,0 +1,51 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/stories",
+	"title": "Stories",
+	"category": "theme",
+	"description": "Story card grid. Filter by category or tag, and skip posts already used higher on the page.",
+	"keywords": [ "stories", "grid", "haber", "cards" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"categoryId": {
+			"type": "number",
+			"default": 0
+		},
+		"tagId": {
+			"type": "number",
+			"default": 0
+		},
+		"postsToShow": {
+			"type": "number",
+			"default": 6
+		},
+		"offset": {
+			"type": "number",
+			"default": 0
+		},
+		"showMore": {
+			"type": "boolean",
+			"default": true
+		},
+		"moreLabel": {
+			"type": "string",
+			"default": "Devamı"
+		},
+		"moreUrl": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}

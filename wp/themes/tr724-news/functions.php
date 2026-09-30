@@ -30,6 +30,12 @@ add_action( 'init', function (): void {
 		null
 	);
 	wp_register_style(
+		'tr724-news-roboto',
+		'https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap',
+		[],
+		null
+	);
+	wp_register_style(
 		'tr724-swiper',
 		'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css',
 		[],
@@ -44,15 +50,19 @@ add_action( 'init', function (): void {
 	);
 
 	register_block_type( get_template_directory() . '/blocks/site-header' );
+	register_block_type( get_template_directory() . '/blocks/site-footer' );
 	register_block_type( get_template_directory() . '/blocks/spotlight' );
 	register_block_type( get_template_directory() . '/blocks/authors-recent-post' );
+	register_block_type( get_template_directory() . '/blocks/stories' );
+	register_block_type( get_template_directory() . '/blocks/videos' );
+	register_block_type( get_template_directory() . '/blocks/category' );
 } );
 
 add_filter(
 	'register_block_type_args',
 	static function ( array $args, string $block_type ): array {
-		if ( 'tr724/site-header' === $block_type ) {
-			// Inner blocks are placed by render.php, including a second navigation render.
+		if ( 'tr724/site-header' === $block_type || 'tr724/site-footer' === $block_type ) {
+			// Inner blocks are placed by each block's render.php.
 			$args['skip_inner_blocks'] = true;
 		}
 		return $args;
@@ -71,6 +81,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-site-header-editor-style'  => '/blocks/site-header/editor.css',
 		'tr724-site-header-view-script'   => '/blocks/site-header/view.js',
 		'tr724-site-header-editor-script' => '/blocks/site-header/edit.js',
+		'tr724-site-footer-style'         => '/blocks/site-footer/style.css',
+		'tr724-site-footer-editor-style'  => '/blocks/site-footer/editor.css',
+		'tr724-site-footer-editor-script' => '/blocks/site-footer/edit.js',
 		'tr724-spotlight-style'           => '/blocks/spotlight/style.css',
 		'tr724-spotlight-editor-style'    => '/blocks/spotlight/editor.css',
 		'tr724-spotlight-editor-script'   => '/blocks/spotlight/edit.js',
@@ -79,6 +92,16 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-authors-recent-post-editor-style'  => '/blocks/authors-recent-post/editor.css',
 		'tr724-authors-recent-post-editor-script' => '/blocks/authors-recent-post/edit.js',
 		'tr724-authors-recent-post-script'        => '/blocks/authors-recent-post/view.js',
+		'tr724-stories-style'                     => '/blocks/stories/style.css',
+		'tr724-stories-editor-style'              => '/blocks/stories/editor.css',
+		'tr724-stories-editor-script'             => '/blocks/stories/edit.js',
+		'tr724-videos-style'                      => '/blocks/videos/style.css',
+		'tr724-videos-editor-style'               => '/blocks/videos/editor.css',
+		'tr724-videos-editor-script'              => '/blocks/videos/edit.js',
+		'tr724-videos-script'                     => '/blocks/videos/view.js',
+		'tr724-category-style'                    => '/blocks/category/style.css',
+		'tr724-category-editor-style'             => '/blocks/category/editor.css',
+		'tr724-category-editor-script'            => '/blocks/category/edit.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {

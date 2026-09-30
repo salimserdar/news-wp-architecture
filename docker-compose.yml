@@ -29,6 +29,16 @@ services:
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
       WORDPRESS_DEBUG: "1"
+      # Aggregator runs on the host. 127.0.0.1 inside this container is not that process.
+      SITE_AGGREGATOR_SERVICE_URL: http://host.docker.internal:3000
+      YOUTUBE_API_KEY: AIzaSyD1l1o9gu4Ovtq5O0_JiUqK3wkZbjmJD14
+      YOUTUBE_CHANNEL_ID: UCqbCHJpfLyjajJZgJQHyBSw
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'SITE_AGGREGATOR_SERVICE_URL', getenv( 'SITE_AGGREGATOR_SERVICE_URL' ) ?: 'http://host.docker.internal:3000' );
+        define( 'YOUTUBE_API_KEY', getenv( 'YOUTUBE_API_KEY' ) ?: 'AIzaSyD1l1o9gu4Ovtq5O0_JiUqK3wkZbjmJD14' );
+        define( 'YOUTUBE_CHANNEL_ID', getenv( 'YOUTUBE_CHANNEL_ID' ) ?: 'UCqbCHJpfLyjajJZgJQHyBSw' );
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     entrypoint: ["/local-entrypoint.sh"]
     command: ["apache2-foreground"]
     volumes:

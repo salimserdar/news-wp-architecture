@@ -1,0 +1,71 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/category",
+	"title": "Category",
+	"category": "theme",
+	"description": "Two-column category cards. Filter by category or tag, and add an image ad or a Google ad.",
+	"keywords": [ "category", "cards", "ekonomi", "ads" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"categoryId": {
+			"type": "number",
+			"default": 0
+		},
+		"tagId": {
+			"type": "number",
+			"default": 0
+		},
+		"postsToShow": {
+			"type": "number",
+			"default": 8
+		},
+		"heading": {
+			"type": "string",
+			"default": ""
+		},
+		"adMode": {
+			"type": "string",
+			"default": "none"
+		},
+		"adImageId": {
+			"type": "number",
+			"default": 0
+		},
+		"adUrl": {
+			"type": "string",
+			"default": ""
+		},
+		"adLabel": {
+			"type": "string",
+			"default": "reklam"
+		},
+		"adClient": {
+			"type": "string",
+			"default": ""
+		},
+		"adSlot": {
+			"type": "string",
+			"default": ""
+		},
+		"adFormat": {
+			"type": "string",
+			"default": "auto"
+		},
+		"adHtml": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "tr724-news-roboto", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}

@@ -1,0 +1,94 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/site-footer",
+	"title": "Site Footer",
+	"category": "theme",
+	"description": "Site footer with the logo, WhatsApp line, social links, app stores, and link columns.",
+	"textdomain": "tr724-news",
+	"attributes": {
+		"whatsappLabel": {
+			"type": "string",
+			"default": "WHATSAPP İLETİŞİM HATTI"
+		},
+		"whatsappPhone": {
+			"type": "string",
+			"default": "0212 212 12 12"
+		},
+		"whatsappUrl": {
+			"type": "string",
+			"default": "https://wa.me/902122121212"
+		},
+		"facebookUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"xUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"instagramUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"youtubeUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"appStoreUrl": {
+			"type": "string",
+			"default": "https://www.apple.com/app-store/"
+		},
+		"playStoreUrl": {
+			"type": "string",
+			"default": "https://play.google.com/store"
+		},
+		"copyright": {
+			"type": "string",
+			"default": "© 2026 TR724 "
+		},
+		"privacyLabel": {
+			"type": "string",
+			"default": "Privacy Policy"
+		},
+		"privacyUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"termsLabel": {
+			"type": "string",
+			"default": "Terms Of Use"
+		},
+		"termsUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"col1Heading": {
+			"type": "string",
+			"default": "HABER"
+		},
+		"col2Heading": {
+			"type": "string",
+			"default": "YAZARLAR"
+		},
+		"col3Heading": {
+			"type": "string",
+			"default": "YOUTUBE"
+		},
+		"col4Heading": {
+			"type": "string",
+			"default": "BİZ KİMİZ"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}
