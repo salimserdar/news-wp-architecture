@@ -4,10 +4,10 @@ Later-phase runbook. Media stays on **local disk** until you actually run these
 steps (doc 05 Q6 → A). Do this when `uploads/` grows past ~50 GB, disk hits 80 %
 (doc 07), or nightly backups should stop copying media.
 
-**Public URLs do not change.** Readers keep requesting
-`https://SITE_DOMAIN/wp-content/uploads/...`. Years of hardcoded `<img src>` in
-`post_content` are left alone — filters on `wp_get_attachment_url` do not rewrite
-those. A Cloudflare Worker on that path serves objects from R2.
+**Public upload URLs use the R2 custom domain.** `wp/mu-plugins/media-urls.php`
+rewrites `/wp-content/uploads/` (attachment URLs and hardcoded `<img src>` in
+post HTML, on output) to `https://media.turkishnote.com/wp-content/uploads/...`.
+The path after the host is the R2 object key. Object bytes are not moved.
 
 rclone is already on the box (`scripts/setup-vps.sh`). Use it for the bulk copy.
 Do **not** `rclone mount` (or gcsfuse) as the live `uploads/` tree — same rule as
@@ -20,7 +20,7 @@ the VM (`perf-tweaks.php` WebP + 2560px cap). Only the **bytes** leave.
 Readers
   └── Cloudflare edge (already caches /wp-content/* for 1 year)
         ├── HTML / PHP  →  VPS (unchanged)
-        └── /wp-content/uploads/*  →  R2  (Worker, same URL)
+        └── https://media.turkishnote.com/wp-content/uploads/*  →  R2
               ▲
               └── PHP-FPM writes new files via S3 API (mu-plugin r2-offload.php)
 ```
@@ -328,8 +328,10 @@ Image **generation** stays on the VM (GD/Imagick, `perf-tweaks.php`). Only the
 the Worker 404s the photo (it never reads the VM disk).
 
 `wp/mu-plugins/r2-offload.php` does that PUT. `scripts/setup-vps.sh` installs it
-with the other mu-plugins. It does not appear in the wp-admin plugin list and
-does not rewrite attachment URLs.
+with the other mu-plugins. It does not appear in the wp-admin plugin list.
+`wp/mu-plugins/media-urls.php` rewrites the public URL to
+`https://media.turkishnote.com/wp-content/uploads/...` (override with `MEDIA_URL`
+→ `NEWS_MEDIA_URL`). The object key stays `wp-content/uploads/...`.
 
 Credentials live in `.env`, not in the database and not in the plugin file.
 Setup copies non-empty values into `wp-config.php` (mode 640, `www-data`):
@@ -384,7 +386,7 @@ Acceptance, on the VM:
    the objects exist.
 3. Confirm the objects: `rclone ls r2-media:news-media/wp-content/uploads/$(date +%Y/%m)/ | grep test`
    — original and WebP sizes.
-4. Confirm the article HTML still uses `/wp-content/uploads/...` on `SITE_DOMAIN`.
+4. Confirm the article HTML uses `https://media.turkishnote.com/wp-content/uploads/...`.
 5. `curl -sI` that URL → `200`, and `cf-cache-status: HIT` on the second request.
 6. Confirm no new cookie on anonymous HTML (`make stats` BYPASS ratio unchanged).
 

@@ -12,6 +12,7 @@ Each item states the options, the recommendation, and whether it is **settled** 
 | 2026-09-11 | **Existing site is migrated**: DB dump imported with `scripts/import-db.sh` (domain rewrite included), `wp-content` copied with `scripts/import-wp-content.sh`. Old caching plugins are deactivated by `scripts/post-import.sh`. |
 | 2026-09-11 | **Cloudflare via Cache Rules + custom mu-plugin purge** (Q1 → A). Edge TTL follows the origin `s-maxage`; purge-by-URL on publish. |
 | 2026-09-11 | Media stays on **local disk** for now (Q6 → A); served under the site domain. R2 offload remains a later option. |
+| 2026-09-29 | Public upload URLs are rewritten to `https://media.turkishnote.com/wp-content/uploads/` by `wp/mu-plugins/media-urls.php`. R2 object keys stay `wp-content/uploads/...`. |
 | 2026-09-11 | **MariaDB** (Q4). Distro package on Ubuntu 24.04. |
 | 2026-09-11 | Nginx purge implemented by **deleting cache files** from PHP (same uid) instead of compiling `ngx_cache_purge` — no custom nginx build needed. `open_file_cache` is therefore restricted to static assets. |
 

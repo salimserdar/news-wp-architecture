@@ -49,7 +49,8 @@ config/
   mariadb/zz-tuning.cnf    InnoDB tuning
 wp/mu-plugins/             cache-control.php (TTL headers), cache-purge.php (nginx+Cloudflare purge,
                            warmer, admin-bar button, WP-CLI), perf-tweaks.php,
-                           r2-offload.php (new uploads → R2 during the upload request)
+                           r2-offload.php (new uploads → R2 during the upload request),
+                           media-urls.php (public uploads → https://media.turkishnote.com)
 scripts/                   create-gce-vm.sh, setup-vps.sh, gcs.sh, pull-gcs-backup.sh,
                            import-db.sh, import-wp-content.sh, post-import.sh, wp.sh, backup.sh
 import/                    (git-ignored) drop DB dumps / archives here

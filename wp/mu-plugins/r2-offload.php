@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: News R2 Offload
- * Description: During an upload, PUTs the original and generated sizes to Cloudflare R2 so the Worker can serve /wp-content/uploads/ immediately. Local files stay. Public URLs are not rewritten.
+ * Description: During an upload, PUTs the original and generated sizes to Cloudflare R2. Local files stay. Public URLs are rewritten by media-urls.php.
  * Version:     1.0.0
  *
  * Configuration (constants, set in wp-config.php by scripts/setup-vps.sh from .env):

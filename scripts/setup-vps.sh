@@ -18,6 +18,8 @@
 #   CF_ZONE_ID / CF_API_TOKEN  # optional; enables Cloudflare purge-on-publish
 #   R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET
 #                              # optional; immediate upload offload (mu-plugin r2-offload.php)
+#   MEDIA_URL=https://media.turkishnote.com
+#                              # optional; public uploads origin (mu-plugin media-urls.php)
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "run as root"; exit 1; }
@@ -318,9 +320,9 @@ if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
   chown www-data:www-data "${WP_ROOT}/wp-config.php"
 fi
 
-echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks, r2-offload)"
+echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks, r2-offload, media-urls)"
 mkdir -p "${WP_ROOT}/wp-content/mu-plugins"
-for plugin in cache-control.php cache-purge.php perf-tweaks.php r2-offload.php; do
+for plugin in cache-control.php cache-purge.php perf-tweaks.php r2-offload.php media-urls.php; do
   install -m 0644 -o www-data -g www-data \
     "${REPO_DIR}/wp/mu-plugins/${plugin}" \
     "${WP_ROOT}/wp-content/mu-plugins/${plugin}"
@@ -391,6 +393,9 @@ if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
   fi
   if [[ -n "${R2_BUCKET:-}" ]]; then
     sudo -u www-data wp config set NEWS_R2_BUCKET "${R2_BUCKET}" --type=constant --path="${WP_ROOT}"
+  fi
+  if [[ -n "${MEDIA_URL:-}" ]]; then
+    sudo -u www-data wp config set NEWS_MEDIA_URL "${MEDIA_URL}" --type=constant --path="${WP_ROOT}"
   fi
 fi
 
