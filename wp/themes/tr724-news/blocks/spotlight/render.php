@@ -42,14 +42,6 @@ if ( ! $query->have_posts() ) {
 
 update_post_thumbnail_cache( $query );
 
-$filtered_kicker = '';
-if ( $category_id > 0 ) {
-	$term = get_term( $category_id, 'category' );
-	if ( $term instanceof WP_Term ) {
-		$filtered_kicker = $term->name;
-	}
-}
-
 $prev_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" /></svg>';
 $next_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5 15 12l-5.5 5.5" /></svg>';
 $more_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.1-5.2" /><path d="M19.5 4.5V9H15" /></svg>';
@@ -68,13 +60,6 @@ $index = 0;
 while ( $query->have_posts() ) {
 	$query->the_post();
 	$post_id = get_the_ID();
-	$kicker  = $filtered_kicker;
-	if ( '' === $kicker ) {
-		$categories = get_the_category( $post_id );
-		if ( $categories ) {
-			$kicker = $categories[0]->name;
-		}
-	}
 
 	$thumb_id = get_post_thumbnail_id( $post_id );
 	$image    = '';
@@ -101,9 +86,6 @@ while ( $query->have_posts() ) {
 	echo $image;
 	echo '<span class="news-slide__shade" aria-hidden="true"></span>';
 	echo '<span class="news-slide__copy">';
-	if ( '' !== $kicker ) {
-		echo '<span class="news-slide__kicker">' . esc_html( $kicker ) . '</span>';
-	}
 	echo '<h3 class="news-slide__title">' . esc_html( get_the_title( $post_id ) ) . '</h3>';
 	echo '</span></a></div>';
 	++$index;
