@@ -1,0 +1,38 @@
+/*
+Theme Name: tr724-news
+Description: Theme developed in this repo and mounted into local Docker from wp/themes.
+Version: 0.1.0
+Requires at least: 6.4
+Requires PHP: 8.3
+Text Domain: tr724-news
+*/
+
+:root {
+	--page-width: 1040px;
+	--gutter: 28px;
+	--gutter-sm: 20px;
+}
+
+body {
+	margin: 0;
+	font-family: Georgia, "Times New Roman", serif;
+	line-height: 1.5;
+}
+
+/* Same content frame as wp/html-them/styles.css .container */
+.container {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 48px;
+	width: 100%;
+	max-width: var(--page-width);
+	margin: 0 auto;
+	padding: 36px var(--gutter) 56px;
+}
+
+@media (max-width: 720px) {
+	.container {
+		padding-inline: var(--gutter-sm);
+	}
+}

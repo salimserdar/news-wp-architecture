@@ -1,0 +1,46 @@
+# Local theme and plugin development only. Not used on the VPS.
+# Theme, plugin, and mu-plugins are bind-mounted from this repo.
+# WordPress core and the local database stay in Docker volumes.
+# Do not point this file at the production .env (Cloudflare, R2, GCS).
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: wordpress
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DEBUG: "1"
+    entrypoint: ["/local-entrypoint.sh"]
+    command: ["apache2-foreground"]
+    volumes:
+      - wp_core:/var/www/html
+      - ./docker/wordpress-entrypoint.sh:/local-entrypoint.sh:ro
+      - ./wp/themes:/var/www/html/wp-content/themes
+      - ./wp/plugins:/var/www/html/wp-content/plugins
+      - ./wp/mu-plugins:/var/www/html/wp-content/mu-plugins
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  wp_core:

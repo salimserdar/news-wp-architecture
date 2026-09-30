@@ -1,0 +1,39 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/site-header",
+	"title": "Site Header",
+	"category": "theme",
+	"description": "Sticky header with the site logo, section navigation, search, and hamburger menu.",
+	"textdomain": "tr724-news",
+	"attributes": {
+		"tvLabel": {
+			"type": "string",
+			"default": "TR724 Tv"
+		},
+		"tvUrl": {
+			"type": "string",
+			"default": "#"
+		},
+		"flashLabel": {
+			"type": "string",
+			"default": "Son Dakika"
+		},
+		"flashUrl": {
+			"type": "string",
+			"default": "#"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js",
+	"viewScript": "file:./view.js"
+}
