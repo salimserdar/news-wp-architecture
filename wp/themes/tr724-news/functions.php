@@ -6,6 +6,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once get_template_directory() . '/inc/ads.php';
+require_once get_template_directory() . '/inc/widgets.php';
+require_once get_template_directory() . '/blocks/ticker/rates.php';
+
 add_action( 'after_setup_theme', function (): void {
 	add_theme_support( 'title-tag' );
 	add_theme_support( 'post-thumbnails' );
@@ -56,6 +60,8 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/stories' );
 	register_block_type( get_template_directory() . '/blocks/videos' );
 	register_block_type( get_template_directory() . '/blocks/category' );
+	register_block_type( get_template_directory() . '/blocks/ticker' );
+	register_block_type( get_template_directory() . '/blocks/popular' );
 } );
 
 add_filter(
@@ -102,6 +108,13 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-category-style'                    => '/blocks/category/style.css',
 		'tr724-category-editor-style'             => '/blocks/category/editor.css',
 		'tr724-category-editor-script'            => '/blocks/category/edit.js',
+		'tr724-ticker-style'                      => '/blocks/ticker/style.css',
+		'tr724-ticker-editor-style'               => '/blocks/ticker/editor.css',
+		'tr724-ticker-editor-script'              => '/blocks/ticker/edit.js',
+		'tr724-popular-style'                     => '/blocks/popular/style.css',
+		'tr724-popular-editor-style'              => '/blocks/popular/editor.css',
+		'tr724-popular-editor-script'             => '/blocks/popular/edit.js',
+		'tr724-popular-script'                    => '/blocks/popular/view.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {
@@ -119,6 +132,33 @@ add_action( 'enqueue_block_assets', function (): void {
 	}
 } );
 
+add_filter(
+	'comments_open',
+	static function ( bool $open, int $post_id ): bool {
+		if ( 'post' === get_post_type( $post_id ) ) {
+			return true;
+		}
+		return $open;
+	},
+	10,
+	2
+);
+
+add_filter(
+	'comment_form_default_fields',
+	static function ( array $fields ): array {
+		unset( $fields['url'], $fields['cookies'] );
+		return $fields;
+	}
+);
+
+add_action( 'pre_get_posts', function ( WP_Query $query ): void {
+	if ( is_admin() || ! $query->is_main_query() || ! $query->is_category() ) {
+		return;
+	}
+	$query->set( 'posts_per_page', 10 );
+} );
+
 add_action( 'wp_enqueue_scripts', function (): void {
 	$path = get_stylesheet_directory() . '/style.css';
 	wp_enqueue_style(
@@ -126,5 +166,57 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		get_stylesheet_uri(),
 		[],
 		is_readable( $path ) ? (string) filemtime( $path ) : null
+	);
+
+	if ( is_singular( 'post' ) ) {
+		wp_enqueue_style( 'tr724-news-inter' );
+
+		$single_css = get_template_directory() . '/assets/css/single.css';
+		wp_enqueue_style(
+			'tr724-single',
+			get_template_directory_uri() . '/assets/css/single.css',
+			[ 'tr724-news', 'tr724-news-inter' ],
+			is_readable( $single_css ) ? (string) filemtime( $single_css ) : null
+		);
+
+		$single_js = get_template_directory() . '/assets/js/single.js';
+		wp_enqueue_script(
+			'tr724-single',
+			get_template_directory_uri() . '/assets/js/single.js',
+			[],
+			is_readable( $single_js ) ? (string) filemtime( $single_js ) : null,
+			true
+		);
+
+		$ads_css = get_template_directory() . '/assets/css/ads.css';
+		wp_enqueue_style(
+			'tr724-ads',
+			get_template_directory_uri() . '/assets/css/ads.css',
+			[ 'tr724-single' ],
+			is_readable( $ads_css ) ? (string) filemtime( $ads_css ) : null
+		);
+		return;
+	}
+
+	if ( ! is_category() ) {
+		return;
+	}
+
+	wp_enqueue_style( 'tr724-news-inter' );
+
+	$category_css = get_template_directory() . '/assets/css/category.css';
+	wp_enqueue_style(
+		'tr724-category-archive',
+		get_template_directory_uri() . '/assets/css/category.css',
+		[ 'tr724-news', 'tr724-news-inter' ],
+		is_readable( $category_css ) ? (string) filemtime( $category_css ) : null
+	);
+
+	$ads_css = get_template_directory() . '/assets/css/ads.css';
+	wp_enqueue_style(
+		'tr724-ads',
+		get_template_directory_uri() . '/assets/css/ads.css',
+		[ 'tr724-category-archive' ],
+		is_readable( $ads_css ) ? (string) filemtime( $ads_css ) : null
 	);
 } );

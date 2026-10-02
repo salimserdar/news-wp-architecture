@@ -33,10 +33,15 @@ services:
       SITE_AGGREGATOR_SERVICE_URL: http://host.docker.internal:3000
       YOUTUBE_API_KEY: AIzaSyD1l1o9gu4Ovtq5O0_JiUqK3wkZbjmJD14
       YOUTUBE_CHANNEL_ID: UCqbCHJpfLyjajJZgJQHyBSw
+      # Skip R2 during local uploads. Production never sets this.
+      NEWS_R2_OFFLOAD: "0"
+      NEWS_MEDIA_URL: http://localhost:8080
       WORDPRESS_CONFIG_EXTRA: |
         define( 'SITE_AGGREGATOR_SERVICE_URL', getenv( 'SITE_AGGREGATOR_SERVICE_URL' ) ?: 'http://host.docker.internal:3000' );
         define( 'YOUTUBE_API_KEY', getenv( 'YOUTUBE_API_KEY' ) ?: 'AIzaSyD1l1o9gu4Ovtq5O0_JiUqK3wkZbjmJD14' );
         define( 'YOUTUBE_CHANNEL_ID', getenv( 'YOUTUBE_CHANNEL_ID' ) ?: 'UCqbCHJpfLyjajJZgJQHyBSw' );
+        if ( ! defined( 'NEWS_R2_OFFLOAD' ) ) { define( 'NEWS_R2_OFFLOAD', false ); }
+        if ( ! defined( 'NEWS_MEDIA_URL' ) ) { define( 'NEWS_MEDIA_URL', 'http://localhost:8080' ); }
     extra_hosts:
       - "host.docker.internal:host-gateway"
     entrypoint: ["/local-entrypoint.sh"]

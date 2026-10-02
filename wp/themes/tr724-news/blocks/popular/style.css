@@ -1,0 +1,203 @@
+.popular {
+	--color-text: #111;
+	--color-brand: #003399;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	color: var(--color-text);
+	font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.popular,
+.popular *,
+.popular *::before,
+.popular *::after {
+	box-sizing: border-box;
+}
+
+.popular button {
+	font-family: inherit;
+}
+
+.popular__ad img {
+	display: block;
+	width: 100%;
+	height: 132px;
+	object-fit: cover;
+	object-position: center;
+	background: var(--color-text);
+}
+
+.popular__ad-label {
+	margin: 6px 0 12px;
+	color: #9a9a9a;
+	font-size: 12px;
+	text-align: center;
+}
+
+.popular__box {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid #e6e6e6;
+	background: #fff;
+}
+
+.popular__head {
+	background: var(--color-brand);
+	color: #fff;
+	text-align: center;
+}
+
+.popular__title {
+	margin: 0;
+	padding: 14px 12px 10px;
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	line-height: 1;
+}
+
+.popular__tabs {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.popular__tab {
+	padding: 8px 4px 12px;
+	border: 0;
+	background: transparent;
+	color: #fff;
+	font: inherit;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-decoration: underline;
+	text-decoration-color: transparent;
+	text-decoration-thickness: 2px;
+	text-underline-offset: 6px;
+	cursor: pointer;
+}
+
+.popular__tab[aria-selected="true"] {
+	text-decoration-color: #fff;
+}
+
+.popular__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.popular__item + .popular__item {
+	border-top: 1px solid #ededed;
+}
+
+.popular__item a {
+	display: grid;
+	grid-template-columns: 42px minmax(0, 1fr);
+	gap: 10px;
+	align-items: center;
+	padding: 10px 12px 12px;
+	color: inherit;
+	text-decoration: none;
+	transition: background 0.2s ease;
+}
+
+.popular__item a:hover {
+	background: #f3f3f3;
+}
+
+.popular__rank {
+	display: grid;
+	width: 34px;
+	height: 34px;
+	place-items: center;
+	border: 2px solid var(--color-brand);
+	background: #fff;
+	box-shadow: 6px 6px 0 var(--color-brand);
+	color: var(--color-brand);
+	font-size: 20px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.popular__copy {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.popular__copy time {
+	color: #9a9a9a;
+	font-size: 11px;
+	line-height: 1.2;
+}
+
+.popular__headline {
+	color: #1c1c1c;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.popular__empty {
+	margin: 0;
+	padding: 14px 12px;
+	color: #9a9a9a;
+	font-size: 13px;
+	line-height: 1.4;
+	list-style: none;
+}
+
+.popular__item a:focus-visible,
+.popular__tab:focus-visible,
+.popular__ad:focus-visible {
+	outline: 2px solid var(--color-brand);
+	outline-offset: 2px;
+}
+
+.post-page .popular__ad-label {
+	margin-top: 6px;
+}
+
+.post-page .popular__tab {
+	text-decoration: none;
+}
+
+.post-page .popular__tab[aria-selected="true"] {
+	position: relative;
+	text-decoration: none;
+}
+
+.post-page .popular__tab[aria-selected="true"]::after {
+	content: "";
+	position: absolute;
+	right: 16%;
+	bottom: 7px;
+	left: 16%;
+	height: 2px;
+	background: #e10600;
+}
+
+.post-page .popular__rank {
+	width: 30px;
+	height: 30px;
+	border-width: 2px;
+	box-shadow: none;
+	font-size: 16px;
+}
+
+.post-page .popular__item a {
+	grid-template-columns: 38px minmax(0, 1fr);
+	gap: 8px;
+}
+
+.post-page .popular__item a:hover {
+	background: #fff;
+	box-shadow: inset 0 0 0 2px #1a4fbf;
+}
+
+.post-page .popular__headline {
+	font-weight: 700;
+}

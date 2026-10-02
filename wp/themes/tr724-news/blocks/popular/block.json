@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/popular",
+	"title": "Popular",
+	"category": "theme",
+	"description": "Most-read stories for today, this week, and this month.",
+	"keywords": [ "popular", "most read", "sidebar", "okunanlar" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"adImageId": {
+			"type": "number",
+			"default": 0
+		},
+		"adUrl": {
+			"type": "string",
+			"default": ""
+		},
+		"adLabel": {
+			"type": "string",
+			"default": "reklam"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js",
+	"script": "file:./view.js"
+}

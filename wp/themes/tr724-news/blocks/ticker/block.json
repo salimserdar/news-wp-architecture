@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/ticker",
+	"title": "Ticker",
+	"category": "theme",
+	"description": "Scrolling market ticker. Defaults to USD, euro, sterling, BIST, and gold.",
+	"keywords": [ "ticker", "markets", "exchange", "bist", "gold" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"symbols": {
+			"type": "array",
+			"default": [ "USDTRY", "EURTRY", "GBPTRY", "XU100", "GLDGR" ],
+			"items": {
+				"type": "string"
+			}
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}

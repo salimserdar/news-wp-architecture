@@ -1,0 +1,153 @@
+.ticker {
+	--color-text: #111;
+	--page-width: 1040px;
+	--gutter: 28px;
+	margin: 0;
+	border-bottom: 1px solid #f0f0f0;
+	background: #fff;
+	color: var(--color-text);
+	font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.ticker,
+.ticker *,
+.ticker *::before,
+.ticker *::after {
+	box-sizing: border-box;
+}
+
+.ticker__list {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	width: 100%;
+	max-width: var(--page-width);
+	margin: 0 auto;
+	padding: 8px var(--gutter) 10px;
+	list-style: none;
+}
+
+.ticker__item {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.ticker__item[aria-hidden="true"] {
+	display: none;
+}
+
+@keyframes ticker-scroll {
+	from {
+		transform: translateX(0);
+	}
+
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+.ticker__label {
+	color: #8d8d8d;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.ticker__row {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+}
+
+.ticker__value {
+	color: var(--color-text);
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.ticker__change {
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.ticker__change--up {
+	color: #1f9d4a;
+}
+
+.ticker__change--down {
+	color: #e10600;
+}
+
+.ticker__change--up::after,
+.ticker__change--down::after {
+	margin-left: 3px;
+	font-size: 9px;
+}
+
+.ticker__change--up::after {
+	content: "▲";
+}
+
+.ticker__change--down::after {
+	content: "▼";
+}
+
+.ticker__empty {
+	max-width: var(--page-width);
+	margin: 0 auto;
+	padding: 8px var(--gutter) 10px;
+	color: #8d8d8d;
+	font-size: 12px;
+}
+
+@media (max-width: 720px) {
+	.ticker {
+		overflow: hidden;
+		scrollbar-width: none;
+	}
+
+	.ticker::-webkit-scrollbar {
+		display: none;
+	}
+
+	.ticker__list {
+		width: max-content;
+		max-width: none;
+		justify-content: flex-start;
+		gap: 0;
+		padding-inline: 0;
+		animation: ticker-scroll 48s linear infinite;
+	}
+
+	.ticker__item {
+		flex-shrink: 0;
+		padding-right: 28px;
+	}
+
+	.ticker__item[aria-hidden="true"] {
+		display: flex;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ticker {
+		overflow-x: auto;
+	}
+
+	.ticker__list {
+		animation: none;
+	}
+
+	.ticker__item[aria-hidden="true"] {
+		display: none;
+	}
+}

@@ -10,6 +10,8 @@
  * Stored post HTML is rewritten when WordPress prints or edits it, not by a database search-replace.
  *
  * Override the origin with NEWS_MEDIA_URL in wp-config.php (no trailing slash).
+ * An environment variable of the same name wins, so local Docker can point at
+ * localhost even when wp-config.php still has the production origin.
  */
 
 namespace News\MediaUrls;
@@ -38,7 +40,10 @@ function media_origin(): string {
 	static $resolving = false;
 
 	$origin = DEFAULT_ORIGIN;
-	if ( defined( 'NEWS_MEDIA_URL' ) && is_string( NEWS_MEDIA_URL ) && '' !== NEWS_MEDIA_URL ) {
+	$env    = getenv( 'NEWS_MEDIA_URL' );
+	if ( is_string( $env ) && '' !== $env ) {
+		$origin = $env;
+	} elseif ( defined( 'NEWS_MEDIA_URL' ) && is_string( NEWS_MEDIA_URL ) && '' !== NEWS_MEDIA_URL ) {
 		$origin = NEWS_MEDIA_URL;
 	}
 	if ( $resolving ) {

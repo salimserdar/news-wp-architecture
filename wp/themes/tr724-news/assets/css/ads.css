@@ -1,0 +1,70 @@
+/* Sidebar ads. Same unit as the category block. */
+
+.post-layout__aside .widget + .widget,
+.category-archive .column--aside .widget + .widget {
+	margin-top: 28px;
+}
+
+.post-layout__aside .ads,
+.category-archive .column--aside .ads {
+	width: 196px;
+	max-width: 100%;
+}
+
+.post-layout__aside .ad,
+.category-archive .column--aside .ad {
+	display: block;
+	overflow: hidden;
+	color: inherit;
+	text-decoration: none;
+}
+
+.post-layout__aside .ad--image,
+.category-archive .column--aside .ad--image {
+	background: #f2f2f2;
+}
+
+.post-layout__aside .ad--image img,
+.category-archive .column--aside .ad--image img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.post-layout__aside .ads__unit,
+.category-archive .column--aside .ads__unit {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+	overflow: hidden;
+}
+
+.post-layout__aside .ads__unit img,
+.post-layout__aside .ads__unit iframe,
+.post-layout__aside .ads__unit ins,
+.category-archive .column--aside .ads__unit img,
+.category-archive .column--aside .ads__unit iframe,
+.category-archive .column--aside .ads__unit ins {
+	max-width: 100%;
+}
+
+.post-layout__aside .ads__label,
+.category-archive .column--aside .ads__label {
+	margin: 5px 0 0;
+	text-align: right;
+	font-size: 10px;
+	color: #cfcfcf;
+}
+
+.post-layout__aside .ad:focus-visible,
+.category-archive .column--aside .ad:focus-visible {
+	outline: 2px solid var(--focus-ring, #ff6200);
+	outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+	.post-layout__aside .ads,
+	.category-archive .column--aside .ads {
+		margin-inline: auto;
+	}
+}

@@ -10,6 +10,9 @@
  *   NEWS_R2_SECRET_ACCESS_KEY
  *   NEWS_R2_BUCKET            e.g. news-media
  *
+ * Local Docker sets NEWS_R2_OFFLOAD=0 (env or constant). That skips every PUT,
+ * retry, and admin error even when the four constants above are present.
+ *
  * Object key = public path without the leading slash
  * (wp-content/uploads/2026/09/23/photo.webp), matching the Worker.
  *
@@ -161,6 +164,9 @@ function offload( int $attachment_id, array $metadata ): void {
 }
 
 function drain_retry(): void {
+	if ( offload_disabled() ) {
+		return;
+	}
 	if ( ! configured() ) {
 		if ( retry_queue() ) {
 			schedule_retry();
@@ -246,13 +252,16 @@ function drain_retry(): void {
 }
 
 function ensure_retry_scheduled(): void {
+	if ( offload_disabled() ) {
+		return;
+	}
 	if ( retry_queue() ) {
 		schedule_retry();
 	}
 }
 
 function admin_notice(): void {
-	if ( ! current_user_can( 'upload_files' ) ) {
+	if ( offload_disabled() || ! current_user_can( 'upload_files' ) ) {
 		return;
 	}
 	$message = get_option( OPTION_ERROR, '' );
@@ -262,8 +271,22 @@ function admin_notice(): void {
 	echo '<div class="notice notice-error"><p>' . esc_html( $message ) . '</p></div>';
 }
 
+function offload_disabled(): bool {
+	if ( defined( 'NEWS_R2_OFFLOAD' ) ) {
+		$value = NEWS_R2_OFFLOAD;
+		if ( false === $value || 0 === $value || '0' === $value || 'false' === $value ) {
+			return true;
+		}
+	}
+	$env = getenv( 'NEWS_R2_OFFLOAD' );
+	return is_string( $env ) && ( '0' === $env || 'false' === $env );
+}
+
 function configured(): bool {
 	static $logged = false;
+	if ( offload_disabled() ) {
+		return false;
+	}
 	$ok = defined( 'NEWS_R2_ACCOUNT_ID' ) && is_string( NEWS_R2_ACCOUNT_ID ) && '' !== NEWS_R2_ACCOUNT_ID
 		&& defined( 'NEWS_R2_ACCESS_KEY_ID' ) && is_string( NEWS_R2_ACCESS_KEY_ID ) && '' !== NEWS_R2_ACCESS_KEY_ID
 		&& defined( 'NEWS_R2_SECRET_ACCESS_KEY' ) && is_string( NEWS_R2_SECRET_ACCESS_KEY ) && '' !== NEWS_R2_SECRET_ACCESS_KEY
