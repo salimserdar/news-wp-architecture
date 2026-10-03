@@ -7,8 +7,10 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once get_template_directory() . '/inc/ads.php';
+require_once get_template_directory() . '/inc/authors.php';
 require_once get_template_directory() . '/inc/widgets.php';
 require_once get_template_directory() . '/blocks/ticker/rates.php';
+require_once get_template_directory() . '/blocks/site-header/search.php';
 
 add_action( 'after_setup_theme', function (): void {
 	add_theme_support( 'title-tag' );
@@ -100,7 +102,7 @@ add_filter(
  */
 add_action( 'enqueue_block_assets', function (): void {
 	$map = [
-		'tr724-site-header-style'         => '/blocks/site-header/style.css',
+		'tr724-site-header-style-2'       => '/blocks/site-header/style.css',
 		'tr724-site-header-editor-style'  => '/blocks/site-header/editor.css',
 		'tr724-site-header-view-script'   => '/blocks/site-header/view.js',
 		'tr724-site-header-editor-script' => '/blocks/site-header/edit.js',
@@ -172,8 +174,126 @@ add_filter(
 	}
 );
 
+if ( ! function_exists( 'tr724_archive_upper' ) ) {
+	/**
+	 * Turkish-aware uppercase for archive titles and dates.
+	 */
+	function tr724_archive_upper( string $text ): string {
+		$text = strtr(
+			$text,
+			[
+				'i' => 'İ',
+				'ı' => 'I',
+			]
+		);
+		return mb_strtoupper( $text, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( 'tr724_archive_pages' ) ) {
+	/**
+	 * Page numbers to show, with gaps when the archive is long.
+	 *
+	 * @return array<int, int|string>
+	 */
+	function tr724_archive_pages( int $current, int $total ): array {
+		if ( $total <= 7 ) {
+			return range( 1, $total );
+		}
+
+		$pages = [ 1 ];
+		$start = max( 2, $current - 1 );
+		$end   = min( $total - 1, $current + 1 );
+
+		if ( $start > 2 ) {
+			$pages[] = 'gap';
+		}
+		for ( $page = $start; $page <= $end; $page++ ) {
+			$pages[] = $page;
+		}
+		if ( $end < $total - 1 ) {
+			$pages[] = 'gap';
+		}
+		$pages[] = $total;
+
+		return $pages;
+	}
+}
+
+if ( ! function_exists( 'tr724_archive_pagination' ) ) {
+	/**
+	 * Previous, page numbers, and next. Inactive on the first and last page.
+	 */
+	function tr724_archive_pagination(): void {
+		global $wp_query;
+
+		$total = isset( $wp_query->max_num_pages ) ? (int) $wp_query->max_num_pages : 0;
+		if ( $total < 2 ) {
+			return;
+		}
+
+		$current = max( 1, (int) get_query_var( 'paged' ) );
+		$pages   = tr724_archive_pages( $current, $total );
+
+		echo '<nav class="pagination" aria-label="' . esc_attr__( 'Sayfalama', 'tr724-news' ) . '">';
+
+		if ( $current > 1 ) {
+			printf(
+				'<a class="pagination__step" href="%1$s" aria-label="%2$s">‹</a>',
+				esc_url( get_pagenum_link( $current - 1 ) ),
+				esc_attr__( 'Önceki sayfa', 'tr724-news' )
+			);
+		} else {
+			printf(
+				'<span class="pagination__step" aria-disabled="true" aria-label="%s">‹</span>',
+				esc_attr__( 'Önceki sayfa', 'tr724-news' )
+			);
+		}
+
+		foreach ( $pages as $page ) {
+			if ( 'gap' === $page ) {
+				echo '<span class="pagination__gap" aria-hidden="true">…</span>';
+				continue;
+			}
+
+			$page = (int) $page;
+			if ( $page === $current ) {
+				printf(
+					'<span class="pagination__page" aria-current="page">%d</span>',
+					$page
+				);
+				continue;
+			}
+
+			printf(
+				'<a class="pagination__page" href="%1$s">%2$d</a>',
+				esc_url( get_pagenum_link( $page ) ),
+				$page
+			);
+		}
+
+		if ( $current < $total ) {
+			printf(
+				'<a class="pagination__step" href="%1$s" aria-label="%2$s">›</a>',
+				esc_url( get_pagenum_link( $current + 1 ) ),
+				esc_attr__( 'Sonraki sayfa', 'tr724-news' )
+			);
+		} else {
+			printf(
+				'<span class="pagination__step" aria-disabled="true" aria-label="%s">›</span>',
+				esc_attr__( 'Sonraki sayfa', 'tr724-news' )
+			);
+		}
+
+		echo '</nav>';
+	}
+}
+
 add_action( 'pre_get_posts', function ( WP_Query $query ): void {
-	if ( is_admin() || ! $query->is_main_query() || ! $query->is_category() ) {
+	if ( is_admin() || ! $query->is_main_query() ) {
+		return;
+	}
+	if ( ! $query->is_category() && ! $query->is_author() ) {
 		return;
 	}
 	$query->set( 'posts_per_page', 10 );
@@ -218,7 +338,7 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		return;
 	}
 
-	if ( ! is_category() ) {
+	if ( ! is_category() && ! is_author() && ! is_search() ) {
 		return;
 	}
 
@@ -232,11 +352,23 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		is_readable( $category_css ) ? (string) filemtime( $category_css ) : null
 	);
 
+	$ads_deps = [ 'tr724-category-archive' ];
+	if ( is_author() ) {
+		$author_css = get_template_directory() . '/assets/css/author.css';
+		wp_enqueue_style(
+			'tr724-author',
+			get_template_directory_uri() . '/assets/css/author.css',
+			[ 'tr724-category-archive' ],
+			is_readable( $author_css ) ? (string) filemtime( $author_css ) : null
+		);
+		$ads_deps[] = 'tr724-author';
+	}
+
 	$ads_css = get_template_directory() . '/assets/css/ads.css';
 	wp_enqueue_style(
 		'tr724-ads',
 		get_template_directory_uri() . '/assets/css/ads.css',
-		[ 'tr724-category-archive' ],
+		$ads_deps,
 		is_readable( $ads_css ) ? (string) filemtime( $ads_css ) : null
 	);
 } );

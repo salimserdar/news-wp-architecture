@@ -30,7 +30,7 @@ add_action( 'widgets_init', static function (): void {
 			[
 				'name'        => __( 'Category', 'tr724-news' ),
 				'id'          => 'category',
-				'description' => __( 'Shown beside the story grid on category archives.', 'tr724-news' ),
+				'description' => __( 'Shown beside the story grid on category archives and author profiles.', 'tr724-news' ),
 			]
 		)
 	);

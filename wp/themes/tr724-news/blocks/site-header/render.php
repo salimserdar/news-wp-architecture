@@ -2,8 +2,8 @@
 /**
  * Front-end layout for the site header.
  *
- * The logo, navigation, and search inner blocks are placed into the bar,
- * the category strip, the search modal, and the hamburger drawer.
+ * The logo and navigation inner blocks are placed into the bar,
+ * the category strip, and the hamburger drawer. Search runs in the modal.
  * Navigation is rendered twice so the strip and the drawer stay one menu.
  *
  * @var array    $attributes
@@ -13,10 +13,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$logo      = '';
-$nav_strip = '';
+$logo       = '';
+$nav_strip  = '';
 $nav_drawer = '';
-$search    = '';
 
 foreach ( $block->inner_blocks as $inner ) {
 	if ( 'core/site-logo' === $inner->name ) {
@@ -24,8 +23,6 @@ foreach ( $block->inner_blocks as $inner ) {
 	} elseif ( 'core/navigation' === $inner->name ) {
 		$nav_strip  = $inner->render();
 		$nav_drawer = $inner->render();
-	} elseif ( 'core/search' === $inner->name ) {
-		$search = $inner->render();
 	}
 }
 
@@ -103,7 +100,16 @@ $wrapper = get_block_wrapper_attributes(
 		</div>
 	</header>
 
-	<div class="search-modal" id="<?php echo esc_attr( $search_id ); ?>" hidden>
+	<div
+		class="search-modal"
+		id="<?php echo esc_attr( $search_id ); ?>"
+		hidden
+		data-search-endpoint="<?php echo esc_url( rest_url( 'tr724/v1/search/posts' ) ); ?>"
+		data-search-page="<?php echo esc_url( home_url( '/' ) ); ?>"
+		data-search-empty="<?php esc_attr_e( 'Sonuç bulunamadı', 'tr724-news' ); ?>"
+		data-search-error="<?php esc_attr_e( 'Arama şu anda kullanılamıyor.', 'tr724-news' ); ?>"
+		data-search-loading="<?php esc_attr_e( 'Aranıyor…', 'tr724-news' ); ?>"
+	>
 		<div class="search-modal__backdrop" data-search-close></div>
 		<div
 			class="search-modal__dialog"
@@ -122,7 +128,26 @@ $wrapper = get_block_wrapper_attributes(
 					×
 				</button>
 			</div>
-			<?php echo $search; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<input
+				class="search-modal__input"
+				type="search"
+				placeholder="<?php esc_attr_e( 'Haber ara', 'tr724-news' ); ?>"
+				aria-label="<?php esc_attr_e( 'Haber ara', 'tr724-news' ); ?>"
+				autocomplete="off"
+			/>
+			<label class="search-modal__sort" hidden>
+				<span class="search-modal__sort-label"><?php esc_html_e( 'Sırala', 'tr724-news' ); ?></span>
+				<select>
+					<option value="date:desc"><?php esc_html_e( 'En yeni', 'tr724-news' ); ?></option>
+					<option value="date:asc"><?php esc_html_e( 'En eski', 'tr724-news' ); ?></option>
+				</select>
+			</label>
+			<div class="search-modal__results">
+				<div class="search-modal__list" aria-live="polite"></div>
+				<a class="outline-btn search-modal__more" hidden>
+					<?php esc_html_e( 'Daha Fazla', 'tr724-news' ); ?> <span aria-hidden="true">→</span>
+				</a>
+			</div>
 		</div>
 	</div>
 

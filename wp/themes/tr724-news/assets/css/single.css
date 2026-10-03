@@ -63,7 +63,7 @@
 
 .post-layout__aside {
 	grid-column: 2;
-	grid-row: 2;
+	grid-row: 1 / span 2;
 	position: sticky;
 	top: 129px;
 	align-self: start;

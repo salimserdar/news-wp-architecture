@@ -6,124 +6,9 @@
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! function_exists( 'tr724_category_archive_upper' ) ) {
-	/**
-	 * Turkish-aware uppercase for the category title.
-	 */
-	function tr724_category_archive_upper( string $text ): string {
-		$text = strtr(
-			$text,
-			[
-				'i' => 'İ',
-				'ı' => 'I',
-			]
-		);
-		return mb_strtoupper( $text, 'UTF-8' );
-	}
-}
-
-if ( ! function_exists( 'tr724_category_archive_pages' ) ) {
-	/**
-	 * Page numbers to show, with gaps when the archive is long.
-	 *
-	 * @return array<int, int|string>
-	 */
-	function tr724_category_archive_pages( int $current, int $total ): array {
-		if ( $total <= 7 ) {
-			return range( 1, $total );
-		}
-
-		$pages = [ 1 ];
-		$start = max( 2, $current - 1 );
-		$end   = min( $total - 1, $current + 1 );
-
-		if ( $start > 2 ) {
-			$pages[] = 'gap';
-		}
-		for ( $page = $start; $page <= $end; $page++ ) {
-			$pages[] = $page;
-		}
-		if ( $end < $total - 1 ) {
-			$pages[] = 'gap';
-		}
-		$pages[] = $total;
-
-		return $pages;
-	}
-}
-
-if ( ! function_exists( 'tr724_category_archive_pagination' ) ) {
-	/**
-	 * Previous, page numbers, and next. Inactive on the first and last page.
-	 */
-	function tr724_category_archive_pagination(): void {
-		global $wp_query;
-
-		$total = isset( $wp_query->max_num_pages ) ? (int) $wp_query->max_num_pages : 0;
-		if ( $total < 2 ) {
-			return;
-		}
-
-		$current = max( 1, (int) get_query_var( 'paged' ) );
-		$pages   = tr724_category_archive_pages( $current, $total );
-
-		echo '<nav class="pagination" aria-label="' . esc_attr__( 'Sayfalama', 'tr724-news' ) . '">';
-
-		if ( $current > 1 ) {
-			printf(
-				'<a class="pagination__step" href="%1$s" aria-label="%2$s">‹</a>',
-				esc_url( get_pagenum_link( $current - 1 ) ),
-				esc_attr__( 'Önceki sayfa', 'tr724-news' )
-			);
-		} else {
-			printf(
-				'<span class="pagination__step" aria-disabled="true" aria-label="%s">‹</span>',
-				esc_attr__( 'Önceki sayfa', 'tr724-news' )
-			);
-		}
-
-		foreach ( $pages as $page ) {
-			if ( 'gap' === $page ) {
-				echo '<span class="pagination__gap" aria-hidden="true">…</span>';
-				continue;
-			}
-
-			$page = (int) $page;
-			if ( $page === $current ) {
-				printf(
-					'<span class="pagination__page" aria-current="page">%d</span>',
-					$page
-				);
-				continue;
-			}
-
-			printf(
-				'<a class="pagination__page" href="%1$s">%2$d</a>',
-				esc_url( get_pagenum_link( $page ) ),
-				$page
-			);
-		}
-
-		if ( $current < $total ) {
-			printf(
-				'<a class="pagination__step" href="%1$s" aria-label="%2$s">›</a>',
-				esc_url( get_pagenum_link( $current + 1 ) ),
-				esc_attr__( 'Sonraki sayfa', 'tr724-news' )
-			);
-		} else {
-			printf(
-				'<span class="pagination__step" aria-disabled="true" aria-label="%s">›</span>',
-				esc_attr__( 'Sonraki sayfa', 'tr724-news' )
-			);
-		}
-
-		echo '</nav>';
-	}
-}
-
 $term = get_queried_object();
 $name = ( $term instanceof WP_Term ) ? $term->name : single_cat_title( '', false );
-$heading = tr724_category_archive_upper( $name );
+$heading = tr724_archive_upper( $name );
 
 $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 8v4.5l2.5 1.5" /></svg>';
 ?>
@@ -203,7 +88,7 @@ $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="1
 						}
 						?>
 					</div>
-					<?php tr724_category_archive_pagination(); ?>
+					<?php tr724_archive_pagination(); ?>
 				<?php else : ?>
 					<p class="stories__empty"><?php esc_html_e( 'No posts found.', 'tr724-news' ); ?></p>
 				<?php endif; ?>

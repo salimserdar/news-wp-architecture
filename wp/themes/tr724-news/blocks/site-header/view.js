@@ -6,9 +6,181 @@
 		var drawer = root.querySelector( ".drawer" );
 		if ( ! openSearch || ! modal || ! menuButton || ! drawer ) return;
 
-		var input = modal.querySelector( ".wp-block-search__input" );
+		var input = modal.querySelector( ".search-modal__input" );
+		var sortField = modal.querySelector( ".search-modal__sort" );
+		var sort = sortField ? sortField.querySelector( "select" ) : null;
+		var list = modal.querySelector( ".search-modal__list" );
+		var more = modal.querySelector( ".search-modal__more" );
+		var endpoint = modal.getAttribute( "data-search-endpoint" );
+		var searchPage = modal.getAttribute( "data-search-page" );
+		var emptyText = modal.getAttribute( "data-search-empty" ) || "Sonuç bulunamadı";
+		var errorText = modal.getAttribute( "data-search-error" ) || "Arama şu anda kullanılamıyor.";
+		var loadingText = modal.getAttribute( "data-search-loading" ) || "Aranıyor…";
+		var pageSize = 20;
+		var page = 1;
+		var total = 0;
+		var shown = 0;
+		var query = "";
+		var timer = 0;
+		var requestId = 0;
+		var controller = null;
 		var reduceMotion = window.matchMedia( "(prefers-reduced-motion: reduce)" ).matches;
 		var drawerOpen = false;
+
+		function currentSort() {
+			return sort && sort.value === "date:asc" ? "date:asc" : "date:desc";
+		}
+
+		function searchPageUrl() {
+			if ( ! searchPage || ! query ) return "";
+			var url = new URL( searchPage, window.location.href );
+			url.searchParams.set( "s", query );
+			url.searchParams.set( "sort", currentSort() );
+			url.searchParams.set( "paged", "2" );
+			return url.toString();
+		}
+
+		function setSortVisible( visible ) {
+			if ( sortField ) sortField.hidden = ! visible;
+		}
+
+		function setStatus( message ) {
+			if ( ! list ) return;
+			list.replaceChildren();
+			var note = document.createElement( "p" );
+			note.className = "search-modal__empty";
+			note.textContent = message;
+			list.append( note );
+			if ( more ) more.hidden = true;
+		}
+
+		function renderHits( items, append ) {
+			if ( ! list ) return;
+			if ( ! append ) list.replaceChildren();
+			var firstNew = null;
+			items.forEach( function ( story ) {
+				if ( ! story || typeof story.url !== "string" || typeof story.title !== "string" || story.url === "" ) {
+					return;
+				}
+				var link = document.createElement( "a" );
+				link.className = "search-hit";
+				link.href = story.url;
+				var kickerText = typeof story.kicker === "string" ? story.kicker.trim() : "";
+				if ( kickerText && kickerText.toLocaleUpperCase( "tr-TR" ) !== "MANŞET" ) {
+					var kicker = document.createElement( "span" );
+					kicker.className = "search-hit__kicker";
+					kicker.textContent = kickerText;
+					link.append( kicker );
+				}
+				var title = document.createElement( "span" );
+				title.className = "search-hit__title";
+				title.textContent = story.title;
+				link.append( title );
+				var authorText = typeof story.author === "string" ? story.author.trim() : "";
+				var showAuthor = authorText !== "" && authorText.toLocaleUpperCase( "tr-TR" ).indexOf( "TR724" ) === -1;
+				if ( showAuthor || story.time ) {
+					var meta = document.createElement( "span" );
+					meta.className = "search-hit__meta";
+					if ( showAuthor ) {
+						var author = document.createElement( "span" );
+						author.className = "search-hit__author";
+						author.textContent = authorText;
+						meta.append( author );
+					}
+					if ( story.time ) {
+						var time = document.createElement( "time" );
+						time.className = "search-hit__time";
+						time.textContent = story.time;
+						if ( story.datetime ) time.dateTime = story.datetime;
+						meta.append( time );
+					}
+					link.append( meta );
+				}
+				if ( ! firstNew ) firstNew = link;
+				list.append( link );
+			} );
+			if ( append && firstNew && typeof firstNew.scrollIntoView === "function" ) {
+				firstNew.scrollIntoView( { block: "nearest" } );
+			}
+		}
+
+		function resetSearch() {
+			window.clearTimeout( timer );
+			if ( controller ) controller.abort();
+			requestId += 1;
+			query = "";
+			page = 1;
+			total = 0;
+			shown = 0;
+			if ( input ) input.value = "";
+			if ( list ) list.replaceChildren();
+			setSortVisible( false );
+			if ( more ) {
+				more.hidden = true;
+				more.removeAttribute( "href" );
+			}
+		}
+
+		function search( nextPage, append ) {
+			if ( ! input || ! endpoint ) return;
+			var current = input.value.trim();
+			if ( current.length < 2 ) {
+				resetSearch();
+				if ( input ) input.value = current;
+				return;
+			}
+
+			query = current;
+			page = nextPage;
+			if ( controller ) controller.abort();
+			controller = typeof AbortController === "function" ? new AbortController() : null;
+			var id = ++requestId;
+			if ( ! append ) setStatus( loadingText );
+
+			var url = new URL( endpoint, window.location.href );
+			url.searchParams.set( "q", query );
+			url.searchParams.set( "page", String( page ) );
+			url.searchParams.set( "limit", String( pageSize ) );
+			url.searchParams.set( "sort", currentSort() );
+
+			var options = {
+				headers: { Accept: "application/json" },
+			};
+			if ( controller ) options.signal = controller.signal;
+
+			window.fetch( url.toString(), options )
+				.then( function ( response ) {
+					if ( ! response.ok ) throw new Error( "search" );
+					return response.json();
+				} )
+				.then( function ( data ) {
+					if ( id !== requestId ) return;
+					var items = data && Array.isArray( data.results ) ? data.results : [];
+					total = data && typeof data.total === "number" ? data.total : items.length;
+					if ( ! append && ! items.length ) {
+						setStatus( emptyText );
+						setSortVisible( false );
+						shown = 0;
+						return;
+					}
+					renderHits( items, append );
+					setSortVisible( true );
+					shown = append ? shown + items.length : items.length;
+					if ( more ) {
+						var href = searchPageUrl();
+						if ( href ) more.href = href;
+						more.hidden = ! href || shown >= total || items.length === 0;
+					}
+				} )
+				.catch( function ( error ) {
+					if ( error && error.name === "AbortError" ) return;
+					if ( id !== requestId ) return;
+					if ( ! append ) {
+						setStatus( errorText );
+						setSortVisible( false );
+					}
+				} );
+		}
 
 		function setDrawer( open ) {
 			drawerOpen = open;
@@ -63,15 +235,14 @@
 			}
 			modal.hidden = false;
 			document.body.style.overflow = "hidden";
-			if ( input ) {
-				input.value = "";
-				input.focus();
-			}
+			resetSearch();
+			if ( input ) input.focus();
 		}
 
 		function closeModal() {
 			modal.hidden = true;
 			document.body.style.overflow = "";
+			resetSearch();
 			openSearch.focus();
 		}
 
@@ -79,6 +250,29 @@
 		modal.querySelectorAll( "[data-search-close]" ).forEach( function ( control ) {
 			control.addEventListener( "click", closeModal );
 		} );
+
+		if ( input ) {
+			input.addEventListener( "input", function () {
+				window.clearTimeout( timer );
+				timer = window.setTimeout( function () {
+					search( 1, false );
+				}, 300 );
+			} );
+			input.addEventListener( "keydown", function ( event ) {
+				if ( event.key !== "Enter" ) return;
+				event.preventDefault();
+				window.clearTimeout( timer );
+				search( 1, false );
+			} );
+		}
+
+		if ( sort ) {
+			sort.addEventListener( "change", function () {
+				window.clearTimeout( timer );
+				if ( ! input || input.value.trim().length < 2 ) return;
+				search( 1, false );
+			} );
+		}
 
 		document.addEventListener( "keydown", function ( event ) {
 			if ( event.key !== "Escape" ) return;
