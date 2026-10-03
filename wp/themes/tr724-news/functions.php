@@ -57,11 +57,28 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/site-footer' );
 	register_block_type( get_template_directory() . '/blocks/spotlight' );
 	register_block_type( get_template_directory() . '/blocks/authors-recent-post' );
+	register_block_type( get_template_directory() . '/blocks/yazarlar' );
 	register_block_type( get_template_directory() . '/blocks/stories' );
 	register_block_type( get_template_directory() . '/blocks/videos' );
 	register_block_type( get_template_directory() . '/blocks/category' );
 	register_block_type( get_template_directory() . '/blocks/ticker' );
 	register_block_type( get_template_directory() . '/blocks/popular' );
+} );
+
+add_action( 'enqueue_block_editor_assets', function (): void {
+	$roles = [];
+	foreach ( wp_roles()->get_names() as $slug => $label ) {
+		$roles[] = [
+			'value' => $slug,
+			'label' => translate_user_role( $label ),
+		];
+	}
+
+	wp_add_inline_script(
+		'tr724-yazarlar-editor-script',
+		'window.tr724YazarlarRoles = ' . wp_json_encode( $roles ) . ';',
+		'before'
+	);
 } );
 
 add_filter(
@@ -98,6 +115,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-authors-recent-post-editor-style'  => '/blocks/authors-recent-post/editor.css',
 		'tr724-authors-recent-post-editor-script' => '/blocks/authors-recent-post/edit.js',
 		'tr724-authors-recent-post-script'        => '/blocks/authors-recent-post/view.js',
+		'tr724-yazarlar-style'                    => '/blocks/yazarlar/style.css',
+		'tr724-yazarlar-editor-style'             => '/blocks/yazarlar/editor.css',
+		'tr724-yazarlar-editor-script'            => '/blocks/yazarlar/edit.js',
 		'tr724-stories-style'                     => '/blocks/stories/style.css',
 		'tr724-stories-editor-style'              => '/blocks/stories/editor.css',
 		'tr724-stories-editor-script'             => '/blocks/stories/edit.js',

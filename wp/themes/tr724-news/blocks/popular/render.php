@@ -82,7 +82,7 @@ if ( '' !== $ad_image ) {
 
 echo '<div class="popular__box">';
 echo '<div class="popular__head">';
-echo '<h2 class="popular__title" id="' . esc_attr( $title_id ) . '">' . esc_html__( 'EN ÇOK OKUNANLAR', 'tr724-news' ) . '</h2>';
+echo '<h2 class="popular__title" id="' . esc_attr( $title_id ) . '">' . esc_html__( 'ÇOK OKUNANLAR', 'tr724-news' ) . '</h2>';
 
 if ( '' !== $message ) {
 	echo '</div>';
@@ -93,7 +93,7 @@ if ( '' !== $message ) {
 
 echo '<div class="popular__tabs" role="tablist" aria-label="' . esc_attr__( 'Zaman aralığı', 'tr724-news' ) . '">';
 foreach ( $tabs as $period => $tab ) {
-	$selected = 'week' === $period;
+	$selected = 'today' === $period;
 	echo '<button class="popular__tab" type="button" role="tab"';
 	echo ' id="' . esc_attr( $tab['id'] ) . '"';
 	echo ' aria-controls="' . esc_attr( $tab['panel'] ) . '"';
@@ -106,7 +106,7 @@ foreach ( $tabs as $period => $tab ) {
 echo '</div></div>';
 
 foreach ( $tabs as $period => $tab ) {
-	$selected = 'week' === $period;
+	$selected = 'today' === $period;
 	$items    = isset( $result[ $period ] ) && is_array( $result[ $period ] ) ? $result[ $period ] : [];
 	echo '<ol class="popular__list" id="' . esc_attr( $tab['panel'] ) . '" role="tabpanel"';
 	echo ' aria-labelledby="' . esc_attr( $tab['id'] ) . '"';

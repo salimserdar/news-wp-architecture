@@ -39,11 +39,11 @@ function tr724_ticker_upper( string $text ): string {
 
 function tr724_ticker_label( string $symbol, string $name, string $group ): string {
 	$defaults = [
-		'USDTRY' => 'USD',
+		'USDTRY' => 'DOLAR',
 		'EURTRY' => 'EURO',
 		'GBPTRY' => 'STERLİN',
 		'XU100'  => 'BIST',
-		'GLDGR'  => 'GOLD',
+		'GLDGR'  => 'ALTIN',
 	];
 	if ( isset( $defaults[ $symbol ] ) ) {
 		return $defaults[ $symbol ];
@@ -133,7 +133,7 @@ function tr724_ticker_normalize( array $data ): array {
  * @return array<int, array{symbol: string, name: string, label: string, group: string, price: float, change: float|null, changePercent: float}>|WP_Error
  */
 function tr724_ticker_instruments(): array|WP_Error {
-	$cache_key = 'tr724_fx_rates';
+	$cache_key = 'tr724_fx_rates_v2';
 	$cached    = get_transient( $cache_key );
 	if ( is_array( $cached ) ) {
 		return $cached;
@@ -162,7 +162,7 @@ function tr724_ticker_instruments(): array|WP_Error {
 	}
 
 	if ( null === $instruments ) {
-		$stale = get_transient( 'tr724_fx_rates_last' );
+		$stale = get_transient( 'tr724_fx_rates_last_v2' );
 		if ( is_array( $stale ) ) {
 			return $stale;
 		}
@@ -170,7 +170,7 @@ function tr724_ticker_instruments(): array|WP_Error {
 	}
 
 	set_transient( $cache_key, $instruments, 5 * MINUTE_IN_SECONDS );
-	set_transient( 'tr724_fx_rates_last', $instruments, 12 * HOUR_IN_SECONDS );
+	set_transient( 'tr724_fx_rates_last_v2', $instruments, 12 * HOUR_IN_SECONDS );
 
 	return $instruments;
 }

@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/yazarlar",
+	"title": "Yazarlar",
+	"category": "theme",
+	"description": "Author grid. Lists users in a role. Defaults to Author.",
+	"keywords": [ "authors", "yazarlar", "writers" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"sectionTitle": {
+			"type": "string",
+			"default": "TÜM YAZARLARI"
+		},
+		"columns": {
+			"type": "number",
+			"default": 4
+		},
+		"role": {
+			"type": "string",
+			"default": "author"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}
