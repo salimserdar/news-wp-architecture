@@ -169,6 +169,47 @@ if ( ! function_exists( 'tr724_single_author_avatar' ) ) {
 		return $avatar;
 	}
 }
+
+if ( ! function_exists( 'tr724_single_is_columnist' ) ) {
+	/**
+	 * Columnist posts are written by the Author or Archive Author role.
+	 */
+	function tr724_single_is_columnist( int $author_id ): bool {
+		$user = get_userdata( $author_id );
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+		return (bool) array_intersect( (array) $user->roles, [ 'author', 'archive_author' ] );
+	}
+}
+
+if ( ! function_exists( 'tr724_single_author_date' ) ) {
+	/**
+	 * Archive-style date: "03 EKİM 2026".
+	 */
+	function tr724_single_author_date( int $post_id ): string {
+		$published = (int) get_post_timestamp( $post_id );
+		if ( ! $published ) {
+			return '';
+		}
+		$months = [
+			1  => 'OCAK',
+			2  => 'ŞUBAT',
+			3  => 'MART',
+			4  => 'NİSAN',
+			5  => 'MAYIS',
+			6  => 'HAZİRAN',
+			7  => 'TEMMUZ',
+			8  => 'AĞUSTOS',
+			9  => 'EYLÜL',
+			10 => 'EKİM',
+			11 => 'KASIM',
+			12 => 'ARALIK',
+		];
+		$month_num = (int) wp_date( 'n', $published );
+		return wp_date( 'd', $published ) . ' ' . ( $months[ $month_num ] ?? '' ) . ' ' . wp_date( 'Y', $published );
+	}
+}
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -464,7 +505,76 @@ if ( have_posts() ) {
 							<span aria-hidden="true">→</span>
 						</a>
 					</div>
-					<?php comments_template(); ?>
+					<?php
+					if ( tr724_author_is_newsroom( $author_id ) ) {
+						echo render_block(
+							[
+								'blockName'    => 'tr724/headlines',
+								'attrs'        => [
+									'excludeId'   => $post_id,
+									'categoryId'  => 13694,
+									'postsToShow' => 15,
+								],
+								'innerBlocks'  => [],
+								'innerHTML'    => '',
+								'innerContent' => [],
+							]
+						);
+					}
+					if ( tr724_single_is_columnist( $author_id ) ) {
+						$author_posts = new WP_Query(
+							[
+								'post_type'           => 'post',
+								'post_status'         => 'publish',
+								'author'              => $author_id,
+								'post__not_in'        => [ $post_id ],
+								'posts_per_page'      => 5,
+								'ignore_sticky_posts' => true,
+								'no_found_rows'       => true,
+							]
+						);
+						if ( $author_posts->have_posts() ) {
+							$author_posts_title_id = wp_unique_id( 'author-posts-title-' );
+							$author_posts_heading  = tr724_single_upper(
+								sprintf(
+									/* translators: %s: author display name. */
+									__( '%s yazıları', 'tr724-news' ),
+									$author
+								)
+							);
+							?>
+							<section class="post__author-posts" aria-labelledby="<?php echo esc_attr( $author_posts_title_id ); ?>">
+								<h2 class="post__author-posts-title" id="<?php echo esc_attr( $author_posts_title_id ); ?>">
+									<a href="<?php echo esc_url( get_author_posts_url( $author_id ) ); ?>"><?php echo esc_html( $author_posts_heading ); ?></a>
+								</h2>
+								<?php
+								while ( $author_posts->have_posts() ) {
+									$author_posts->the_post();
+									$recent_id = (int) get_the_ID();
+									$date_text = tr724_single_author_date( $recent_id );
+									?>
+									<article class="post__author-post">
+										<?php if ( '' !== $date_text ) : ?>
+											<time datetime="<?php echo esc_attr( (string) get_post_time( DATE_W3C, true, $recent_id ) ); ?>"><?php echo esc_html( $date_text ); ?></time>
+										<?php endif; ?>
+										<h3 class="post__author-post-title">
+											<a href="<?php echo esc_url( get_permalink( $recent_id ) ); ?>"><?php echo esc_html( get_the_title( $recent_id ) ); ?></a>
+										</h3>
+									</article>
+									<?php
+								}
+								?>
+								<a class="post__author-posts-all" href="<?php echo esc_url( get_author_posts_url( $author_id ) ); ?>">
+									<?php esc_html_e( 'Tüm yazıları gör', 'tr724-news' ); ?>
+									<span aria-hidden="true">→</span>
+								</a>
+							</section>
+							<?php
+						}
+						wp_reset_postdata();
+					}
+					comments_template();
+					?>
 				</div>
 				<aside class="post-layout__aside"><?php dynamic_sidebar( 'single-post' ); ?></aside>
 			</div>

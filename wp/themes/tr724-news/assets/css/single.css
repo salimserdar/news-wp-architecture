@@ -28,6 +28,9 @@
 .post__breadcrumb a:focus-visible,
 .post__tags a:focus-visible,
 .post__patron-cta:focus-visible,
+.post__author-posts-title a:focus-visible,
+.post__author-post-title a:focus-visible,
+.post__author-posts-all:focus-visible,
 .post__comment-submit:focus-visible,
 .post__share-link:focus-visible,
 .post__author-name:focus-visible,
@@ -480,6 +483,85 @@
 	background: #e86000;
 }
 
+.post__author-posts {
+	margin-top: 36px;
+}
+
+.post__author-posts-title {
+	margin: 0 0 8px;
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: 0.02em;
+}
+
+.post__author-posts-title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.post__author-posts-title a:hover {
+	color: var(--color-accent-link);
+}
+
+.post__author-posts-title::after {
+	content: "";
+	display: block;
+	width: 36px;
+	height: 3px;
+	margin-top: 5px;
+	background: var(--color-accent-link);
+}
+
+.post__author-post {
+	padding: 16px 0 18px;
+	border-bottom: 1px solid #ececec;
+}
+
+.post__author-post time {
+	display: block;
+	margin-bottom: 10px;
+	color: #b0b0b0;
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	line-height: 1;
+}
+
+.post__author-post-title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1.25;
+}
+
+.post__author-post-title a {
+	color: #111;
+	text-decoration: none;
+}
+
+.post__author-post-title a:hover {
+	color: var(--color-accent-link);
+}
+
+.post__author-posts-all {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 16px;
+	color: var(--color-accent-link);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1;
+	text-decoration: none;
+	transition: color 0.2s ease;
+}
+
+.post__author-posts-all:hover {
+	color: #e86000;
+}
+
 .post__comments {
 	--comment-ink: #003399;
 	margin-top: 36px;
@@ -729,6 +811,10 @@
 		align-items: flex-start;
 	}
 
+	.post__author-post-title {
+		font-size: 18px;
+	}
+
 	.lightbox {
 		padding: 44px 12px 16px;
 	}
@@ -743,6 +829,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.post__tags a,
 	.post__patron-cta,
+	.post__author-posts-all,
 	.post__comment-submit,
 	.post__comment-form textarea,
 	.post__comment-form input[type="text"],

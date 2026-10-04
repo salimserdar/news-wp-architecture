@@ -65,7 +65,21 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/category' );
 	register_block_type( get_template_directory() . '/blocks/ticker' );
 	register_block_type( get_template_directory() . '/blocks/popular' );
+	register_block_type( get_template_directory() . '/blocks/headlines' );
 } );
+
+if ( ! function_exists( 'tr724_author_is_newsroom' ) ) {
+	/**
+	 * Newsroom posts are written by an editor or an administrator.
+	 */
+	function tr724_author_is_newsroom( int $author_id ): bool {
+		$user = get_userdata( $author_id );
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+		return (bool) array_intersect( (array) $user->roles, [ 'editor', 'administrator' ] );
+	}
+}
 
 add_action( 'enqueue_block_editor_assets', function (): void {
 	$roles = [];
@@ -137,6 +151,10 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-popular-editor-style'              => '/blocks/popular/editor.css',
 		'tr724-popular-editor-script'             => '/blocks/popular/edit.js',
 		'tr724-popular-script'                    => '/blocks/popular/view.js',
+		'tr724-headlines-style'                   => '/blocks/headlines/style.css',
+		'tr724-headlines-editor-style'            => '/blocks/headlines/editor.css',
+		'tr724-headlines-editor-script'           => '/blocks/headlines/edit.js',
+		'tr724-headlines-script'                  => '/blocks/headlines/view.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {
@@ -308,6 +326,19 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		is_readable( $path ) ? (string) filemtime( $path ) : null
 	);
 
+	if ( is_404() ) {
+		wp_enqueue_style( 'tr724-news-inter' );
+
+		$not_found_css = get_template_directory() . '/assets/css/not-found.css';
+		wp_enqueue_style(
+			'tr724-not-found',
+			get_template_directory_uri() . '/assets/css/not-found.css',
+			[ 'tr724-news', 'tr724-news-inter' ],
+			is_readable( $not_found_css ) ? (string) filemtime( $not_found_css ) : null
+		);
+		return;
+	}
+
 	if ( is_singular( 'post' ) ) {
 		wp_enqueue_style( 'tr724-news-inter' );
 
@@ -327,6 +358,12 @@ add_action( 'wp_enqueue_scripts', function (): void {
 			is_readable( $single_js ) ? (string) filemtime( $single_js ) : null,
 			true
 		);
+
+		$newsroom_author = (int) get_post_field( 'post_author', get_queried_object_id() );
+		if ( tr724_author_is_newsroom( $newsroom_author ) ) {
+			wp_enqueue_style( 'tr724-headlines-style' );
+			wp_enqueue_script( 'tr724-headlines-script' );
+		}
 
 		$ads_css = get_template_directory() . '/assets/css/ads.css';
 		wp_enqueue_style(
