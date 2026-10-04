@@ -34,8 +34,8 @@ $months = [
 	12 => 'ARALIK',
 ];
 
-$watermark = __( 'YAZARLAR', 'tr724-news' );
-$heading   = __( 'BUGÜNÜN YAZARLARI', 'tr724-news' );
+$watermark = __( 'YAZAR', 'tr724-news' );
+$heading   = __( 'YAZAR PROFİL', 'tr724-news' );
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>

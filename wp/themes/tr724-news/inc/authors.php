@@ -1,6 +1,7 @@
 <?php
 /**
  * Shared author photo and social links for the yazarlar block and author archives.
+ * Direct children of the yazarlar category resolve to the matching author archive.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -125,3 +126,79 @@ if ( ! function_exists( 'tr724_yazarlar_social' ) ) {
 		return '<div class="' . esc_attr( $class ) . '">' . $links . '</div>';
 	}
 }
+
+if ( ! function_exists( 'tr724_yazarlar_author_for_term' ) ) {
+	/**
+	 * User whose nicename matches a direct child of the yazarlar category.
+	 */
+	function tr724_yazarlar_author_for_term( WP_Term $term ): ?WP_User {
+		if ( 'category' !== $term->taxonomy || (int) $term->parent <= 0 ) {
+			return null;
+		}
+
+		$parent = get_term( (int) $term->parent, 'category' );
+		if ( ! $parent instanceof WP_Term || 'yazarlar' !== $parent->slug ) {
+			return null;
+		}
+
+		$user = get_user_by( 'slug', $term->slug );
+		return $user instanceof WP_User ? $user : null;
+	}
+}
+
+add_action(
+	'template_redirect',
+	static function (): void {
+		if ( ! is_category() ) {
+			return;
+		}
+
+		$term = get_queried_object();
+		if ( ! $term instanceof WP_Term ) {
+			return;
+		}
+
+		$user = tr724_yazarlar_author_for_term( $term );
+		if ( ! $user instanceof WP_User ) {
+			return;
+		}
+
+		$url = get_author_posts_url( (int) $user->ID );
+		if ( is_feed() ) {
+			$feed = get_query_var( 'feed' );
+			if ( ! is_string( $feed ) || '' === $feed || 'feed' === $feed ) {
+				$feed = '';
+			}
+			$feed_url = get_author_feed_link( (int) $user->ID, $feed );
+			if ( is_string( $feed_url ) && '' !== $feed_url ) {
+				$url = $feed_url;
+			}
+		} else {
+			$paged = (int) get_query_var( 'paged' );
+			if ( $paged > 1 ) {
+				$url = trailingslashit( $url ) . user_trailingslashit( 'page/' . $paged, 'paged' );
+			}
+		}
+
+		wp_safe_redirect( $url, 301 );
+		exit;
+	}
+);
+
+add_filter(
+	'term_link',
+	static function ( string $termlink, WP_Term $term, string $taxonomy ): string {
+		if ( 'category' !== $taxonomy ) {
+			return $termlink;
+		}
+
+		$user = tr724_yazarlar_author_for_term( $term );
+		if ( ! $user instanceof WP_User ) {
+			return $termlink;
+		}
+
+		return get_author_posts_url( (int) $user->ID );
+	},
+	10,
+	3
+);
