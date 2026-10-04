@@ -11,6 +11,7 @@ require_once get_template_directory() . '/inc/authors.php';
 require_once get_template_directory() . '/inc/widgets.php';
 require_once get_template_directory() . '/blocks/ticker/rates.php';
 require_once get_template_directory() . '/blocks/site-header/search.php';
+require_once get_template_directory() . '/blocks/related-news/posts.php';
 
 add_action( 'after_setup_theme', function (): void {
 	add_theme_support( 'title-tag' );
@@ -66,6 +67,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/ticker' );
 	register_block_type( get_template_directory() . '/blocks/popular' );
 	register_block_type( get_template_directory() . '/blocks/headlines' );
+	register_block_type( get_template_directory() . '/blocks/related-news' );
 } );
 
 if ( ! function_exists( 'tr724_author_is_newsroom' ) ) {
@@ -155,6 +157,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-headlines-editor-style'            => '/blocks/headlines/editor.css',
 		'tr724-headlines-editor-script'           => '/blocks/headlines/edit.js',
 		'tr724-headlines-script'                  => '/blocks/headlines/view.js',
+		'tr724-related-news-style'                => '/blocks/related-news/style.css',
+		'tr724-related-news-editor-style'         => '/blocks/related-news/editor.css',
+		'tr724-related-news-editor-script'        => '/blocks/related-news/edit.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {

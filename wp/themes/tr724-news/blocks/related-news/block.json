@@ -1,0 +1,42 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/related-news",
+	"title": "Related news",
+	"category": "text",
+	"icon": "admin-links",
+	"description": "Place related stories inside an article. Search, then show a list or one story.",
+	"keywords": [ "related", "ilgili", "haber", "news", "link" ],
+	"textdomain": "tr724-news",
+	"usesContext": [ "postId" ],
+	"attributes": {
+		"postIds": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "number"
+			}
+		},
+		"layout": {
+			"type": "string",
+			"default": "list",
+			"enum": [ "list", "single" ]
+		},
+		"heading": {
+			"type": "string",
+			"default": "İlgili Haberler"
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false,
+		"multiple": true
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}

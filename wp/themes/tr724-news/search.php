@@ -1,11 +1,14 @@
 <?php
 /**
- * Search results. Same aggregator query as the header search modal.
+ * Search results from the site aggregator.
+ *
+ * {SITE_AGGREGATOR_SERVICE_URL}/api/v1/search/posts?q=&page=&limit=20&status=publish&sort=
  */
 
 defined( 'ABSPATH' ) || exit;
 
-$query = tr724_search_query( get_search_query() );
+$raw   = get_search_query();
+$query = tr724_search_query( $raw );
 $sort  = tr724_search_sort( isset( $_GET['sort'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['sort'] ) ) : 'date:desc' );
 $page  = max( 1, (int) get_query_var( 'paged' ) );
 
@@ -15,7 +18,7 @@ $total  = is_array( $result ) ? (int) $result['total'] : 0;
 $limit  = is_array( $result ) && (int) $result['limit'] > 0 ? (int) $result['limit'] : 20;
 $pages  = (int) min( 50, (int) ceil( $total / $limit ) );
 $error  = is_wp_error( $result ) ? $result->get_error_message() : '';
-if ( '' === $query ) {
+if ( '' === $query && '' !== trim( $raw ) ) {
 	$error = __( 'Arama için en az 2 karakter yazın.', 'tr724-news' );
 }
 ?>
@@ -34,6 +37,29 @@ if ( '' === $query ) {
 		<span class="category__watermark" aria-hidden="true"><?php esc_html_e( 'ARAMA', 'tr724-news' ); ?></span>
 		<h1 class="section-title category__title" id="search-page-title"><?php echo esc_html( '' !== $query ? $query : __( 'Arama', 'tr724-news' ) ); ?></h1>
 	</header>
+
+	<form class="search-archive__form" role="search" method="get" action="<?php echo esc_url( home_url( '/' ) ); ?>">
+		<label class="search-archive__label" for="search-page-query"><?php esc_html_e( 'Haber ara', 'tr724-news' ); ?></label>
+		<input
+			id="search-page-query"
+			type="search"
+			name="s"
+			value="<?php echo esc_attr( $query ); ?>"
+			minlength="2"
+			maxlength="120"
+			required
+			placeholder="<?php esc_attr_e( 'Haber ara', 'tr724-news' ); ?>"
+			autocomplete="off"
+		>
+		<label class="search-archive__sort">
+			<span class="search-archive__sort-label"><?php esc_html_e( 'Sırala', 'tr724-news' ); ?></span>
+			<select name="sort">
+				<option value="date:desc" <?php selected( $sort, 'date:desc' ); ?>><?php esc_html_e( 'En yeni', 'tr724-news' ); ?></option>
+				<option value="date:asc" <?php selected( $sort, 'date:asc' ); ?>><?php esc_html_e( 'En eski', 'tr724-news' ); ?></option>
+			</select>
+		</label>
+		<button class="outline-btn" type="submit"><?php esc_html_e( 'Ara', 'tr724-news' ); ?></button>
+	</form>
 
 	<div class="row">
 		<div class="column">
@@ -93,7 +119,7 @@ if ( '' === $query ) {
 							<?php endif; ?>
 						</nav>
 					<?php endif; ?>
-				<?php else : ?>
+				<?php elseif ( '' !== $error || '' !== $query ) : ?>
 					<p class="stories__empty"><?php echo esc_html( '' !== $error ? $error : __( 'Sonuç bulunamadı', 'tr724-news' ) ); ?></p>
 				<?php endif; ?>
 			</section>

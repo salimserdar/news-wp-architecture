@@ -1,11 +1,11 @@
 <?php
 /**
- * Header search against the site aggregator.
+ * Search against the site aggregator.
  *
- * The browser calls this route. The route calls
- * /api/v1/search/posts?q=&page=&limit=20&sort=date:desc on the aggregator, which is not
- * reachable from the browser (no CORS, and inside Docker the host is
- * host.docker.internal).
+ * The header modal searches as you type. The browser calls this route, and the
+ * route calls {SITE_AGGREGATOR_SERVICE_URL}/api/v1/search/posts. The search
+ * service does not allow cross-origin browser requests, so the modal cannot
+ * call it directly. The search page uses the same lookup.
  */
 
 defined( 'ABSPATH' ) || exit;
