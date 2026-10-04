@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "tr724/related-news",
-	"title": "Related news",
+	"title": "İlgili Haberler",
 	"category": "text",
 	"icon": "admin-links",
 	"description": "Place related stories inside an article. Search, then show a list or one story.",

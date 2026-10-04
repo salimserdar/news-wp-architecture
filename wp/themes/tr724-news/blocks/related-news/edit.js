@@ -301,7 +301,7 @@
 				? el(
 					Modal,
 					{
-						title: __( "Related news", "tr724-news" ),
+						title: __( "İlgili Haberler", "tr724-news" ),
 						className: "related-news-editor__modal",
 						onRequestClose: function () {
 							setIsOpen( false );

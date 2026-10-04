@@ -70,6 +70,42 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/related-news' );
 } );
 
+/**
+ * Administrators insert every tr724 block. Editors insert only İlgili Haberler.
+ * Other roles insert none of them. Blocks already saved in a post still render.
+ */
+add_filter(
+	'allowed_block_types_all',
+	static function ( $allowed_block_types ) {
+		$roles = (array) wp_get_current_user()->roles;
+		if ( in_array( 'administrator', $roles, true ) ) {
+			return $allowed_block_types;
+		}
+
+		$keep_related = in_array( 'editor', $roles, true );
+		$registered   = array_keys( WP_Block_Type_Registry::get_instance()->get_all_registered() );
+		$hidden       = [];
+		foreach ( $registered as $name ) {
+			if ( ! str_starts_with( $name, 'tr724/' ) ) {
+				continue;
+			}
+			if ( $keep_related && 'tr724/related-news' === $name ) {
+				continue;
+			}
+			$hidden[] = $name;
+		}
+
+		if ( true === $allowed_block_types ) {
+			$allowed_block_types = $registered;
+		}
+		if ( ! is_array( $allowed_block_types ) ) {
+			return $allowed_block_types;
+		}
+
+		return array_values( array_diff( $allowed_block_types, $hidden ) );
+	}
+);
+
 if ( ! function_exists( 'tr724_author_is_newsroom' ) ) {
 	/**
 	 * Newsroom posts are written by an editor or an administrator.
