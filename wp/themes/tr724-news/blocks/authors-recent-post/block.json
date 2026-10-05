@@ -2,15 +2,19 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "tr724/authors-recent-post",
-	"title": "Authors Recent Post",
+	"title": "Yazarların Son Yazıları",
 	"category": "theme",
-	"description": "Yazarlar list. Shows each Author-role user with their latest post.",
+	"description": "Yazar rolündeki her kullanıcıyı son yazısıyla listeler.",
 	"keywords": [ "authors", "yazarlar", "columnists" ],
 	"textdomain": "tr724-news",
 	"attributes": {
 		"heading": {
 			"type": "string",
 			"default": "YAZARLAR"
+		},
+		"headingUrl": {
+			"type": "string",
+			"default": ""
 		},
 		"postsToShow": {
 			"type": "number",

@@ -75,6 +75,14 @@
 	bottom: 18px;
 }
 
+.news-slide__eyebrow {
+	display: block;
+	margin: 0;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
 .news-slide__title {
 	margin: 4px 0 0;
 	font-size: 26px;
@@ -246,6 +254,10 @@
 		margin-inline: -20px;
 	}
 
+	.news-slide__eyebrow {
+		font-size: 13px;
+	}
+
 	.news-slide__title {
 		font-size: 22px;
 	}
@@ -322,5 +334,11 @@
 	.news-pager__more:active {
 		background: #fff6ef;
 		color: var(--color-accent-press);
+	}
+}
+
+@media (max-width: 560px) {
+	.news-slide__eyebrow {
+		font-size: 12px;
 	}
 }

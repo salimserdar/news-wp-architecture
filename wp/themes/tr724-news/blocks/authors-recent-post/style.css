@@ -63,6 +63,15 @@
 	letter-spacing: 0.06em;
 }
 
+.authors__title-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.authors__title-link:hover {
+	color: var(--color-accent-link);
+}
+
 .authors__viewport {
 	flex: 1;
 	min-height: 0;
@@ -175,7 +184,8 @@
 
 .authors__down:focus-visible,
 .authors__up:focus-visible,
-.authors .author:focus-visible {
+.authors .author:focus-visible,
+.authors__title-link:focus-visible {
 	outline: 2px solid var(--focus-ring);
 	outline-offset: 2px;
 }

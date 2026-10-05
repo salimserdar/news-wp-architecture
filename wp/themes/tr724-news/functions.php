@@ -7,6 +7,7 @@
 defined( 'ABSPATH' ) || exit;
 
 require_once get_template_directory() . '/inc/ads.php';
+require_once get_template_directory() . '/inc/additional-image.php';
 require_once get_template_directory() . '/inc/authors.php';
 require_once get_template_directory() . '/inc/widgets.php';
 require_once get_template_directory() . '/blocks/ticker/rates.php';

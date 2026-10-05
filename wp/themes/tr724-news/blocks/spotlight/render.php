@@ -42,6 +42,17 @@ if ( ! $query->have_posts() ) {
 
 update_post_thumbnail_cache( $query );
 
+$extra_ids = [];
+foreach ( $query->posts as $spotlight_post ) {
+	$extra_id = tr724_additional_image_id( (int) $spotlight_post->ID );
+	if ( $extra_id > 0 ) {
+		$extra_ids[] = $extra_id;
+	}
+}
+if ( $extra_ids ) {
+	_prime_post_caches( $extra_ids, false, true );
+}
+
 $prev_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" /></svg>';
 $next_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5 15 12l-5.5 5.5" /></svg>';
 $more_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.1-5.2" /><path d="M19.5 4.5V9H15" /></svg>';
@@ -61,19 +72,23 @@ while ( $query->have_posts() ) {
 	$query->the_post();
 	$post_id = get_the_ID();
 
-	$thumb_id = get_post_thumbnail_id( $post_id );
-	$image    = '';
+	$thumb_id = tr724_additional_image_id( $post_id );
+	if ( $thumb_id <= 0 ) {
+		$thumb_id = (int) get_post_thumbnail_id( $post_id );
+	}
+	$extra_title = tr724_additional_title( $post_id );
+	$upper_title = tr724_upper_title( $post_id );
+	$slide_title = '' !== $extra_title ? $extra_title : get_the_title( $post_id );
+	$hide_title  = tr724_hide_title( $post_id );
+	$slide_label = ( ! $hide_title && '' !== $upper_title ) ? $upper_title . ' ' . $slide_title : $slide_title;
+	$image       = '';
 	if ( $thumb_id ) {
-		$alt = (string) get_post_meta( $thumb_id, '_wp_attachment_image_alt', true );
-		if ( '' === $alt ) {
-			$alt = get_the_title( $post_id );
-		}
 		$image = wp_get_attachment_image(
 			$thumb_id,
 			'large',
 			false,
 			[
-				'alt'           => $alt,
+				'alt'           => $slide_title,
 				'loading'       => 0 === $index ? 'eager' : 'lazy',
 				'fetchpriority' => 0 === $index ? 'high' : 'low',
 				'decoding'      => 'async',
@@ -82,12 +97,18 @@ while ( $query->have_posts() ) {
 	}
 
 	echo '<div class="swiper-slide">';
-	echo '<a class="news-slide" href="' . esc_url( get_permalink( $post_id ) ) . '">';
+	echo '<a class="news-slide" href="' . esc_url( get_permalink( $post_id ) ) . '" aria-label="' . esc_attr( $slide_label ) . '">';
 	echo $image;
-	echo '<span class="news-slide__shade" aria-hidden="true"></span>';
-	echo '<span class="news-slide__copy">';
-	echo '<h3 class="news-slide__title">' . esc_html( get_the_title( $post_id ) ) . '</h3>';
-	echo '</span></a></div>';
+	if ( ! $hide_title ) {
+		echo '<span class="news-slide__shade" aria-hidden="true"></span>';
+		echo '<span class="news-slide__copy">';
+		if ( '' !== $upper_title ) {
+			echo '<span class="news-slide__eyebrow">' . esc_html( $upper_title ) . '</span>';
+		}
+		echo '<h3 class="news-slide__title">' . esc_html( $slide_title ) . '</h3>';
+		echo '</span>';
+	}
+	echo '</a></div>';
 	++$index;
 }
 

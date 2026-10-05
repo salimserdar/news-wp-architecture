@@ -2,3 +2,33 @@
 	outline: 1px dashed rgba(0, 45, 142, 0.35);
 	outline-offset: 4px;
 }
+
+.editor-styles-wrapper .wp-block-column:has(.authors) > .wp-block-tr724-authors-recent-post {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.editor-styles-wrapper .wp-block-column:has(.authors) > .wp-block-tr724-authors-recent-post > .components-server-side-render,
+.editor-styles-wrapper .wp-block-column:has(.authors) > .wp-block-tr724-authors-recent-post > div,
+.editor-styles-wrapper .wp-block-column:has(.authors) .components-disabled,
+.editor-styles-wrapper .wp-block-column:has(.authors) .authors {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.editor-styles-wrapper .authors__list,
+.editor-styles-wrapper .authors__list > li {
+	margin: 0;
+	padding: 0;
+	max-width: 100%;
+}
+
+.editor-styles-wrapper .authors .author,
+.editor-styles-wrapper .authors__title-link {
+	pointer-events: auto;
+}

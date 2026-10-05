@@ -17,6 +17,12 @@ if ( '' === $heading ) {
 	$heading = __( 'YAZARLAR', 'tr724-news' );
 }
 
+$heading_url  = isset( $attributes['headingUrl'] ) ? trim( (string) $attributes['headingUrl'] ) : '';
+$heading_html = esc_html( $heading );
+if ( '' !== $heading_url ) {
+	$heading_html = '<a class="authors__title-link" href="' . esc_url( $heading_url ) . '">' . $heading_html . '</a>';
+}
+
 $author_ids = get_users(
 	[
 		'role'    => 'author',
@@ -61,8 +67,8 @@ if ( ! $post_ids ) {
 			'class' => 'authors authors--empty',
 		]
 	) . '>';
-	echo '<h2 class="authors__title">' . esc_html( $heading ) . '</h2>';
-	echo '<p class="authors__empty">' . esc_html__( 'No author posts found.', 'tr724-news' ) . '</p>';
+	echo '<h2 class="authors__title">' . $heading_html . '</h2>';
+	echo '<p class="authors__empty">' . esc_html__( 'Yazar yazısı bulunamadı.', 'tr724-news' ) . '</p>';
 	echo '</section>';
 	return;
 }
@@ -85,8 +91,8 @@ if ( ! $query->have_posts() ) {
 			'class' => 'authors authors--empty',
 		]
 	) . '>';
-	echo '<h2 class="authors__title">' . esc_html( $heading ) . '</h2>';
-	echo '<p class="authors__empty">' . esc_html__( 'No author posts found.', 'tr724-news' ) . '</p>';
+	echo '<h2 class="authors__title">' . $heading_html . '</h2>';
+	echo '<p class="authors__empty">' . esc_html__( 'Yazar yazısı bulunamadı.', 'tr724-news' ) . '</p>';
 	echo '</section>';
 	wp_reset_postdata();
 	return;
@@ -103,7 +109,7 @@ echo '<section ' . get_block_wrapper_attributes(
 		'aria-labelledby'    => $title_id,
 	]
 ) . '>';
-echo '<h2 class="authors__title" id="' . esc_attr( $title_id ) . '">' . esc_html( $heading ) . '</h2>';
+echo '<h2 class="authors__title" id="' . esc_attr( $title_id ) . '">' . $heading_html . '</h2>';
 echo '<div class="authors__viewport">';
 echo '<ul class="authors__list">';
 

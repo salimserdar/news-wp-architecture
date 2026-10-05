@@ -21,16 +21,23 @@
 					null,
 					el(
 						PanelBody,
-						{ title: __( "Authors Recent Post", "tr724-news" ), initialOpen: true },
+						{ title: __( "Yazarların Son Yazıları", "tr724-news" ), initialOpen: true },
 						el( TextControl, {
-							label: __( "Heading", "tr724-news" ),
+							label: __( "Başlık", "tr724-news" ),
 							value: attributes.heading || "",
 							onChange: function ( value ) {
 								props.setAttributes( { heading: value } );
 							},
 						} ),
+						el( TextControl, {
+							label: __( "Başlık bağlantısı", "tr724-news" ),
+							value: attributes.headingUrl || "",
+							onChange: function ( value ) {
+								props.setAttributes( { headingUrl: value } );
+							},
+						} ),
 						el( RangeControl, {
-							label: __( "Authors", "tr724-news" ),
+							label: __( "Yazar sayısı", "tr724-news" ),
 							value: attributes.postsToShow || 8,
 							min: 1,
 							max: 30,

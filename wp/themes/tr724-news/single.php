@@ -378,8 +378,20 @@ if ( have_posts() ) {
 
 				<div class="post-layout__main">
 					<?php
+					$youtube_id = tr724_youtube_id( tr724_youtube_url( $post_id ) );
+					if ( '' !== $youtube_id ) {
+						$embed = 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $youtube_id );
+						echo '<figure class="post__hero post__hero--video">';
+						printf(
+							'<iframe src="%1$s" title="%2$s" loading="eager" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>',
+							esc_url( $embed ),
+							esc_attr( $title )
+						);
+						echo '</figure>';
+					}
+
 					$thumb_id = (int) get_post_thumbnail_id( $post_id );
-					if ( $thumb_id ) {
+					if ( '' === $youtube_id && $thumb_id ) {
 						$hero_alt = (string) get_post_meta( $thumb_id, '_wp_attachment_image_alt', true );
 						if ( '' === $hero_alt ) {
 							$hero_alt = $title;

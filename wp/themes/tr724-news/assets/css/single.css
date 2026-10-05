@@ -125,12 +125,14 @@
 	margin: 0 0 24px;
 }
 
-.post__hero img {
+.post__hero img,
+.post__hero--video iframe {
 	display: block;
 	width: 100%;
 	height: auto;
 	aspect-ratio: 16 / 9;
 	object-fit: cover;
+	border: 0;
 }
 
 .post__hero figcaption {
