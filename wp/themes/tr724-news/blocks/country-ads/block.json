@@ -1,0 +1,52 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/country-ads",
+	"title": "Country Ads",
+	"category": "theme",
+	"icon": "megaphone",
+	"description": "Show an image or GIF ad for the visitor's country, with a fallback for everywhere else.",
+	"keywords": [ "ad", "ads", "country", "reklam", "gif" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"fallbackImageId": {
+			"type": "number",
+			"default": 0
+		},
+		"fallbackUrl": {
+			"type": "string",
+			"default": ""
+		},
+		"countries": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string"
+					},
+					"imageId": {
+						"type": "number"
+					},
+					"url": {
+						"type": "string"
+					}
+				}
+			}
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false,
+		"multiple": true
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js",
+	"script": "file:./view.js"
+}

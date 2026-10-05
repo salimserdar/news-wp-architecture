@@ -1,0 +1,34 @@
+.country-ad {
+	width: 100%;
+}
+
+.country-ad,
+.country-ad *,
+.country-ad *::before,
+.country-ad *::after {
+	box-sizing: border-box;
+}
+
+.country-ad__config {
+	display: none;
+}
+
+.country-ad__link {
+	display: block;
+	width: 100%;
+	color: inherit;
+	text-decoration: none;
+}
+
+.country-ad__image {
+	display: block;
+	width: auto;
+	max-width: 100%;
+	height: auto;
+	margin-inline: auto;
+}
+
+.country-ad__link:focus-visible {
+	outline: 2px solid var(--focus-ring, #ff6200);
+	outline-offset: 2px;
+}

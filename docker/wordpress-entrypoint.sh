@@ -52,4 +52,13 @@ insert_wp_config_define SITE_AGGREGATOR_READ_API_KEY "define( 'SITE_AGGREGATOR_R
 insert_wp_config_define YOUTUBE_API_KEY "define( 'YOUTUBE_API_KEY', getenv( 'YOUTUBE_API_KEY' ) ?: '' );"
 insert_wp_config_define YOUTUBE_CHANNEL_ID "define( 'YOUTUBE_CHANNEL_ID', getenv( 'YOUTUBE_CHANNEL_ID' ) ?: '' );"
 
+# Apache runs as www-data. A root-owned uploads/ or uploads/YYYY/ (mode 755)
+# blocks the next month folder, e.g. uploads/2026/10. Only those parents need
+# to be writable; do not walk the media tree.
+mkdir -p wp-content/uploads
+if [ "$(stat -c '%U' wp-content/uploads)" != "www-data" ]; then
+	chown www-data:www-data wp-content/uploads
+fi
+find wp-content/uploads -mindepth 1 -maxdepth 1 -type d ! -user www-data -exec chown www-data:www-data {} +
+
 exec docker-entrypoint.sh "$@"

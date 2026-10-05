@@ -90,6 +90,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/post-list' );
 	register_block_type( get_template_directory() . '/blocks/headlines' );
 	register_block_type( get_template_directory() . '/blocks/related-news' );
+	register_block_type( get_template_directory() . '/blocks/country-ads' );
 } );
 
 /**
@@ -227,6 +228,10 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-related-news-style'                => '/blocks/related-news/style.css',
 		'tr724-related-news-editor-style'         => '/blocks/related-news/editor.css',
 		'tr724-related-news-editor-script'        => '/blocks/related-news/edit.js',
+		'tr724-country-ads-style'                 => '/blocks/country-ads/style.css',
+		'tr724-country-ads-editor-style'          => '/blocks/country-ads/editor.css',
+		'tr724-country-ads-editor-script'         => '/blocks/country-ads/edit.js',
+		'tr724-country-ads-script'                => '/blocks/country-ads/view.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {
