@@ -4,10 +4,24 @@
 	"name": "tr724/stories",
 	"title": "Stories",
 	"category": "theme",
-	"description": "Story card grid. Filter by category or tag, and skip posts already used higher on the page.",
+	"description": "Story card grid. Filter by one or more categories or tags, and skip posts already used higher on the page.",
 	"keywords": [ "stories", "grid", "haber", "cards" ],
 	"textdomain": "tr724-news",
 	"attributes": {
+		"categoryIds": {
+			"type": "array",
+			"items": {
+				"type": "number"
+			},
+			"default": []
+		},
+		"tagIds": {
+			"type": "array",
+			"items": {
+				"type": "number"
+			},
+			"default": []
+		},
 		"categoryId": {
 			"type": "number",
 			"default": 0

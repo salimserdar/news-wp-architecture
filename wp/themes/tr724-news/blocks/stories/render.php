@@ -1,7 +1,7 @@
 <?php
 /**
- * Story card grid. Latest posts, filtered by category and/or tag, with an offset
- * so a block can start after posts already shown (for example, 6 posts after the 15th).
+ * Story card grid. Latest posts, filtered by one or more categories and/or tags,
+ * with an offset so a block can start after posts already shown (for example, 6 posts after the 15th).
  *
  * @var array    $attributes
  * @var string   $content
@@ -16,26 +16,54 @@ $count = max( 1, min( 24, $count ) );
 $offset = isset( $attributes['offset'] ) ? (int) $attributes['offset'] : 0;
 $offset = max( 0, min( 200, $offset ) );
 
-$category_id = isset( $attributes['categoryId'] ) ? (int) $attributes['categoryId'] : 0;
-$tag_id      = isset( $attributes['tagId'] ) ? (int) $attributes['tagId'] : 0;
-
-$category = null;
-if ( $category_id > 0 ) {
-	$category = get_term( $category_id, 'category' );
-	if ( ! $category || is_wp_error( $category ) ) {
-		$category = null;
+$term_sources = [
+	'category' => [ 'categoryIds', 'categoryId' ],
+	'post_tag' => [ 'tagIds', 'tagId' ],
+];
+$filters      = [];
+foreach ( $term_sources as $taxonomy => $keys ) {
+	$ids  = [];
+	$seen = [];
+	$raw  = $attributes[ $keys[0] ] ?? [];
+	if ( is_array( $raw ) ) {
+		foreach ( $raw as $id ) {
+			$id = (int) $id;
+			if ( $id > 0 && ! isset( $seen[ $id ] ) ) {
+				$seen[ $id ] = true;
+				$ids[]       = $id;
+			}
+		}
 	}
+	$legacy = isset( $attributes[ $keys[1] ] ) ? (int) $attributes[ $keys[1] ] : 0;
+	if ( $legacy > 0 && ! isset( $seen[ $legacy ] ) ) {
+		$ids[] = $legacy;
+	}
+
+	$terms = [];
+	if ( $ids ) {
+		$found = get_terms(
+			[
+				'taxonomy'   => $taxonomy,
+				'include'    => $ids,
+				'hide_empty' => false,
+				'orderby'    => 'include',
+			]
+		);
+		if ( $found && ! is_wp_error( $found ) ) {
+			$terms = $found;
+		}
+	}
+
+	$filters[ $taxonomy ] = [
+		'ids'   => $ids,
+		'terms' => $terms,
+	];
 }
 
-$tag = null;
-if ( $tag_id > 0 ) {
-	$tag = get_term( $tag_id, 'post_tag' );
-	if ( ! $tag || is_wp_error( $tag ) ) {
-		$tag = null;
-	}
-}
+$categories = $filters['category']['terms'];
+$tags       = $filters['post_tag']['terms'];
 
-$term_missing = ( $category_id > 0 && ! $category ) || ( $tag_id > 0 && ! $tag );
+$term_missing = ( $filters['category']['ids'] && ! $categories ) || ( $filters['post_tag']['ids'] && ! $tags );
 
 $query_args = [
 	'post_type'              => 'post',
@@ -47,18 +75,15 @@ $query_args = [
 ];
 
 $tax_query = [];
-if ( $category ) {
+foreach ( $filters as $taxonomy => $filter ) {
+	if ( ! $filter['terms'] ) {
+		continue;
+	}
 	$tax_query[] = [
-		'taxonomy' => 'category',
+		'taxonomy' => $taxonomy,
 		'field'    => 'term_id',
-		'terms'    => (int) $category->term_id,
-	];
-}
-if ( $tag ) {
-	$tax_query[] = [
-		'taxonomy' => 'post_tag',
-		'field'    => 'term_id',
-		'terms'    => (int) $tag->term_id,
+		'terms'    => array_map( 'intval', wp_list_pluck( $filter['terms'], 'term_id' ) ),
+		'operator' => 'IN',
 	];
 }
 if ( count( $tax_query ) > 1 ) {
@@ -77,14 +102,14 @@ if ( '' === $more_label ) {
 }
 
 $more_url = isset( $attributes['moreUrl'] ) ? trim( (string) $attributes['moreUrl'] ) : '';
-if ( '' === $more_url && $category ) {
-	$term_link = get_term_link( $category );
+if ( '' === $more_url && 1 === count( $categories ) ) {
+	$term_link = get_term_link( $categories[0] );
 	if ( ! is_wp_error( $term_link ) ) {
 		$more_url = $term_link;
 	}
 }
-if ( '' === $more_url && $tag ) {
-	$term_link = get_term_link( $tag );
+if ( '' === $more_url && ! $filters['category']['ids'] && 1 === count( $tags ) ) {
+	$term_link = get_term_link( $tags[0] );
 	if ( ! is_wp_error( $term_link ) ) {
 		$more_url = $term_link;
 	}
@@ -112,7 +137,9 @@ if ( ! $query || ! $query->have_posts() ) {
 
 update_post_thumbnail_cache( $query );
 
-$forced_kicker = $category ? $category->name : '';
+$forced_kicker = ( 1 === count( $categories ) ) ? $categories[0]->name : '';
+$category_ids  = array_map( 'intval', wp_list_pluck( $categories, 'term_id' ) );
+$tag_ids       = array_map( 'intval', wp_list_pluck( $tags, 'term_id' ) );
 
 echo '<section ' . get_block_wrapper_attributes(
 	[
@@ -128,11 +155,29 @@ while ( $query->have_posts() ) {
 
 	$kicker = $forced_kicker;
 	if ( '' === $kicker ) {
-		$categories = get_the_category( $post_id );
-		if ( $categories ) {
-			$kicker = $categories[0]->name;
-		} elseif ( $tag ) {
-			$kicker = $tag->name;
+		$post_categories = get_the_category( $post_id );
+		if ( $post_categories ) {
+			$kicker = $post_categories[0]->name;
+			if ( count( $categories ) > 1 ) {
+				foreach ( $post_categories as $post_category ) {
+					if ( in_array( (int) $post_category->term_id, $category_ids, true ) ) {
+						$kicker = $post_category->name;
+						break;
+					}
+				}
+			}
+		} elseif ( 1 === count( $tags ) ) {
+			$kicker = $tags[0]->name;
+		} elseif ( count( $tags ) > 1 ) {
+			$post_tags = get_the_tags( $post_id );
+			if ( $post_tags && ! is_wp_error( $post_tags ) ) {
+				foreach ( $post_tags as $post_tag ) {
+					if ( in_array( (int) $post_tag->term_id, $tag_ids, true ) ) {
+						$kicker = $post_tag->name;
+						break;
+					}
+				}
+			}
 		}
 	}
 
