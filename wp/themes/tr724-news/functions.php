@@ -357,7 +357,7 @@ add_action( 'pre_get_posts', function ( WP_Query $query ): void {
 	if ( is_admin() || ! $query->is_main_query() ) {
 		return;
 	}
-	if ( ! $query->is_category() && ! $query->is_author() ) {
+	if ( ! $query->is_category() && ! $query->is_tag() && ! $query->is_author() ) {
 		return;
 	}
 	$query->set( 'posts_per_page', 10 );
@@ -421,7 +421,7 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		return;
 	}
 
-	if ( ! is_category() && ! is_author() && ! is_search() ) {
+	if ( ! is_category() && ! is_tag() && ! is_author() && ! is_search() ) {
 		return;
 	}
 

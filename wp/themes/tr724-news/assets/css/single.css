@@ -48,7 +48,7 @@
 }
 
 .post-layout:has(.post-layout__aside) {
-	grid-template-columns: minmax(0, 1fr) 280px;
+	grid-template-columns: minmax(0, 1fr) 320px;
 	column-gap: 24px;
 }
 
