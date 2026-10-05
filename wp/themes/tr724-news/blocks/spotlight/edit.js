@@ -6,6 +6,7 @@
 	var PanelBody = components.PanelBody;
 	var RangeControl = components.RangeControl;
 	var SelectControl = components.SelectControl;
+	var TextControl = components.TextControl;
 	var useSelect = data.useSelect;
 	var ServerSideRender = serverSideRender.default || serverSideRender;
 	var __ = i18n.__;
@@ -64,6 +65,15 @@
 								if ( ! count || count < 1 ) count = 1;
 								if ( count > 30 ) count = 30;
 								props.setAttributes( { postsToShow: count } );
+							},
+						} ),
+						el( TextControl, {
+							label: __( "More link", "tr724-news" ),
+							help: __( "Optional. Makes Devamı open this address.", "tr724-news" ),
+							value: attributes.moreUrl || "",
+							type: "url",
+							onChange: function ( value ) {
+								props.setAttributes( { moreUrl: value } );
 							},
 						} )
 					)

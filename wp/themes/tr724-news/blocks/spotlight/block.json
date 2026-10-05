@@ -15,6 +15,10 @@
 		"postsToShow": {
 			"type": "number",
 			"default": 15
+		},
+		"moreUrl": {
+			"type": "string",
+			"default": ""
 		}
 	},
 	"supports": {

@@ -56,10 +56,12 @@
 			newsSwiper.slideTo( index );
 		} );
 
-		pagerMore.addEventListener( "click", function () {
-			if ( newsSwiper.isEnd ) newsSwiper.slideTo( 0 );
-			else newsSwiper.slideNext();
-		} );
+		if ( pagerMore.tagName !== "A" ) {
+			pagerMore.addEventListener( "click", function () {
+				if ( newsSwiper.isEnd ) newsSwiper.slideTo( 0 );
+				else newsSwiper.slideNext();
+			} );
+		}
 	}
 
 	function destroySpotlight( root ) {

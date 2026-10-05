@@ -116,11 +116,18 @@ echo '</div>';
 echo '<button class="news-swiper__nav news-swiper__prev" type="button" aria-label="' . esc_attr__( 'Önceki haber', 'tr724-news' ) . '">' . $prev_icon . '</button>';
 echo '<button class="news-swiper__nav news-swiper__next" type="button" aria-label="' . esc_attr__( 'Sonraki haber', 'tr724-news' ) . '">' . $next_icon . '</button>';
 echo '</div>';
+$more_url = isset( $attributes['moreUrl'] ) ? esc_url( trim( (string) $attributes['moreUrl'] ) ) : '';
+
 echo '<div class="news-pager">';
 echo '<div class="news-pager__numbers"></div>';
-echo '<button class="news-pager__more" type="button">';
+if ( '' !== $more_url ) {
+	echo '<a class="news-pager__more" href="' . $more_url . '">';
+} else {
+	echo '<button class="news-pager__more" type="button">';
+}
 echo '<span class="news-pager__more-label">' . esc_html__( 'Devamı', 'tr724-news' ) . '</span>';
 echo $more_icon;
-echo '</button></div></section>';
+echo '' !== $more_url ? '</a>' : '</button>';
+echo '</div></section>';
 
 wp_reset_postdata();
