@@ -535,7 +535,7 @@
     var facebook =
       '<a class="writer__social-link writer__social-link--facebook" href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 8.2H17V5h-2.5C11.9 5 10 6.9 10 9.5V11H8v3h2v7h3v-7h2.4l.6-3H13V9.6c0-.8.6-1.4 1.5-1.4z"/></svg></a>';
     var twitter =
-      '<a class="writer__social-link writer__social-link--x" href="#" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 7.4c.5-.3.8-.8.9-1.3-.4.3-.9.5-1.5.6A2.3 2.3 0 0 0 15.4 8c-1.3 0-2.3 1-2.3 2.3 0 .2 0 .4.1.5-1.9-.1-3.6-1-4.7-2.4-.2.3-.3.7-.3 1.1 0 .8.4 1.5 1 1.9-.4 0-.7-.1-1-.3v.1c0 1.1.8 2 1.8 2.2-.2.1-.4.1-.7.1-.1 0-.3 0-.4-.1.3.9 1.1 1.5 2 1.6A4.6 4.6 0 0 1 7 16.2a6.5 6.5 0 0 0 3.5 1c4.2 0 6.5-3.5 6.5-6.5v-.3c.5-.3.8-.7 1.1-1.2-.4.2-.9.3-1.3.4z"/></svg></a>';
+      '<a class="writer__social-link writer__social-link--x" href="#" aria-label="X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 4h2.4l-5.3 6L20.5 20h-4.5l-3.5-4.6L8.4 20H6l5.6-6.4L4.2 4h4.6l3.2 4.2L16.8 4zm-.8 14.4h1.3L8.1 5.5H6.7l9.3 12.9z"/></svg></a>';
     var youtube =
       '<a class="writer__social-link writer__social-link--youtube" href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 8.2a2.2 2.2 0 0 0-1.5-1.6C17.5 6.2 12 6.2 12 6.2s-5.5 0-7.1.4a2.2 2.2 0 0 0-1.5 1.6A23 23 0 0 0 3 12a23 23 0 0 0 .4 3.8 2.2 2.2 0 0 0 1.5 1.6c1.6.4 7.1.4 7.1.4s5.5 0 7.1-.4a2.2 2.2 0 0 0 1.5-1.6A23 23 0 0 0 21 12a23 23 0 0 0-.4-3.8zM10.3 15V9l5.2 3-5.2 3z"/></svg></a>';
 

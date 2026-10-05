@@ -210,6 +210,39 @@ if ( ! function_exists( 'tr724_single_author_date' ) ) {
 		return wp_date( 'd', $published ) . ' ' . ( $months[ $month_num ] ?? '' ) . ' ' . wp_date( 'Y', $published );
 	}
 }
+
+if ( ! function_exists( 'tr724_single_share' ) ) {
+	/**
+	 * Facebook, X, WhatsApp, email, and print actions for the current post.
+	 */
+	function tr724_single_share( string $title, string $permalink ): void {
+		$share_url  = rawurlencode( $permalink );
+		$share_text = rawurlencode( $title . ' ' . $permalink );
+		?>
+		<div class="post__share">
+			<span class="post__share-label">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7a2.5 2.5 0 0 0 0-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81A2.99 2.99 0 0 0 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 2.92-2.92z" /></svg>
+				<?php esc_html_e( 'PAYLAŞ', 'tr724-news' ); ?>
+			</span>
+			<a class="post__share-link post__share-link--facebook" href="<?php echo esc_url( 'https://www.facebook.com/sharer/sharer.php?u=' . $share_url ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( "Facebook'ta paylaş", 'tr724-news' ); ?>">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 8.2H17V5h-2.5C11.9 5 10 6.9 10 9.5V11H8v3h2v7h3v-7h2.4l.6-3H13V9.6c0-.8.6-1.4 1.5-1.4z" /></svg>
+			</a>
+			<a class="post__share-link post__share-link--x" href="<?php echo esc_url( 'https://twitter.com/intent/tweet?url=' . $share_url . '&text=' . rawurlencode( $title ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( "X'te paylaş", 'tr724-news' ); ?>">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 4h2.4l-5.3 6L20.5 20h-4.5l-3.5-4.6L8.4 20H6l5.6-6.4L4.2 4h4.6l3.2 4.2L16.8 4zm-.8 14.4h1.3L8.1 5.5H6.7l9.3 12.9z" /></svg>
+			</a>
+			<a class="post__share-link post__share-link--whatsapp" href="<?php echo esc_url( 'https://wa.me/?text=' . $share_text ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( "WhatsApp'ta paylaş", 'tr724-news' ); ?>">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.41a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 13.9c-.24.68-1.4 1.3-1.94 1.38-.5.08-1.12.11-1.81-.11-.41-.14-.95-.31-1.63-.61-2.87-1.24-4.74-4.13-4.88-4.32-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.28.64-.41 1.02-.41.12 0 .23 0 .33.01.3.01.44.03.64.49.24.58.82 2 .89 2.15.07.14.12.31.02.5-.1.19-.14.31-.28.48-.14.16-.3.37-.42.49-.14.14-.29.29-.12.56.16.28.73 1.2 1.57 1.95 1.08.96 1.99 1.26 2.27 1.4.28.14.44.12.6-.07.17-.19.69-.8.88-1.08.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.68-.17 1.36z" /></svg>
+			</a>
+			<a class="post__share-link post__share-link--email" href="<?php echo esc_url( 'mailto:?subject=' . rawurlencode( $title ) . '&body=' . $share_text ); ?>" aria-label="<?php esc_attr_e( 'E-posta ile paylaş', 'tr724-news' ); ?>">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5L4 8V6l8 5 8-5v2z" /></svg>
+			</a>
+			<button class="post__share-link post__share-link--print" type="button" data-post-print aria-label="<?php esc_attr_e( 'Yazdır', 'tr724-news' ); ?>">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" /></svg>
+			</button>
+		</div>
+		<?php
+	}
+}
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -253,9 +286,6 @@ if ( have_posts() ) {
 		if ( '' === $author ) {
 			$author = get_the_author_meta( 'user_login', $author_id );
 		}
-
-		$share_url = rawurlencode( (string) $permalink );
-		$share_text = rawurlencode( $title . ' ' . $permalink );
 
 		$crumbs = [
 			[
@@ -343,27 +373,7 @@ if ( have_posts() ) {
 							<?php endif; ?>
 						</span>
 					</div>
-					<div class="post__share">
-						<span class="post__share-label">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7a2.5 2.5 0 0 0 0-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 1 0-3-3c0 .24.04.47.09.7L8.04 9.81A2.99 2.99 0 0 0 6 9a3 3 0 1 0 0 6c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 2.92-2.92z" /></svg>
-							<?php esc_html_e( 'PAYLAŞ', 'tr724-news' ); ?>
-						</span>
-						<a class="post__share-link post__share-link--facebook" href="<?php echo esc_url( 'https://www.facebook.com/sharer/sharer.php?u=' . $share_url ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( "Facebook'ta paylaş", 'tr724-news' ); ?>">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 8.2H17V5h-2.5C11.9 5 10 6.9 10 9.5V11H8v3h2v7h3v-7h2.4l.6-3H13V9.6c0-.8.6-1.4 1.5-1.4z" /></svg>
-						</a>
-						<a class="post__share-link post__share-link--x" href="<?php echo esc_url( 'https://twitter.com/intent/tweet?url=' . $share_url . '&text=' . rawurlencode( $title ) ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( "X'te paylaş", 'tr724-news' ); ?>">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 4h2.4l-5.3 6L20.5 20h-4.5l-3.5-4.6L8.4 20H6l5.6-6.4L4.2 4h4.6l3.2 4.2L16.8 4zm-.8 14.4h1.3L8.1 5.5H6.7l9.3 12.9z" /></svg>
-						</a>
-						<a class="post__share-link post__share-link--whatsapp" href="<?php echo esc_url( 'https://wa.me/?text=' . $share_text ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php esc_attr_e( "WhatsApp'ta paylaş", 'tr724-news' ); ?>">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.41a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 13.9c-.24.68-1.4 1.3-1.94 1.38-.5.08-1.12.11-1.81-.11-.41-.14-.95-.31-1.63-.61-2.87-1.24-4.74-4.13-4.88-4.32-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.28.64-.41 1.02-.41.12 0 .23 0 .33.01.3.01.44.03.64.49.24.58.82 2 .89 2.15.07.14.12.31.02.5-.1.19-.14.31-.28.48-.14.16-.3.37-.42.49-.14.14-.29.29-.12.56.16.28.73 1.2 1.57 1.95 1.08.96 1.99 1.26 2.27 1.4.28.14.44.12.6-.07.17-.19.69-.8.88-1.08.19-.28.37-.23.63-.14.26.09 1.64.77 1.92.91.28.14.47.21.54.33.07.12.07.68-.17 1.36z" /></svg>
-						</a>
-						<a class="post__share-link post__share-link--email" href="<?php echo esc_url( 'mailto:?subject=' . rawurlencode( $title ) . '&body=' . $share_text ); ?>" aria-label="<?php esc_attr_e( 'E-posta ile paylaş', 'tr724-news' ); ?>">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5L4 8V6l8 5 8-5v2z" /></svg>
-						</a>
-						<button class="post__share-link post__share-link--print" type="button" data-post-print aria-label="<?php esc_attr_e( 'Yazdır', 'tr724-news' ); ?>">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" /></svg>
-						</button>
-					</div>
+					<?php tr724_single_share( $title, (string) $permalink ); ?>
 					<div class="post__follow">
 						<a class="post__follow-link post__follow-link--news" href="https://www.google.com/preferences/source?q=tr724.com" target="_blank" rel="noopener noreferrer">
 							<img src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/google-news.svg' ); ?>" alt="" width="24" height="24" />
@@ -506,6 +516,7 @@ if ( have_posts() ) {
 							</ul>
 						</div>
 					<?php endif; ?>
+					<?php tr724_single_share( $title, (string) $permalink ); ?>
 					<div class="post__patron">
 						<div class="post__patron-copy">
 							<p class="post__patron-kicker"><?php esc_html_e( 'TR724 Patreon', 'tr724-news' ); ?></p>

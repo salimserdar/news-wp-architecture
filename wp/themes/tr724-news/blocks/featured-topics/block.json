@@ -1,0 +1,22 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/featured-topics",
+	"title": "Featured Topics",
+	"category": "theme",
+	"description": "Tags chosen in Editorial → Featured Topics, in the saved order.",
+	"keywords": [ "topics", "tags", "featured", "konular", "etiket" ],
+	"textdomain": "tr724-news",
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false,
+		"customClassName": true
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}

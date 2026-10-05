@@ -19,6 +19,10 @@
 		"role": {
 			"type": "string",
 			"default": "author"
+		},
+		"collapseInitially": {
+			"type": "boolean",
+			"default": false
 		}
 	},
 	"supports": {
@@ -31,5 +35,6 @@
 	"render": "file:./render.php",
 	"style": [ "tr724-news-inter", "file:./style.css" ],
 	"editorStyle": "file:./editor.css",
-	"editorScript": "file:./edit.js"
+	"editorScript": "file:./edit.js",
+	"script": "file:./view.js"
 }

@@ -113,20 +113,17 @@ if ( ! $query || ! $query->have_posts() ) {
 	while ( $query->have_posts() ) {
 		$query->the_post();
 		$post_id   = get_the_ID();
-		$published = get_post_timestamp( $post_id );
-		$time_html = '';
-		if ( $published ) {
-			$time_text = sprintf(
-				/* translators: %s: human-readable interval, such as "2 saat". */
-				__( '%s önce', 'tr724-news' ),
-				human_time_diff( $published )
-			);
-			$time_html = '<time datetime="' . esc_attr( get_post_time( DATE_W3C, true, $post_id ) ) . '">' . esc_html( $time_text ) . '</time>';
+		$author_id = (int) get_post_field( 'post_author', $post_id );
+		$author    = get_the_author_meta( 'display_name', $author_id );
+		if ( '' === $author ) {
+			$author = get_the_author_meta( 'user_login', $author_id );
 		}
 		echo '<li class="post-list__item">';
 		echo '<a href="' . esc_url( get_permalink( $post_id ) ) . '">';
 		echo '<span class="post-list__copy">';
-		echo $time_html;
+		if ( '' !== $author ) {
+			echo '<span class="post-list__author">' . esc_html( $author ) . '</span>';
+		}
 		echo '<span class="post-list__headline">' . esc_html( get_the_title( $post_id ) ) . '</span>';
 		echo '</span></a></li>';
 	}

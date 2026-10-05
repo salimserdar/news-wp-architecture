@@ -100,6 +100,14 @@
 	height: 26px;
 }
 
+.site-header__tv svg path:first-child {
+	fill: #ff0000;
+}
+
+.site-header__tv svg path:last-child {
+	fill: #fff;
+}
+
 .site-header__search {
 	display: grid;
 	width: 28px;

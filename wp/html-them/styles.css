@@ -162,6 +162,14 @@ body {
   height: 26px;
 }
 
+.site-header__tv svg path:first-child {
+  fill: #ff0000;
+}
+
+.site-header__tv svg path:last-child {
+  fill: #fff;
+}
+
 .site-header__search {
   display: grid;
   width: 28px;
@@ -3153,7 +3161,7 @@ body {
 }
 
 .writer__social-link--x {
-  background: #1da1f2;
+  background: #000;
 }
 
 .writer__social-link--youtube {

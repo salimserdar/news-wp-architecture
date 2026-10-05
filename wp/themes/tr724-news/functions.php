@@ -27,6 +27,7 @@ function tr724_aggregator_headers(): array {
 require_once get_template_directory() . '/inc/ads.php';
 require_once get_template_directory() . '/inc/additional-image.php';
 require_once get_template_directory() . '/inc/authors.php';
+require_once get_template_directory() . '/inc/editorial/bootstrap.php';
 require_once get_template_directory() . '/inc/widgets.php';
 require_once get_template_directory() . '/blocks/ticker/rates.php';
 require_once get_template_directory() . '/blocks/site-header/search.php';
@@ -91,6 +92,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/headlines' );
 	register_block_type( get_template_directory() . '/blocks/related-news' );
 	register_block_type( get_template_directory() . '/blocks/country-ads' );
+	register_block_type( get_template_directory() . '/blocks/featured-topics' );
 } );
 
 /**
@@ -198,6 +200,7 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-yazarlar-style'                    => '/blocks/yazarlar/style.css',
 		'tr724-yazarlar-editor-style'             => '/blocks/yazarlar/editor.css',
 		'tr724-yazarlar-editor-script'            => '/blocks/yazarlar/edit.js',
+		'tr724-yazarlar-script'                   => '/blocks/yazarlar/view.js',
 		'tr724-sub-page-header-style'             => '/blocks/sub-page-header/style.css',
 		'tr724-sub-page-header-editor-style'      => '/blocks/sub-page-header/editor.css',
 		'tr724-sub-page-header-editor-script'     => '/blocks/sub-page-header/edit.js',
@@ -232,6 +235,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-country-ads-editor-style'          => '/blocks/country-ads/editor.css',
 		'tr724-country-ads-editor-script'         => '/blocks/country-ads/edit.js',
 		'tr724-country-ads-script'                => '/blocks/country-ads/view.js',
+		'tr724-featured-topics-style-2'           => '/blocks/featured-topics/style.css',
+		'tr724-featured-topics-editor-style'      => '/blocks/featured-topics/editor.css',
+		'tr724-featured-topics-editor-script'     => '/blocks/featured-topics/edit.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {

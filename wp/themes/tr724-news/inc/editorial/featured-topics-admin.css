@@ -1,0 +1,152 @@
+.tr724-ft .description {
+	max-width: 720px;
+}
+
+.tr724-ft-add {
+	position: relative;
+	max-width: 420px;
+	margin: 16px 0 20px;
+}
+
+.tr724-ft-add input[type="search"] {
+	width: 100%;
+	max-width: none;
+}
+
+.tr724-ft-add label {
+	display: block;
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+.tr724-ft-status {
+	min-height: 1.2em;
+	margin: 6px 0 0;
+	color: #646970;
+}
+
+.tr724-ft-results {
+	position: absolute;
+	z-index: 20;
+	left: 0;
+	right: 0;
+	max-height: 260px;
+	margin: 4px 0 0;
+	padding: 0;
+	overflow: auto;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.tr724-ft-results li {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 12px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.tr724-ft-results li:last-child {
+	border-bottom: 0;
+}
+
+.tr724-ft-results span {
+	min-width: 0;
+}
+
+.tr724-ft-empty {
+	max-width: 760px;
+	margin: 0 0 12px;
+	color: #646970;
+}
+
+.tr724-ft-list {
+	max-width: 760px;
+	margin: 0 0 16px;
+	padding: 0;
+	list-style: none;
+}
+
+.tr724-ft-item {
+	display: flex;
+	gap: 10px;
+	align-items: flex-start;
+	margin: 0 0 8px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.tr724-ft-item.ui-sortable-helper {
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+
+.tr724-ft-placeholder {
+	margin: 0 0 8px;
+	background: #f6f7f7;
+	border: 1px dashed #8c8f94;
+	visibility: visible !important;
+}
+
+.tr724-ft-handle {
+	flex: none;
+	width: 24px;
+	height: 24px;
+	margin-top: 2px;
+	color: #787c82;
+	cursor: grab;
+	user-select: none;
+}
+
+.tr724-ft-handle:active {
+	cursor: grabbing;
+}
+
+.tr724-ft-item-body {
+	flex: 1;
+	min-width: 0;
+}
+
+.tr724-ft-item-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 0;
+}
+
+.tr724-ft-tag {
+	margin: 0;
+}
+
+.tr724-ft-tag-kicker {
+	color: #646970;
+}
+
+.tr724-ft-actions {
+	display: flex;
+	flex: none;
+	gap: 10px;
+	align-items: center;
+}
+
+.tr724-ft-actions .button-link {
+	padding: 0;
+	line-height: 1.4;
+}
+
+.tr724-ft-actions .button-link:disabled {
+	color: #a7aaad;
+	cursor: default;
+}
+
+@media (max-width: 782px) {
+	.tr724-ft-item-head {
+		flex-direction: column;
+		align-items: stretch;
+	}
+}

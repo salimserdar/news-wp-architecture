@@ -7,6 +7,7 @@
 	var TextControl = components.TextControl;
 	var RangeControl = components.RangeControl;
 	var SelectControl = components.SelectControl;
+	var ToggleControl = components.ToggleControl;
 	var ServerSideRender = serverSideRender.default || serverSideRender;
 	var __ = i18n.__;
 
@@ -14,6 +15,7 @@
 		edit: function ( props ) {
 			var attributes = props.attributes;
 			var role = attributes.role || "author";
+			var collapse = !! attributes.collapseInitially;
 			var roleOptions = ( window.tr724YazarlarRoles || [
 				{ value: "author", label: __( "Author", "tr724-news" ) },
 			] ).slice();
@@ -61,6 +63,14 @@
 								if ( ! count || count < 1 ) count = 1;
 								if ( count > 6 ) count = 6;
 								props.setAttributes( { columns: count } );
+							},
+						} ),
+						el( ToggleControl, {
+							label: __( "Start collapsed", "tr724-news" ),
+							help: __( "Hide every author until a visitor opens the list. The button states how many authors are in the archive. Off shows every author.", "tr724-news" ),
+							checked: collapse,
+							onChange: function ( value ) {
+								props.setAttributes( { collapseInitially: !! value } );
 							},
 						} )
 					)
