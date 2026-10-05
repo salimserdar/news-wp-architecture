@@ -1,0 +1,16 @@
+.block-editor-block-list__layout > .wp-block-tr724-authors-recent-wide {
+	outline: 1px dashed rgba(0, 45, 142, 0.35);
+	outline-offset: 4px;
+}
+
+.editor-styles-wrapper .authors-wide__grid,
+.editor-styles-wrapper .authors-wide__grid > li {
+	margin: 0;
+	padding: 0;
+	max-width: 100%;
+}
+
+.editor-styles-wrapper .authors-wide__card,
+.editor-styles-wrapper .authors-wide__title-link {
+	pointer-events: auto;
+}

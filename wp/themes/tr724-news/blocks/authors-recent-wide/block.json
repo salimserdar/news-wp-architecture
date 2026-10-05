@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/authors-recent-wide",
+	"title": "Wide Author Recent Posts",
+	"category": "theme",
+	"description": "Yazar rolündeki her kullanıcının son yazısını geniş kart ızgarasında listeler.",
+	"keywords": [ "authors", "yazarlar", "columnists", "wide" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"heading": {
+			"type": "string",
+			"default": "BUGÜNÜN YAZARLARI"
+		},
+		"headingUrl": {
+			"type": "string",
+			"default": ""
+		},
+		"postsToShow": {
+			"type": "number",
+			"default": 6
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}

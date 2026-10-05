@@ -1,0 +1,146 @@
+.authors-wide {
+	--color-text: #111;
+	--color-accent: #ff4f00;
+	--color-accent-link: #ff6c00;
+	--focus-ring: #ff6200;
+	width: 100%;
+	font-family: Inter, "Segoe UI", sans-serif;
+	color: var(--color-text);
+}
+
+.authors-wide,
+.authors-wide *,
+.authors-wide *::before,
+.authors-wide *::after {
+	box-sizing: border-box;
+}
+
+.authors-wide__header {
+	margin: 0 0 22px;
+}
+
+.authors-wide__title {
+	margin: 0;
+	color: var(--color-text);
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: 0.02em;
+}
+
+.authors-wide__title::after {
+	content: "";
+	display: block;
+	width: 36px;
+	height: 3px;
+	margin-top: 5px;
+	background: var(--color-accent);
+}
+
+.authors-wide__title-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.authors-wide__title-link:hover {
+	color: var(--color-accent-link);
+}
+
+.authors-wide__empty {
+	margin: 0;
+	font-size: 14px;
+}
+
+.authors-wide__grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 16px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.authors-wide__grid > li {
+	min-width: 0;
+}
+
+.authors-wide__card {
+	display: grid;
+	grid-template-columns: 64px minmax(0, 1fr);
+	gap: 14px;
+	align-items: center;
+	height: 100%;
+	padding: 14px 16px;
+	border: 1px solid #e4e4e4;
+	background: #fff;
+	color: inherit;
+	text-decoration: none;
+}
+
+.authors-wide__avatar {
+	width: 64px;
+	height: 64px;
+	padding: 2px;
+	border-radius: 50%;
+	background: #2f74d6;
+}
+
+.authors-wide__avatar img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 2px solid #fff;
+	border-radius: 50%;
+	object-fit: cover;
+	object-position: center 18%;
+}
+
+.authors-wide__name {
+	display: block;
+	color: #a3a3a3;
+	font-size: 12px;
+	font-weight: 400;
+	line-height: 1.2;
+}
+
+.authors-wide__headline {
+	display: -webkit-box;
+	margin-top: 4px;
+	overflow: hidden;
+	color: var(--color-text);
+	font-size: 15px;
+	font-weight: 700;
+	line-height: 1.3;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.authors-wide__card:hover .authors-wide__headline {
+	color: var(--color-accent-link);
+}
+
+.authors-wide__card:focus-visible,
+.authors-wide__title-link:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 2px;
+}
+
+@media (max-width: 781px) {
+	.authors-wide__grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 560px) {
+	.authors-wide__header {
+		margin-bottom: 16px;
+	}
+
+	.authors-wide__title {
+		margin-bottom: 6px;
+	}
+
+	.authors-wide__grid {
+		grid-template-columns: 1fr;
+	}
+}

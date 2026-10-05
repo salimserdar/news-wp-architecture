@@ -61,6 +61,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/site-footer' );
 	register_block_type( get_template_directory() . '/blocks/spotlight' );
 	register_block_type( get_template_directory() . '/blocks/authors-recent-post' );
+	register_block_type( get_template_directory() . '/blocks/authors-recent-wide' );
 	register_block_type( get_template_directory() . '/blocks/yazarlar' );
 	register_block_type( get_template_directory() . '/blocks/stories' );
 	register_block_type( get_template_directory() . '/blocks/videos' );
@@ -171,6 +172,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-authors-recent-post-editor-style'  => '/blocks/authors-recent-post/editor.css',
 		'tr724-authors-recent-post-editor-script' => '/blocks/authors-recent-post/edit.js',
 		'tr724-authors-recent-post-script'        => '/blocks/authors-recent-post/view.js',
+		'tr724-authors-recent-wide-style-2'       => '/blocks/authors-recent-wide/style.css',
+		'tr724-authors-recent-wide-editor-style'  => '/blocks/authors-recent-wide/editor.css',
+		'tr724-authors-recent-wide-editor-script' => '/blocks/authors-recent-wide/edit.js',
 		'tr724-yazarlar-style'                    => '/blocks/yazarlar/style.css',
 		'tr724-yazarlar-editor-style'             => '/blocks/yazarlar/editor.css',
 		'tr724-yazarlar-editor-script'            => '/blocks/yazarlar/edit.js',
