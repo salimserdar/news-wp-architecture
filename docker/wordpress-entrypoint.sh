@@ -48,7 +48,8 @@ insert_wp_config_define() {
 }
 
 insert_wp_config_define SITE_AGGREGATOR_SERVICE_URL "define( 'SITE_AGGREGATOR_SERVICE_URL', getenv( 'SITE_AGGREGATOR_SERVICE_URL' ) ?: 'http://host.docker.internal:3000' );"
-insert_wp_config_define YOUTUBE_API_KEY "define( 'YOUTUBE_API_KEY', getenv( 'YOUTUBE_API_KEY' ) ?: 'AIzaSyD1l1o9gu4Ovtq5O0_JiUqK3wkZbjmJD14' );"
-insert_wp_config_define YOUTUBE_CHANNEL_ID "define( 'YOUTUBE_CHANNEL_ID', getenv( 'YOUTUBE_CHANNEL_ID' ) ?: 'UCqbCHJpfLyjajJZgJQHyBSw' );"
+insert_wp_config_define SITE_AGGREGATOR_READ_API_KEY "define( 'SITE_AGGREGATOR_READ_API_KEY', getenv( 'SITE_AGGREGATOR_READ_API_KEY' ) ?: '' );"
+insert_wp_config_define YOUTUBE_API_KEY "define( 'YOUTUBE_API_KEY', getenv( 'YOUTUBE_API_KEY' ) ?: '' );"
+insert_wp_config_define YOUTUBE_CHANNEL_ID "define( 'YOUTUBE_CHANNEL_ID', getenv( 'YOUTUBE_CHANNEL_ID' ) ?: '' );"
 
 exec docker-entrypoint.sh "$@"

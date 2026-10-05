@@ -111,9 +111,7 @@ function tr724_youtube_videos(): array|WP_Error {
 		$endpoint,
 		[
 			'timeout' => 8,
-			'headers' => [
-				'Accept' => 'application/json',
-			],
+			'headers' => tr724_aggregator_headers(),
 		]
 	);
 

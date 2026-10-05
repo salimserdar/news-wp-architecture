@@ -1,0 +1,11 @@
+.block-editor-block-list__layout > .wp-block-tr724-sub-page-header {
+	outline: 1px dashed rgba(0, 45, 142, 0.35);
+	outline-offset: 4px;
+}
+
+.editor-styles-wrapper .sub-page-header .category__title {
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: 0.02em;
+}

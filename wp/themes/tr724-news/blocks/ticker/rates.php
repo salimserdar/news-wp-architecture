@@ -143,9 +143,7 @@ function tr724_ticker_instruments(): array|WP_Error {
 		tr724_ticker_endpoint(),
 		[
 			'timeout' => 8,
-			'headers' => [
-				'Accept' => 'application/json',
-			],
+			'headers' => tr724_aggregator_headers(),
 		]
 	);
 

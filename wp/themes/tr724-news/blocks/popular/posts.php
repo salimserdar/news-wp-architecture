@@ -226,9 +226,7 @@ function tr724_popular_lists(): array|WP_Error {
 		tr724_popular_endpoint(),
 		[
 			'timeout' => 8,
-			'headers' => [
-				'Accept' => 'application/json',
-			],
+			'headers' => tr724_aggregator_headers(),
 		]
 	);
 

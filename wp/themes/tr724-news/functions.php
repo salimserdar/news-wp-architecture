@@ -6,6 +6,24 @@
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Headers for site-aggregator reads. Search stays public.
+ *
+ * @return array<string, string>
+ */
+function tr724_aggregator_headers(): array {
+	$headers = [
+		'Accept' => 'application/json',
+	];
+	if ( defined( 'SITE_AGGREGATOR_READ_API_KEY' ) && is_string( SITE_AGGREGATOR_READ_API_KEY ) ) {
+		$key = trim( SITE_AGGREGATOR_READ_API_KEY );
+		if ( '' !== $key ) {
+			$headers['Authorization'] = 'Bearer ' . $key;
+		}
+	}
+	return $headers;
+}
+
 require_once get_template_directory() . '/inc/ads.php';
 require_once get_template_directory() . '/inc/additional-image.php';
 require_once get_template_directory() . '/inc/authors.php';
@@ -63,6 +81,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/authors-recent-post' );
 	register_block_type( get_template_directory() . '/blocks/authors-recent-wide' );
 	register_block_type( get_template_directory() . '/blocks/yazarlar' );
+	register_block_type( get_template_directory() . '/blocks/sub-page-header' );
 	register_block_type( get_template_directory() . '/blocks/stories' );
 	register_block_type( get_template_directory() . '/blocks/videos' );
 	register_block_type( get_template_directory() . '/blocks/category' );
@@ -178,6 +197,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-yazarlar-style'                    => '/blocks/yazarlar/style.css',
 		'tr724-yazarlar-editor-style'             => '/blocks/yazarlar/editor.css',
 		'tr724-yazarlar-editor-script'            => '/blocks/yazarlar/edit.js',
+		'tr724-sub-page-header-style'             => '/blocks/sub-page-header/style.css',
+		'tr724-sub-page-header-editor-style'      => '/blocks/sub-page-header/editor.css',
+		'tr724-sub-page-header-editor-script'     => '/blocks/sub-page-header/edit.js',
 		'tr724-stories-style'                     => '/blocks/stories/style.css',
 		'tr724-stories-editor-style'              => '/blocks/stories/editor.css',
 		'tr724-stories-editor-script'             => '/blocks/stories/edit.js',
