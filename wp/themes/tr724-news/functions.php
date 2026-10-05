@@ -67,6 +67,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/category' );
 	register_block_type( get_template_directory() . '/blocks/ticker' );
 	register_block_type( get_template_directory() . '/blocks/popular' );
+	register_block_type( get_template_directory() . '/blocks/post-list' );
 	register_block_type( get_template_directory() . '/blocks/headlines' );
 	register_block_type( get_template_directory() . '/blocks/related-news' );
 } );
@@ -190,6 +191,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-popular-editor-style'              => '/blocks/popular/editor.css',
 		'tr724-popular-editor-script'             => '/blocks/popular/edit.js',
 		'tr724-popular-script'                    => '/blocks/popular/view.js',
+		'tr724-post-list-style-2'                 => '/blocks/post-list/style.css',
+		'tr724-post-list-editor-style'            => '/blocks/post-list/editor.css',
+		'tr724-post-list-editor-script'           => '/blocks/post-list/edit.js',
 		'tr724-headlines-style'                   => '/blocks/headlines/style.css',
 		'tr724-headlines-editor-style'            => '/blocks/headlines/editor.css',
 		'tr724-headlines-editor-script'           => '/blocks/headlines/edit.js',

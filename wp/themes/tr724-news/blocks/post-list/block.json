@@ -1,0 +1,50 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/post-list",
+	"title": "Post list",
+	"category": "theme",
+	"description": "Latest posts in the popular box. Filter by one or more categories, without rank numbers, and add a more link.",
+	"keywords": [ "posts", "list", "category", "haber", "popular" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"heading": {
+			"type": "string",
+			"default": ""
+		},
+		"categoryIds": {
+			"type": "array",
+			"items": {
+				"type": "number"
+			},
+			"default": []
+		},
+		"postsToShow": {
+			"type": "number",
+			"default": 8
+		},
+		"showMore": {
+			"type": "boolean",
+			"default": true
+		},
+		"moreLabel": {
+			"type": "string",
+			"default": "Daha Fazla"
+		},
+		"moreUrl": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}
