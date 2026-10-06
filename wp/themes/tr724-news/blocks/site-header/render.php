@@ -73,6 +73,56 @@ $social = [
 	],
 ];
 
+$patron_item = sprintf(
+	'<li class="wp-block-navigation-item site-nav__patron"><a class="site-nav__patron-link" href="%1$s" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 .48v23.04h4.22V.48zm15.385 0c-4.764 0-8.641 3.88-8.641 8.65 0 4.755 3.877 8.623 8.641 8.623 4.75 0 8.615-3.868 8.615-8.623C24 4.36 20.136.48 15.385.48z"/></svg>%2$s</a></li>',
+	esc_url( 'https://www.patreon.com/tr724' ),
+	esc_html__( 'Patron ol', 'tr724-news' )
+);
+
+/**
+ * Append the Patreon button to the navigation list.
+ *
+ * @param string $html Rendered navigation markup.
+ * @param string $item List item to insert before the container closes.
+ */
+$append_patron = static function ( string $html, string $item ): string {
+	if ( ! preg_match( '/<ul\b[^>]*wp-block-navigation__container[^>]*>/i', $html, $match, PREG_OFFSET_CAPTURE ) ) {
+		return $html;
+	}
+
+	$offset = $match[0][1] + strlen( $match[0][0] );
+	$length = strlen( $html );
+	$depth  = 1;
+
+	while ( $offset < $length && $depth > 0 ) {
+		$next_open  = stripos( $html, '<ul', $offset );
+		$next_close = stripos( $html, '</ul>', $offset );
+
+		if ( false === $next_close ) {
+			return $html;
+		}
+
+		if ( false !== $next_open && $next_open < $next_close ) {
+			++$depth;
+			$offset = $next_open + 3;
+			continue;
+		}
+
+		--$depth;
+
+		if ( 0 === $depth ) {
+			return substr( $html, 0, $next_close ) . $item . substr( $html, $next_close );
+		}
+
+		$offset = $next_close + 5;
+	}
+
+	return $html;
+};
+
+$nav_strip  = $append_patron( $nav_strip, $patron_item );
+$nav_drawer = $append_patron( $nav_drawer, $patron_item );
+
 $wrapper = get_block_wrapper_attributes(
 	[
 		'class'             => 'tr724-site-header',

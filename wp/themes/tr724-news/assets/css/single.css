@@ -481,6 +481,12 @@
 	transition: background 0.2s ease;
 }
 
+.post__patron-cta svg {
+	width: 16px;
+	height: 16px;
+	fill: currentColor;
+}
+
 .post__patron-cta:hover {
 	background: #e86000;
 }

@@ -1,6 +1,7 @@
 .tr724-site-footer {
 	--color-text: #111;
 	--color-brand: #003399;
+	--color-accent-link: #ff6c00;
 	--focus-ring: #ff6200;
 	--page-width: 1040px;
 	--gutter: 28px;
@@ -301,6 +302,38 @@
 	text-transform: none;
 }
 
+.site-footer__patron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	padding: 11px 16px;
+	background: var(--color-accent-link);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1;
+	text-decoration: none;
+	transition: background 0.2s ease;
+}
+
+.site-footer__patron:visited {
+	color: #fff;
+}
+
+.site-footer__patron svg {
+	width: 16px;
+	height: 16px;
+	fill: currentColor;
+}
+
+.site-footer__patron:hover,
+.site-footer__patron:focus {
+	background: #e86000;
+	color: #fff;
+}
+
 .site-footer__bottom {
 	border-top: 1px solid #1a3570;
 }
@@ -377,5 +410,11 @@
 	.site-footer__bottom .site-footer__inner {
 		flex-direction: column;
 		align-items: flex-start;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.site-footer__patron {
+		transition: none;
 	}
 }
