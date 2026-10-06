@@ -1,0 +1,145 @@
+.exchange {
+	--color-text: #111;
+	--color-brand: #003399;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	color: var(--color-text);
+	font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.exchange,
+.exchange *,
+.exchange *::before,
+.exchange *::after {
+	box-sizing: border-box;
+}
+
+.exchange__box {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid #e6e6e6;
+	background: #fff;
+}
+
+.exchange__head {
+	background: var(--color-brand);
+	color: #fff;
+	text-align: center;
+}
+
+.exchange__title {
+	margin: 0;
+	padding: 14px 12px;
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	line-height: 1;
+}
+
+.exchange__featured {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.exchange__featured--single {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.exchange__card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+	padding: 14px 12px 12px;
+}
+
+.exchange__card + .exchange__card {
+	border-left: 1px solid #ededed;
+}
+
+.exchange__label {
+	color: #8d8d8d;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	line-height: 1;
+}
+
+.exchange__card .exchange__value {
+	font-size: 20px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.exchange__list {
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid #ededed;
+	list-style: none;
+}
+
+.exchange__row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 10px 12px;
+}
+
+.exchange__row + .exchange__row {
+	border-top: 1px solid #ededed;
+}
+
+.exchange__quote {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 4px;
+	min-width: 0;
+	text-align: right;
+}
+
+.exchange__row .exchange__value {
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.exchange__change {
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.exchange__change--up {
+	color: #1f9d4a;
+}
+
+.exchange__change--down {
+	color: #e10600;
+}
+
+.exchange__change--up::after,
+.exchange__change--down::after {
+	margin-left: 3px;
+	font-size: 9px;
+}
+
+.exchange__change--up::after {
+	content: "▲";
+}
+
+.exchange__change--down::after {
+	content: "▼";
+}
+
+.exchange__empty {
+	margin: 0;
+	padding: 14px 12px;
+	color: #9a9a9a;
+	font-size: 13px;
+	line-height: 1.4;
+}

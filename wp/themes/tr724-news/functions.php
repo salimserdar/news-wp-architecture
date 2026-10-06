@@ -34,6 +34,63 @@ require_once get_template_directory() . '/blocks/ticker/rates.php';
 require_once get_template_directory() . '/blocks/site-header/search.php';
 require_once get_template_directory() . '/blocks/related-news/posts.php';
 
+/**
+ * Exchange sidebar is limited to one category archive when a category is chosen.
+ *
+ * @param array<string, mixed> $attributes
+ */
+function tr724_exchange_is_visible( array $attributes ): bool {
+	$category_id = isset( $attributes['categoryId'] ) ? (int) $attributes['categoryId'] : 0;
+	if ( $category_id < 1 ) {
+		return true;
+	}
+	if ( tr724_category_is_editor_preview() ) {
+		return true;
+	}
+	return is_category( $category_id );
+}
+
+/**
+ * Drop the widget wrapper when the exchange block is the only content and this archive is not its category.
+ *
+ * @param array|false $instance Widget instance.
+ * @param WP_Widget   $widget   Widget object.
+ * @return array|false
+ */
+add_filter(
+	'widget_display_callback',
+	static function ( $instance, $widget ) {
+		if ( false === $instance || ! $widget instanceof WP_Widget_Block || ! is_array( $instance ) ) {
+			return $instance;
+		}
+
+		$content = isset( $instance['content'] ) ? (string) $instance['content'] : '';
+		if ( ! str_contains( $content, 'wp:tr724/exchange' ) ) {
+			return $instance;
+		}
+
+		$visible = 0;
+		foreach ( parse_blocks( $content ) as $parsed ) {
+			$name = $parsed['blockName'] ?? null;
+			if ( ! is_string( $name ) || '' === $name ) {
+				continue;
+			}
+			if ( 'tr724/exchange' !== $name ) {
+				$visible++;
+				continue;
+			}
+			$attrs = isset( $parsed['attrs'] ) && is_array( $parsed['attrs'] ) ? $parsed['attrs'] : [];
+			if ( tr724_exchange_is_visible( $attrs ) ) {
+				$visible++;
+			}
+		}
+
+		return 0 === $visible ? false : $instance;
+	},
+	10,
+	2
+);
+
 add_action( 'after_setup_theme', function (): void {
 	add_theme_support( 'title-tag' );
 	add_theme_support( 'post-thumbnails' );
@@ -88,6 +145,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/videos' );
 	register_block_type( get_template_directory() . '/blocks/category' );
 	register_block_type( get_template_directory() . '/blocks/ticker' );
+	register_block_type( get_template_directory() . '/blocks/exchange' );
 	register_block_type( get_template_directory() . '/blocks/popular' );
 	register_block_type( get_template_directory() . '/blocks/post-list' );
 	register_block_type( get_template_directory() . '/blocks/headlines' );
@@ -218,6 +276,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-ticker-style'                      => '/blocks/ticker/style.css',
 		'tr724-ticker-editor-style'               => '/blocks/ticker/editor.css',
 		'tr724-ticker-editor-script'              => '/blocks/ticker/edit.js',
+		'tr724-exchange-style'                    => '/blocks/exchange/style.css',
+		'tr724-exchange-editor-style'             => '/blocks/exchange/editor.css',
+		'tr724-exchange-editor-script'            => '/blocks/exchange/edit.js',
 		'tr724-popular-style'                     => '/blocks/popular/style.css',
 		'tr724-popular-editor-style'              => '/blocks/popular/editor.css',
 		'tr724-popular-editor-script'             => '/blocks/popular/edit.js',

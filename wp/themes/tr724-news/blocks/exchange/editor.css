@@ -1,0 +1,9 @@
+.block-editor-block-list__layout > .wp-block-tr724-exchange {
+	outline: 1px dashed rgba(0, 45, 142, 0.35);
+	outline-offset: 4px;
+}
+
+.editor-styles-wrapper .exchange {
+	width: 100%;
+	max-width: 320px;
+}

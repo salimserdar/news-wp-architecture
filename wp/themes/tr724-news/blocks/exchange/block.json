@@ -1,0 +1,31 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/exchange",
+	"title": "Exchange",
+	"category": "theme",
+	"description": "Sidebar market widget. Gold and BIST on top, then free-market currencies. Can be limited to one category archive.",
+	"keywords": [ "exchange", "markets", "sidebar", "ekonomi", "bist", "gold" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"title": {
+			"type": "string",
+			"default": "PİYASALAR"
+		},
+		"categoryId": {
+			"type": "number",
+			"default": 0
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}
