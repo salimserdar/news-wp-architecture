@@ -26,6 +26,7 @@ function tr724_aggregator_headers(): array {
 
 require_once get_template_directory() . '/inc/ads.php';
 require_once get_template_directory() . '/inc/additional-image.php';
+require_once get_template_directory() . '/inc/category-carousel.php';
 require_once get_template_directory() . '/inc/authors.php';
 require_once get_template_directory() . '/inc/editorial/bootstrap.php';
 require_once get_template_directory() . '/inc/widgets.php';
@@ -490,5 +491,33 @@ add_action( 'wp_enqueue_scripts', function (): void {
 		get_template_directory_uri() . '/assets/css/ads.css',
 		$ads_deps,
 		is_readable( $ads_css ) ? (string) filemtime( $ads_css ) : null
+	);
+
+	if ( ! is_category() ) {
+		return;
+	}
+
+	$carousel_term = get_queried_object();
+	if ( ! $carousel_term instanceof WP_Term || ! tr724_category_carousel_should_show( $carousel_term ) ) {
+		return;
+	}
+
+	wp_enqueue_style( 'tr724-swiper' );
+
+	$carousel_css = get_template_directory() . '/assets/css/category-carousel.css';
+	wp_enqueue_style(
+		'tr724-category-carousel',
+		get_template_directory_uri() . '/assets/css/category-carousel.css',
+		[ 'tr724-swiper', 'tr724-news-inter' ],
+		is_readable( $carousel_css ) ? (string) filemtime( $carousel_css ) : null
+	);
+
+	$carousel_js = get_template_directory() . '/assets/js/category-carousel.js';
+	wp_enqueue_script(
+		'tr724-category-carousel',
+		get_template_directory_uri() . '/assets/js/category-carousel.js',
+		[ 'tr724-swiper' ],
+		is_readable( $carousel_js ) ? (string) filemtime( $carousel_js ) : null,
+		true
 	);
 } );

@@ -30,6 +30,13 @@ $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="1
 
 	<div class="row">
 		<div class="column">
+			<?php
+			$show_carousel = ( $term instanceof WP_Term ) && tr724_category_carousel_should_show( $term );
+			if ( $show_carousel ) {
+				tr724_render_category_carousel( $term );
+			}
+			?>
+			<?php if ( have_posts() || ! $show_carousel ) : ?>
 			<section class="stories<?php echo have_posts() ? '' : ' stories--empty'; ?>" aria-labelledby="category-title">
 				<?php if ( have_posts() ) : ?>
 					<?php
@@ -93,6 +100,7 @@ $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="1
 					<p class="stories__empty"><?php esc_html_e( 'No posts found.', 'tr724-news' ); ?></p>
 				<?php endif; ?>
 			</section>
+			<?php endif; ?>
 		</div>
 		<div class="column column--aside"><?php dynamic_sidebar( 'category' ); ?></div>
 	</div>

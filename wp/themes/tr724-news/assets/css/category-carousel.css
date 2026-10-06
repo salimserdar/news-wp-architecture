@@ -1,0 +1,230 @@
+/* Category archive carousel. Slide treatment matches the spotlight block. */
+
+.category-carousel {
+	--color-text: #111;
+	--color-accent-link: #ff6c00;
+	--focus-ring: #ff6200;
+	--z-overlay: 2;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	margin: 0 0 28px;
+	font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.category-carousel,
+.category-carousel *,
+.category-carousel *::before,
+.category-carousel *::after {
+	box-sizing: border-box;
+}
+
+.category-carousel__swiper {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	height: auto;
+	overflow: hidden;
+}
+
+.category-carousel__swiper .swiper-slide {
+	height: 100%;
+}
+
+.category-carousel__slide {
+	position: relative;
+	display: block;
+	height: 100%;
+	overflow: hidden;
+	color: #fff;
+	text-decoration: none;
+	background: var(--color-text);
+}
+
+.category-carousel__slide img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.category-carousel__shade {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 52%;
+	background: linear-gradient(transparent, rgba(0, 0, 0, 0.78));
+}
+
+.category-carousel__copy {
+	position: absolute;
+	left: 22px;
+	right: 72px;
+	bottom: 18px;
+}
+
+.category-carousel__eyebrow {
+	display: block;
+	margin: 0;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.2;
+}
+
+.category-carousel__title {
+	margin: 4px 0 0;
+	font-size: 26px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+.category-carousel__nav {
+	position: absolute;
+	top: 50%;
+	z-index: var(--z-overlay);
+	width: 42px;
+	height: 42px;
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	background: rgba(255, 255, 255, 0.92);
+	color: #5c6570;
+	cursor: pointer;
+	transform: translateY(-50%);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.18s ease, background 0.18s ease;
+}
+
+.category-carousel__prev {
+	left: 16px;
+}
+
+.category-carousel__next {
+	right: 16px;
+}
+
+.category-carousel__nav svg {
+	width: 22px;
+	height: 22px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.category-carousel__nav:hover {
+	background: #fff;
+}
+
+.category-carousel__swiper:hover .category-carousel__nav,
+.category-carousel__swiper:focus-within .category-carousel__nav {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.category-carousel__swiper:hover .category-carousel__nav.swiper-button-disabled,
+.category-carousel__swiper:focus-within .category-carousel__nav.swiper-button-disabled {
+	opacity: 0.72;
+}
+
+.category-carousel__nav:focus-visible,
+.category-carousel__pager .swiper-pagination-bullet:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: 2px;
+}
+
+.category-carousel__pager {
+	position: static;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: auto;
+	margin-top: 14px;
+	transform: none;
+}
+
+.category-carousel__pager.swiper-pagination-horizontal {
+	bottom: auto;
+	left: auto;
+	width: auto;
+}
+
+.category-carousel__pager.swiper-pagination-horizontal.swiper-pagination-bullets .swiper-pagination-bullet {
+	margin: 0;
+}
+
+.category-carousel__pager .swiper-pagination-bullet {
+	position: relative;
+	width: 8px;
+	height: 8px;
+	margin: 0;
+	border: 0;
+	border-radius: 999px;
+	outline: none;
+	box-shadow: none;
+	background: var(--color-accent-link);
+	opacity: 0.35;
+	cursor: pointer;
+	transition: width 0.2s ease, opacity 0.2s ease;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+.category-carousel__pager .swiper-pagination-bullet::before {
+	content: "";
+	position: absolute;
+	inset: -6px;
+}
+
+.category-carousel__pager .swiper-pagination-bullet-active {
+	width: 22px;
+	opacity: 1;
+}
+
+@media (max-width: 720px) {
+	.category-carousel {
+		width: calc(100% + 40px);
+		margin-inline: -20px;
+	}
+
+	.category-carousel__eyebrow {
+		font-size: 13px;
+	}
+
+	.category-carousel__title {
+		font-size: 22px;
+	}
+
+	.category-carousel__copy {
+		right: 18px;
+	}
+}
+
+@media (max-width: 560px) {
+	.category-carousel__title {
+		font-size: 18px;
+	}
+
+	.category-carousel__eyebrow {
+		font-size: 12px;
+	}
+
+	.category-carousel__nav {
+		width: 34px;
+		height: 34px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.category-carousel__nav,
+	.category-carousel__pager .swiper-pagination-bullet {
+		transition: none;
+	}
+}
