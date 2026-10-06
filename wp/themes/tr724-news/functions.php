@@ -152,6 +152,7 @@ add_action( 'init', function (): void {
 	register_block_type( get_template_directory() . '/blocks/related-news' );
 	register_block_type( get_template_directory() . '/blocks/country-ads' );
 	register_block_type( get_template_directory() . '/blocks/featured-topics' );
+	register_block_type( get_template_directory() . '/blocks/timeline' );
 } );
 
 /**
@@ -300,6 +301,9 @@ add_action( 'enqueue_block_assets', function (): void {
 		'tr724-featured-topics-style-2'           => '/blocks/featured-topics/style.css',
 		'tr724-featured-topics-editor-style'      => '/blocks/featured-topics/editor.css',
 		'tr724-featured-topics-editor-script'     => '/blocks/featured-topics/edit.js',
+		'tr724-timeline-style-2'                  => '/blocks/timeline/style.css',
+		'tr724-timeline-editor-style'             => '/blocks/timeline/editor.css',
+		'tr724-timeline-editor-script'            => '/blocks/timeline/edit.js',
 	];
 
 	foreach ( $map as $handle => $relative ) {

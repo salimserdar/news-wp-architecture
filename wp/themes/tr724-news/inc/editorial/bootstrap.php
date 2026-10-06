@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/featured-topics.php';
 require_once __DIR__ . '/featured-topics-page.php';
+require_once __DIR__ . '/timeline.php';
+require_once __DIR__ . '/timeline-page.php';
 
 if ( ! function_exists( 'tr724_editorial_capability' ) ) {
 	/**
@@ -51,6 +53,15 @@ if ( ! function_exists( 'tr724_editorial_pages' ) ) {
 					'menu_title' => 'Featured Topics',
 					'callback'   => 'tr724_editorial_render_featured_topics_page',
 					'enqueue'    => 'tr724_editorial_enqueue_featured_topics_assets',
+				],
+				[
+					'id'         => 'timeline',
+					'slug'       => 'tr724-editorial-timeline',
+					'label_key'  => 'timeline',
+					'title'      => 'Timeline',
+					'menu_title' => 'Timeline',
+					'callback'   => 'tr724_editorial_render_timeline_page',
+					'enqueue'    => 'tr724_editorial_enqueue_timeline_assets',
 				],
 			]
 		);
@@ -181,6 +192,10 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'en' => 'Featured Topics',
 				'tr' => 'Öne Çıkan Konular',
 			],
+			'timeline'               => [
+				'en' => 'Timeline',
+				'tr' => 'Yayın Akışı',
+			],
 			'description'            => [
 				'en' => 'Choose the tags shown in every Featured Topics block. Drag to set the order.',
 				'tr' => 'Öne Çıkan Konular bloğunda gösterilecek etiketleri seçin. Sırayı sürükleyerek belirleyin.',
@@ -276,6 +291,62 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 			'block_empty'            => [
 				'en' => 'No featured topics yet. Choose tags in Editorial → Featured Topics.',
 				'tr' => 'Henüz öne çıkan konu yok. Etiketleri Editöryal → Öne Çıkan Konular bölümünden seçin.',
+			],
+			'timeline_description'   => [
+				'en' => 'Edit the YouTube programs in the Timeline block. Saving replaces this schedule. Time and name are listed side by side.',
+				'tr' => 'Yayın Akışı bloğundaki YouTube programlarını düzenleyin. Kaydetmek bu akışın yerine geçer. Saat ve ad yan yana listelenir.',
+			],
+			'timeline_order'         => [
+				'en' => 'Programs are shown from earliest to latest.',
+				'tr' => 'Programlar en erken saatten başlayarak gösterilir.',
+			],
+			'timeline_time'          => [
+				'en' => 'Time',
+				'tr' => 'Saat',
+			],
+			'timeline_name'          => [
+				'en' => 'Program name',
+				'tr' => 'Program adı',
+			],
+			'timeline_url'           => [
+				'en' => 'YouTube URL',
+				'tr' => 'YouTube adresi',
+			],
+			'timeline_url_placeholder' => [
+				'en' => 'https://www.youtube.com/watch?v=',
+				'tr' => 'https://www.youtube.com/watch?v=',
+			],
+			'timeline_add'           => [
+				'en' => 'Add program',
+				'tr' => 'Program ekle',
+			],
+			'timeline_empty'         => [
+				'en' => 'No programs yet.',
+				'tr' => 'Henüz program yok.',
+			],
+			'timeline_saved'         => [
+				'en' => 'Timeline saved.',
+				'tr' => 'Yayın akışı kaydedildi.',
+			],
+			'timeline_dropped'       => [
+				'en' => 'Some programs were skipped because the time or name was missing or the list is full. Links that were not YouTube videos were left off.',
+				'tr' => 'Saat veya ad eksik olduğu ya da liste dolduğu için bazı programlar atlandı. YouTube videosu olmayan bağlantılar kaldırıldı.',
+			],
+			'timeline_limit'         => [
+				'en' => 'You can add up to %d programs.',
+				'tr' => 'En fazla %d program ekleyebilirsiniz.',
+			],
+			'timeline_block_help'    => [
+				'en' => 'Programs come from Editorial → Timeline. This block cannot override them.',
+				'tr' => 'Programlar Editöryal → Yayın Akışı bölümünden gelir. Bu blok onları değiştiremez.',
+			],
+			'timeline_edit'          => [
+				'en' => 'Edit the schedule',
+				'tr' => 'Akışı düzenle',
+			],
+			'timeline_block_empty'   => [
+				'en' => 'No programs yet. Add them in Editorial → Timeline.',
+				'tr' => 'Henüz program yok. Programları Editöryal → Yayın Akışı bölümünden ekleyin.',
 			],
 		];
 

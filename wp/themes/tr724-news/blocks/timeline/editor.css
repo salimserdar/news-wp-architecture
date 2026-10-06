@@ -1,0 +1,8 @@
+.block-editor-block-list__layout > .wp-block-tr724-timeline {
+	outline: 1px dashed rgba(0, 45, 142, 0.35);
+	outline-offset: 4px;
+}
+
+.editor-styles-wrapper .timeline {
+	width: 100%;
+}

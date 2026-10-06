@@ -1,0 +1,125 @@
+.timeline {
+	--color-text: #111;
+	--color-accent: #ff4f00;
+	--focus-ring: #ff6200;
+	width: 100%;
+	color: var(--color-text);
+	font-family: Inter, "Segoe UI", sans-serif;
+}
+
+.timeline,
+.timeline *,
+.timeline *::before,
+.timeline *::after {
+	box-sizing: border-box;
+}
+
+.timeline__title {
+	margin: 0 0 14px;
+	font-size: 15px;
+	font-weight: 800;
+	letter-spacing: 0.02em;
+	line-height: 1;
+}
+
+.timeline__title::after {
+	content: "";
+	display: block;
+	width: 36px;
+	height: 3px;
+	margin-top: 8px;
+	background: var(--color-accent);
+}
+
+.timeline__list {
+	display: flex;
+	margin: 0;
+	padding: 0;
+	overflow-x: auto;
+	list-style: none;
+	border-top: 1px solid #eee;
+	border-bottom: 1px solid #eee;
+	scrollbar-width: thin;
+}
+
+.timeline__item {
+	flex: 0 0 auto;
+	min-width: 0;
+}
+
+.timeline__item + .timeline__item {
+	border-left: 1px solid #ececec;
+}
+
+.timeline__program {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 52px;
+	padding: 10px 16px;
+	color: inherit;
+	text-decoration: none;
+}
+
+a.timeline__program:hover,
+a.timeline__program:focus {
+	background: #f7f7f7;
+}
+
+a.timeline__program:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: -2px;
+}
+
+.timeline__time {
+	flex: none;
+	color: var(--color-accent);
+	font-size: 14px;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	line-height: 1.2;
+}
+
+.timeline__name {
+	min-width: 0;
+	max-width: 28ch;
+	overflow: hidden;
+	color: var(--color-text);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.2;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.timeline__play {
+	flex: none;
+	display: block;
+}
+
+.timeline--empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 72px;
+	background: #f4f4f4;
+}
+
+.timeline__empty {
+	margin: 0;
+	padding: 16px;
+	font-size: 14px;
+}
+
+@media (max-width: 600px) {
+	.timeline__program {
+		padding: 10px 12px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	a.timeline__program {
+		transition: none;
+	}
+}
