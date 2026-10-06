@@ -586,7 +586,7 @@
 }
 
 .drawer__tv svg path:first-child {
-	fill: var(--color-brand);
+	fill: #ff0000;
 }
 
 .drawer__tv svg path:last-child {
@@ -751,6 +751,38 @@
 	letter-spacing: 0.02em;
 }
 
+.drawer__patron {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	margin: 14px 16px 0;
+	padding: 11px 16px;
+	background: var(--color-accent-link);
+	color: #fff;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1;
+	text-decoration: none;
+	transition: background 0.2s ease;
+}
+
+.drawer__patron:visited {
+	color: #fff;
+}
+
+.drawer__patron svg {
+	width: 16px;
+	height: 16px;
+	fill: currentColor;
+}
+
+.drawer__patron:hover,
+.drawer__patron:focus {
+	background: #e86000;
+	color: #fff;
+}
+
 .drawer__social {
 	display: flex;
 	justify-content: center;
@@ -864,7 +896,8 @@
 	.drawer__panel,
 	.drawer__nav .wp-block-navigation-item__content,
 	.site-nav .wp-block-navigation-item__content,
-	.site-nav__patron-link {
+	.site-nav__patron-link,
+	.drawer__patron {
 		transition: none;
 	}
 }
