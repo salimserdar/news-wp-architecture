@@ -320,9 +320,9 @@ if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
   chown www-data:www-data "${WP_ROOT}/wp-config.php"
 fi
 
-echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks, r2-offload, media-urls)"
+echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks, r2-offload, media-urls, media-search, post-sync)"
 mkdir -p "${WP_ROOT}/wp-content/mu-plugins"
-for plugin in cache-control.php cache-purge.php perf-tweaks.php r2-offload.php media-urls.php; do
+for plugin in cache-control.php cache-purge.php perf-tweaks.php r2-offload.php media-urls.php media-search.php media-search-order.js post-sync.php; do
   install -m 0644 -o www-data -g www-data \
     "${REPO_DIR}/wp/mu-plugins/${plugin}" \
     "${WP_ROOT}/wp-content/mu-plugins/${plugin}"
