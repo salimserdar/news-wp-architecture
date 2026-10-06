@@ -27,15 +27,21 @@ add_action( 'init', function (): void {
 
 // Heartbeat: 60 s in the editor, off elsewhere in wp-admin. Dozens of editors
 // polling admin-ajax every 15 s is a real load on PHP-FPM.
+// wp-auth-check depends on heartbeat. Since 6.9.1, core warns when that
+// dependency is missing, so skip the session-expiry dialog on the same screens.
 add_filter( 'heartbeat_settings', function ( array $settings ): array {
 	$settings['interval'] = 60;
 	return $settings;
 } );
 add_action( 'admin_enqueue_scripts', function ( string $hook ): void {
-	if ( ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
-		wp_deregister_script( 'heartbeat' );
+	if ( in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+		return;
 	}
-} );
+
+	// Before wp_auth_check_load() at priority 10. Core documents this removal.
+	remove_action( 'admin_enqueue_scripts', 'wp_auth_check_load' );
+	wp_deregister_script( 'heartbeat' );
+}, 1 );
 
 // XML-RPC and pingbacks: brute-force vector and DDoS amplifier; nginx blocks
 // xmlrpc.php too, this closes the internal paths.
