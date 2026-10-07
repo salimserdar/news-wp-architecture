@@ -16,6 +16,11 @@
 		return;
 	}
 
+	function syncHidden( item ) {
+		var box = item.querySelector( 'input[data-name="hidden"]' );
+		item.classList.toggle( "is-hidden", !!( box && box.checked ) );
+	}
+
 	function reindex() {
 		var items = list.querySelectorAll( ".tr724-tl-item" );
 		items.forEach( function ( item, index ) {
@@ -26,6 +31,7 @@
 				}
 				input.name = "tr724_timeline_programs[" + index + "][" + field + "]";
 			} );
+			syncHidden( item );
 		} );
 		if ( empty ) {
 			empty.hidden = items.length > 0;
@@ -49,6 +55,17 @@
 		var time = node.querySelector( 'input[type="time"]' );
 		if ( time ) {
 			time.focus();
+		}
+	} );
+
+	list.addEventListener( "change", function ( event ) {
+		var input = event.target;
+		if ( ! input || input.getAttribute( "data-name" ) !== "hidden" ) {
+			return;
+		}
+		var item = input.closest( ".tr724-tl-item" );
+		if ( item ) {
+			syncHidden( item );
 		}
 	} );
 

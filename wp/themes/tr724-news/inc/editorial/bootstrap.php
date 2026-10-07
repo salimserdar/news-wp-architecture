@@ -300,6 +300,14 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'en' => 'Programs are shown from earliest to latest.',
 				'tr' => 'Programlar en erken saatten başlayarak gösterilir.',
 			],
+			'timeline_hide'          => [
+				'en' => 'Hide',
+				'tr' => 'Gizle',
+			],
+			'timeline_hide_help'     => [
+				'en' => 'Check Hide to keep a program in this list without showing it on the Timeline.',
+				'tr' => 'Bir programı bu listede tutup Yayın Akışında göstermemek için Gizle kutusunu işaretleyin.',
+			],
 			'timeline_time'          => [
 				'en' => 'Time',
 				'tr' => 'Saat',

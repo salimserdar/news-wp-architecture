@@ -9,12 +9,13 @@ if ( ! function_exists( 'tr724_editorial_render_timeline_row' ) ) {
 	/**
 	 * One program. The add button clones #tr724-tl-template, which passes a null index.
 	 *
-	 * @param array{time?: string, name?: string, url?: string} $row
+	 * @param array{time?: string, name?: string, url?: string, hidden?: bool} $row
 	 */
 	function tr724_editorial_render_timeline_row( ?int $index, array $row ): void {
-		$time = isset( $row['time'] ) ? (string) $row['time'] : '';
-		$name = isset( $row['name'] ) ? (string) $row['name'] : '';
-		$url  = isset( $row['url'] ) ? (string) $row['url'] : '';
+		$time   = isset( $row['time'] ) ? (string) $row['time'] : '';
+		$name   = isset( $row['name'] ) ? (string) $row['name'] : '';
+		$url    = isset( $row['url'] ) ? (string) $row['url'] : '';
+		$hidden = ! empty( $row['hidden'] );
 
 		$field_name = static function ( string $field ) use ( $index ): string {
 			if ( null === $index ) {
@@ -23,7 +24,7 @@ if ( ! function_exists( 'tr724_editorial_render_timeline_row' ) ) {
 			return 'tr724_timeline_programs[' . $index . '][' . $field . ']';
 		};
 		?>
-		<li class="tr724-tl-item">
+		<li class="tr724-tl-item<?php echo $hidden ? ' is-hidden' : ''; ?>">
 			<label>
 				<span><?php echo esc_html( tr724_editorial_ui( 'timeline_time' ) ); ?></span>
 				<input type="time" data-name="time" <?php echo '' !== $field_name( 'time' ) ? 'name="' . esc_attr( $field_name( 'time' ) ) . '"' : ''; ?> value="<?php echo esc_attr( $time ); ?>" step="60" autocomplete="off">
@@ -35,6 +36,10 @@ if ( ! function_exists( 'tr724_editorial_render_timeline_row' ) ) {
 			<label>
 				<span><?php echo esc_html( tr724_editorial_ui( 'timeline_url' ) ); ?></span>
 				<input type="text" class="regular-text" data-name="url" inputmode="url" spellcheck="false" <?php echo '' !== $field_name( 'url' ) ? 'name="' . esc_attr( $field_name( 'url' ) ) . '"' : ''; ?> value="<?php echo esc_attr( $url ); ?>" placeholder="<?php echo esc_attr( tr724_editorial_ui( 'timeline_url_placeholder' ) ); ?>" maxlength="300" autocomplete="off">
+			</label>
+			<label class="tr724-tl-hide">
+				<input type="checkbox" data-name="hidden" value="1" <?php checked( $hidden ); ?> <?php echo '' !== $field_name( 'hidden' ) ? 'name="' . esc_attr( $field_name( 'hidden' ) ) . '"' : ''; ?>>
+				<span><?php echo esc_html( tr724_editorial_ui( 'timeline_hide' ) ); ?></span>
 			</label>
 			<button type="button" class="button-link-delete tr724-tl-remove"><?php echo esc_html( tr724_editorial_ui( 'remove' ) ); ?></button>
 		</li>
@@ -68,6 +73,7 @@ if ( ! function_exists( 'tr724_editorial_render_timeline_page' ) ) {
 			<?php endif; ?>
 			<p class="description"><?php echo esc_html( tr724_editorial_ui( 'timeline_description' ) ); ?></p>
 			<p class="description"><?php echo esc_html( tr724_editorial_ui( 'timeline_order' ) ); ?></p>
+			<p class="description"><?php echo esc_html( tr724_editorial_ui( 'timeline_hide_help' ) ); ?></p>
 
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="tr724-tl-form" autocomplete="off">
 				<input type="hidden" name="action" value="tr724_save_timeline">

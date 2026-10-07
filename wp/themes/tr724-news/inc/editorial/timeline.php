@@ -45,7 +45,9 @@ if ( ! function_exists( 'tr724_editorial_timeline_normalize_program' ) ) {
 	 * One program, or null when the time or name is missing.
 	 * url_dropped is true when a link was entered and it is not a YouTube video.
 	 *
-	 * @return array{time: string, name: string, url: string, url_dropped: bool}|null
+	 * hidden is true when the program is kept in the list but left off the Timeline block.
+	 *
+	 * @return array{time: string, name: string, url: string, hidden: bool, url_dropped: bool}|null
 	 */
 	function tr724_editorial_timeline_normalize_program( mixed $program ): ?array {
 		if ( ! is_array( $program ) ) {
@@ -70,6 +72,7 @@ if ( ! function_exists( 'tr724_editorial_timeline_normalize_program' ) ) {
 			'time'        => $time,
 			'name'        => $name,
 			'url'         => $url,
+			'hidden'      => ! empty( $program['hidden'] ),
 			'url_dropped' => '' !== $raw_url && '' === $url,
 		];
 	}
@@ -79,8 +82,8 @@ if ( ! function_exists( 'tr724_editorial_timeline_sort' ) ) {
 	/**
 	 * Earliest time first. Equal times keep their previous order.
 	 *
-	 * @param array<int, array{time: string, name: string, url: string}> $programs
-	 * @return array<int, array{time: string, name: string, url: string}>
+	 * @param array<int, array{time: string, name: string, url: string, hidden?: bool}> $programs
+	 * @return array<int, array{time: string, name: string, url: string, hidden?: bool}>
 	 */
 	function tr724_editorial_timeline_sort( array $programs ): array {
 		$indexed = [];
@@ -151,7 +154,7 @@ if ( ! function_exists( 'tr724_editorial_timeline_config' ) ) {
 	/**
 	 * Saved programs, in time order.
 	 *
-	 * @return array<int, array{time: string, name: string, url: string}>
+	 * @return array<int, array{time: string, name: string, url: string, hidden: bool}>
 	 */
 	function tr724_editorial_timeline_config(): array {
 		$max   = tr724_editorial_timeline_max();
@@ -176,11 +179,20 @@ if ( ! function_exists( 'tr724_editorial_timeline_config' ) ) {
 if ( ! function_exists( 'tr724_editorial_get_timeline' ) ) {
 	/**
 	 * The single schedule shown by the Timeline block.
+	 * Programs marked hidden stay in the saved list and are left off this schedule.
 	 *
 	 * @return array<int, array{time: string, name: string, url: string}>
 	 */
 	function tr724_editorial_get_timeline(): array {
-		$items    = tr724_editorial_timeline_config();
+		$items = [];
+		foreach ( tr724_editorial_timeline_config() as $item ) {
+			if ( ! empty( $item['hidden'] ) ) {
+				continue;
+			}
+			unset( $item['hidden'] );
+			$items[] = $item;
+		}
+
 		$filtered = apply_filters( 'tr724_editorial_timeline', $items );
 		return is_array( $filtered ) ? $filtered : $items;
 	}
@@ -190,7 +202,7 @@ if ( ! function_exists( 'tr724_editorial_sanitize_timeline_request' ) ) {
 	/**
 	 * Turn the Timeline form into the stored list.
 	 *
-	 * @return array{programs: array<int, array{time: string, name: string, url: string}>, dropped: bool}
+	 * @return array{programs: array<int, array{time: string, name: string, url: string, hidden: bool}>, dropped: bool}
 	 */
 	function tr724_editorial_sanitize_timeline_request(): array {
 		$posted = [];

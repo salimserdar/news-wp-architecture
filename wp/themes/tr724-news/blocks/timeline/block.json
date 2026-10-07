@@ -7,8 +7,15 @@
 	"description": "Yayın Akışı. YouTube programs with time and name in a horizontal row. Managed in Editorial → Timeline.",
 	"keywords": [ "timeline", "schedule", "youtube", "yayın", "akış", "program" ],
 	"textdomain": "tr724-news",
+	"attributes": {
+		"anchor": {
+			"type": "string",
+			"default": ""
+		}
+	},
 	"supports": {
 		"html": false,
+		"anchor": true,
 		"align": false,
 		"color": false,
 		"typography": false,

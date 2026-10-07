@@ -23,7 +23,7 @@
 
 .tr724-tl-item {
 	display: grid;
-	grid-template-columns: 140px minmax(180px, 1fr) minmax(240px, 1.4fr) auto;
+	grid-template-columns: 140px minmax(180px, 1fr) minmax(240px, 1.4fr) auto auto;
 	gap: 12px;
 	align-items: end;
 	margin: 0 0 8px;
@@ -41,6 +41,29 @@
 .tr724-tl-item input {
 	width: 100%;
 	max-width: none;
+}
+
+.tr724-tl-item.is-hidden {
+	opacity: 0.55;
+}
+
+.tr724-tl-hide {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 6px;
+	white-space: nowrap;
+}
+
+.tr724-tl-hide span {
+	display: inline;
+	margin: 0;
+	font-weight: 600;
+}
+
+.tr724-tl-hide input {
+	width: auto;
+	margin: 0;
 }
 
 .tr724-tl-remove {
