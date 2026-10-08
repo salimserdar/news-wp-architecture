@@ -178,8 +178,9 @@ function write_single_webp( string $path ): string|\WP_Error {
 	$size   = $editor->get_size();
 	$width  = (int) ( $size['width'] ?? 0 );
 	$height = (int) ( $size['height'] ?? 0 );
-	$mime   = method_exists( $editor, 'get_mime_type' ) ? (string) $editor->get_mime_type() : '';
-	$reason = picture_error( '' !== $mime ? $mime : 'image/jpeg', $width, $height );
+	// get_mime_type() is protected on WP_Image_Editor; calling it fatals the upload.
+	$mime   = wp_get_image_mime( $path );
+	$reason = picture_error( is_string( $mime ) ? $mime : '', $width, $height );
 	if ( '' !== $reason ) {
 		return new \WP_Error( 'news_single_image', $reason );
 	}
