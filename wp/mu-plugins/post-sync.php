@@ -15,9 +15,10 @@ defined( 'ABSPATH' ) || exit;
 
 add_action( 'wp_after_insert_post', __NAMESPACE__ . '\on_after_insert', 20, 2 );
 add_action( 'set_object_terms', __NAMESPACE__ . '\on_set_object_terms', 20, 4 );
-add_action( 'added_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 3 );
-add_action( 'updated_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 3 );
-add_action( 'deleted_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 3 );
+add_action( 'added_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 4 );
+add_action( 'updated_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 4 );
+add_action( 'delete_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 4 );
+add_action( 'deleted_post_meta', __NAMESPACE__ . '\on_thumbnail_meta', 20, 4 );
 add_action( 'before_delete_post', __NAMESPACE__ . '\on_before_delete', 20, 2 );
 add_action( 'shutdown', __NAMESPACE__ . '\flush_pending', 20 );
 
@@ -53,14 +54,63 @@ function on_set_object_terms( int $object_id, $terms, $tt_ids, string $taxonomy 
 }
 
 /**
+ * Featured-image changes queue a post sync.
+ *
+ * wp_delete_attachment() removes every `_thumbnail_id` pointing at that file
+ * with delete_metadata( 'post', null, '_thumbnail_id', $attachment_id, true ).
+ * The object id in that call is null. Typing it as int fatals the request
+ * before the attachment row is deleted, so the media library reports a failed
+ * delete and the photo stays.
+ *
  * @param mixed $meta_id
+ * @param mixed $object_id
+ * @param mixed $meta_value Attachment id when WordPress is deleting every match.
  */
-function on_thumbnail_meta( $meta_id, int $object_id, string $meta_key ): void {
+function on_thumbnail_meta( $meta_id, $object_id, string $meta_key, $meta_value = null ): void {
 	unset( $meta_id );
 	if ( '_thumbnail_id' !== $meta_key ) {
 		return;
 	}
-	queue_upsert( $object_id );
+	if ( is_numeric( $object_id ) && (int) $object_id > 0 ) {
+		queue_upsert( (int) $object_id );
+		return;
+	}
+
+	$attachment_id = is_numeric( $meta_value ) ? (int) $meta_value : 0;
+	if ( $attachment_id < 1 ) {
+		return;
+	}
+	foreach ( post_ids_with_thumbnail( $attachment_id ) as $post_id ) {
+		queue_upsert( $post_id );
+	}
+}
+
+/**
+ * Posts that still store this attachment as their featured image.
+ *
+ * @return list<int>
+ */
+function post_ids_with_thumbnail( int $attachment_id ): array {
+	global $wpdb;
+
+	$ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_thumbnail_id' AND meta_value = %s",
+			(string) $attachment_id
+		)
+	);
+	if ( ! is_array( $ids ) ) {
+		return [];
+	}
+
+	$post_ids = [];
+	foreach ( $ids as $id ) {
+		$post_id = (int) $id;
+		if ( $post_id > 0 ) {
+			$post_ids[] = $post_id;
+		}
+	}
+	return $post_ids;
 }
 
 function on_before_delete( int $post_id, \WP_Post $post ): void {
