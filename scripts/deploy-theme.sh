@@ -1,13 +1,14 @@
 #!/bin/bash
-# Copy repo mu-plugins onto the VPS WordPress tree.
-#   sudo bash scripts/deploy-mu-plugins.sh
+# Copy the repo theme onto the VPS WordPress tree.
+# Only tr724-news is synced, so other themes on the server stay.
+#   sudo bash scripts/deploy-theme.sh
 
 set -e
 
-SOURCE="/opt/news-wp-architecture/wp/mu-plugins/"
-TARGET="/var/www/html/wp-content/mu-plugins/"
+SOURCE="/opt/news-wp-architecture/wp/themes/tr724-news/"
+TARGET="/var/www/html/wp-content/themes/tr724-news/"
 
-echo "Deploying MU plugins..."
+echo "Deploying theme..."
 
 sudo mkdir -p "$TARGET"
 sudo rsync -av --delete "$SOURCE" "$TARGET"
@@ -21,4 +22,4 @@ sudo find "$TARGET" -type f -exec chmod 644 {} +
 echo "Reloading PHP-FPM..."
 sudo systemctl reload php8.3-fpm
 
-echo "MU plugins deployed successfully."
+echo "Theme deployed successfully."
