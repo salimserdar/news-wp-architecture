@@ -33,6 +33,7 @@ services:
       # Values come from the repo .env. Only these names are passed in.
       SITE_AGGREGATOR_SERVICE_URL: ${SITE_AGGREGATOR_SERVICE_URL:-http://host.docker.internal:3000}
       SITE_AGGREGATOR_READ_API_KEY: ${SITE_AGGREGATOR_READ_API_KEY:-}
+      SITE_AGGREGATOR_SYNC_TOKEN: ${SITE_AGGREGATOR_SYNC_TOKEN:-}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
       YOUTUBE_CHANNEL_ID: ${YOUTUBE_CHANNEL_ID:-}
       # Skip R2 during local uploads. Production never sets this.
@@ -41,6 +42,7 @@ services:
       WORDPRESS_CONFIG_EXTRA: |
         define( 'SITE_AGGREGATOR_SERVICE_URL', getenv( 'SITE_AGGREGATOR_SERVICE_URL' ) ?: 'http://host.docker.internal:3000' );
         define( 'SITE_AGGREGATOR_READ_API_KEY', getenv( 'SITE_AGGREGATOR_READ_API_KEY' ) ?: '' );
+        define( 'SITE_AGGREGATOR_SYNC_TOKEN', getenv( 'SITE_AGGREGATOR_SYNC_TOKEN' ) ?: '' );
         define( 'YOUTUBE_API_KEY', getenv( 'YOUTUBE_API_KEY' ) ?: '' );
         define( 'YOUTUBE_CHANNEL_ID', getenv( 'YOUTUBE_CHANNEL_ID' ) ?: '' );
         if ( ! defined( 'NEWS_R2_OFFLOAD' ) ) { define( 'NEWS_R2_OFFLOAD', false ); }
