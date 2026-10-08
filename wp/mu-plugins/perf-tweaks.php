@@ -70,9 +70,8 @@ add_filter( 'max_srcset_image_width', fn() => 1600 );
 // Big-image threshold: scale down giant uploads from photographers (default 2560).
 add_filter( 'big_image_size_threshold', fn() => 2560 );
 
-// WebP for newly generated JPEG sub-sizes (core feature, opt-in since 6.1).
-// Only affects new uploads; ~30 % smaller images. Comment out if a plugin
-// already handles image formats (ShortPixel, Imagify, Cloudflare Polish...).
+// WebP for JPEG sub-sizes an administrator uploads (core feature, opt-in since 6.1).
+// single-image.php stores every other upload as one 640×360 WebP and skips these sizes.
 add_filter( 'image_editor_output_format', function ( array $formats ): array {
 	$formats['image/jpeg'] = 'image/webp';
 	return $formats;
