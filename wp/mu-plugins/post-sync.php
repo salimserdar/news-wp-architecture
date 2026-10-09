@@ -4,12 +4,13 @@
  * Description: Sends the current post or image to the Site Aggregator for Meilisearch. The aggregator does not read MySQL. Media sync feeds media search and does not change a post's thumbnail.
  * Version:     1.1.0
  *
- * POST {SITE_AGGREGATOR_SERVICE_URL}/api/v1/sync/posts
- * POST {SITE_AGGREGATOR_SERVICE_URL}/api/v1/sync/media
- * Authorization: Bearer SITE_AGGREGATOR_SYNC_TOKEN
+ * POST /api/v1/sync/posts
+ * POST /api/v1/sync/media
+ * Authorization: Bearer SYNC_TOKEN
  * Content-Type: application/json
  * Body limit is 1 MB. Image bytes are not sent. Repeating a call is safe.
- * Token and base URL come from wp-config.php constants, then the environment.
+ * On the VPS the token is read from /etc/news-wp/aggregator.env. Docker still
+ * uses SITE_AGGREGATOR_SYNC_TOKEN and SITE_AGGREGATOR_SERVICE_URL.
  */
 
 namespace News\PostSync;
@@ -188,7 +189,7 @@ function flush_pending(): void {
 	$media       = [];
 
 	if ( '' === sync_token() ) {
-		error_log( 'Site Aggregator sync skipped: SITE_AGGREGATOR_SYNC_TOKEN is empty.' );
+		error_log( 'Site Aggregator sync skipped: sync token is empty.' );
 		return;
 	}
 
@@ -201,7 +202,7 @@ function flush_pending(): void {
 }
 
 function send_document( string $path, int $id, string $action ): void {
-	$body = document_body( $path, $id, $action );
+	$body   = document_body( $path, $id, $action );
 	$action = isset( $body['action'] ) && is_string( $body['action'] ) ? $body['action'] : $action;
 	$result = post_json( $path, $body );
 	if ( ! is_sync_result( $result ) ) {
@@ -466,20 +467,32 @@ function post_json( string $path, array $body ): ?array {
 		return null;
 	}
 
-	$headers = [
-		'Accept'        => 'application/json',
-		'Content-Type'  => 'application/json',
-		'Authorization' => 'Bearer ' . sync_token(),
-	];
-
-	$response = wp_remote_post(
-		service_base_url() . $path,
-		[
-			'timeout' => 5,
-			'headers' => $headers,
-			'body'    => $encoded,
-		]
-	);
+	if ( \News\Aggregator\uses_vps() ) {
+		$response = \News\Aggregator\request(
+			'POST',
+			$path,
+			[
+				'timeout' => 5,
+				'body'    => $encoded,
+				'headers' => [
+					'Content-Type' => 'application/json',
+				],
+			]
+		);
+	} else {
+		$response = wp_remote_post(
+			service_base_url() . $path,
+			[
+				'timeout' => 5,
+				'headers' => [
+					'Accept'        => 'application/json',
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . sync_token(),
+				],
+				'body'    => $encoded,
+			]
+		);
+	}
 	if ( is_wp_error( $response ) ) {
 		error_log( sprintf( 'Site Aggregator sync %s failed: %s', $path, $response->get_error_message() ) );
 		return null;
@@ -487,7 +500,10 @@ function post_json( string $path, array $body ): ?array {
 
 	$code = (int) wp_remote_retrieve_response_code( $response );
 	if ( 200 !== $code ) {
-		$detail = trim( substr( wp_strip_all_tags( (string) wp_remote_retrieve_body( $response ) ), 0, 300 ) );
+		$detail = '';
+		if ( ! \News\Aggregator\uses_vps() ) {
+			$detail = trim( substr( wp_strip_all_tags( (string) wp_remote_retrieve_body( $response ) ), 0, 300 ) );
+		}
 		error_log(
 			sprintf(
 				'Site Aggregator sync %s failed: HTTP %d%s',
@@ -560,6 +576,9 @@ function encode_body( array $body ): ?string {
 }
 
 function sync_token(): string {
+	if ( \News\Aggregator\uses_vps() ) {
+		return \News\Aggregator\token( 'sync' );
+	}
 	if ( defined( 'SITE_AGGREGATOR_SYNC_TOKEN' ) && is_string( SITE_AGGREGATOR_SYNC_TOKEN ) && '' !== SITE_AGGREGATOR_SYNC_TOKEN ) {
 		return SITE_AGGREGATOR_SYNC_TOKEN;
 	}

@@ -20,6 +20,11 @@
 #                              # optional; immediate upload offload (mu-plugin r2-offload.php)
 #   MEDIA_URL=https://media.turkishnote.com
 #                              # optional; public uploads origin (mu-plugin media-urls.php)
+#   AGGREGATOR_IP / SYNC_TOKEN / READ_TOKEN
+#                              # optional; copied into /etc/news-wp/aggregator.env
+#                              # when that file's keys are still empty. Not written
+#                              # to wp-config.php. Search proxy also needs
+#                              # /etc/nginx/ssl/site-aggregator.crt (trust anchor only).
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "run as root"; exit 1; }
@@ -215,7 +220,7 @@ echo "==> nginx configs (FastCGI page cache)"
 if [[ "${WP_ROOT}" != "/var/www/html" ]]; then
   echo "    warning: nginx root is /var/www/html; WP_ROOT=${WP_ROOT} is not used by site.conf"
 fi
-mkdir -p /etc/nginx/snippets /etc/nginx/certs /etc/nginx/conf.d \
+mkdir -p /etc/nginx/snippets /etc/nginx/certs /etc/nginx/ssl /etc/nginx/conf.d \
   /etc/nginx/sites-available /etc/nginx/sites-enabled \
   /var/cache/nginx/wp
 chown www-data:www-data /var/cache/nginx/wp
@@ -300,6 +305,83 @@ else
   chmod 600 /etc/nginx/certs/origin.key
 fi
 
+echo "==> Aggregator trust anchor and search proxy"
+install -d -m 0750 -o root -g www-data /etc/news-wp
+AGG_ENV=/etc/news-wp/aggregator.env
+if [[ ! -s "${AGG_ENV}" ]]; then
+  printf '%s\n' 'AGGREGATOR_IP=' 'SYNC_TOKEN=' 'READ_TOKEN=' > "${AGG_ENV}"
+fi
+chown root:www-data "${AGG_ENV}"
+chmod 0640 "${AGG_ENV}"
+
+# Fill empty keys from the environment. Values are not printed.
+agg_fill_empty() {
+  local key="$1"
+  local value="${2:-}"
+  [[ -n "${value}" ]] || return 0
+  if [[ "${value}" == *$'\n'* ]]; then
+    echo "    refusing ${key}: value must be one line"
+    return 0
+  fi
+  local current=""
+  current="$(awk -F= -v k="${key}" '$1==k { sub(/^[^=]*=/,""); print; exit }' "${AGG_ENV}")"
+  [[ -z "${current}" ]] || return 0
+  local tmp
+  tmp="$(mktemp)"
+  AGG_KEY="${key}" AGG_VAL="${value}" awk '
+    BEGIN { key = ENVIRON["AGG_KEY"]; val = ENVIRON["AGG_VAL"]; found = 0 }
+    {
+      if (index($0, key "=") == 1) {
+        print key "=" val
+        found = 1
+      } else {
+        print
+      }
+    }
+    END { if (!found) print key "=" val }
+  ' "${AGG_ENV}" > "${tmp}"
+  cat "${tmp}" > "${AGG_ENV}"
+  rm -f "${tmp}"
+  chown root:www-data "${AGG_ENV}"
+  chmod 0640 "${AGG_ENV}"
+}
+agg_fill_empty AGGREGATOR_IP "${AGGREGATOR_IP:-}"
+agg_fill_empty SYNC_TOKEN "${SYNC_TOKEN:-}"
+agg_fill_empty READ_TOKEN "${READ_TOKEN:-}"
+
+if [[ -s /etc/nginx/ssl/site-aggregator.crt ]]; then
+  chown root:root /etc/nginx/ssl/site-aggregator.crt
+  chmod 644 /etc/nginx/ssl/site-aggregator.crt
+else
+  echo "    trust anchor missing: copy it to /etc/nginx/ssl/site-aggregator.crt"
+  echo "    that file is not this site's public certificate"
+fi
+
+AGG_IP="$(awk -F= '$1=="AGGREGATOR_IP" { sub(/^[^=]*=/,""); print; exit }' "${AGG_ENV}")"
+AGG_IP="${AGG_IP//$'\r'/}"
+AGG_IP="${AGG_IP#"${AGG_IP%%[![:space:]]*}"}"
+AGG_IP="${AGG_IP%"${AGG_IP##*[![:space:]]}"}"
+valid_ipv4() {
+  local ip="$1" o
+  [[ "${ip}" =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]] || return 1
+  for o in "${BASH_REMATCH[@]:1}"; do
+    if [[ "${o}" =~ ^0[0-9]+$ ]] || (( 10#$o > 255 )); then
+      return 1
+    fi
+  done
+}
+strip_aggregator_nginx() {
+  sed -i '/# BEGIN site_aggregator$/,/# END site_aggregator$/d' /etc/nginx/conf.d/00-news-wp.conf
+  sed -i '/# BEGIN site_aggregator_search$/,/# END site_aggregator_search$/d' /etc/nginx/sites-available/wordpress
+}
+if valid_ipv4 "${AGG_IP}" && [[ -s /etc/nginx/ssl/site-aggregator.crt ]]; then
+  sed -i "s/server AGGREGATOR_IP:443;/server ${AGG_IP}:443;/" /etc/nginx/conf.d/00-news-wp.conf
+  echo "    search proxy pinned to the aggregator"
+else
+  strip_aggregator_nginx
+  echo "    search proxy left out until AGGREGATOR_IP and the trust anchor are both set"
+fi
+
 echo "==> WordPress core"
 # Root shells often use umask 077; that would extract 600 files and 403 nginx.
 umask 022
@@ -320,9 +402,9 @@ if [[ -f "${WP_ROOT}/wp-config.php" ]]; then
   chown www-data:www-data "${WP_ROOT}/wp-config.php"
 fi
 
-echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks, r2-offload, media-urls, media-search, post-sync)"
+echo "==> mu-plugins (cache-control, cache-purge, perf-tweaks, r2-offload, media-urls, media-search, post-sync, aggregator-client)"
 mkdir -p "${WP_ROOT}/wp-content/mu-plugins"
-for plugin in cache-control.php cache-purge.php perf-tweaks.php r2-offload.php media-urls.php media-search.php media-search-order.js post-sync.php; do
+for plugin in aggregator-client.php cache-control.php cache-purge.php perf-tweaks.php r2-offload.php media-urls.php media-search.php media-search-order.js post-sync.php; do
   install -m 0644 -o www-data -g www-data \
     "${REPO_DIR}/wp/mu-plugins/${plugin}" \
     "${WP_ROOT}/wp-content/mu-plugins/${plugin}"

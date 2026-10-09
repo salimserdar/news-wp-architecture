@@ -26,3 +26,15 @@ Set **SSL/TLS → Overview → Full (strict)** in Cloudflare.
 If the files are missing, the setup script generates a self-signed pair so nginx
 starts. Cloudflare must then be in **Full** (not strict) mode. Replace with the
 Origin CA cert before go-live.
+
+## Aggregator trust anchor
+
+The aggregator is a different VPS. Its certificate is self-signed for
+`aggregator.internal`. Copy that file to `/etc/nginx/ssl/site-aggregator.crt`
+on this server. Nginx uses it only as `proxy_ssl_trusted_certificate` for the
+search upstream, and PHP uses it as `--cacert` for private aggregator calls.
+
+Do not install that file as this site's public certificate, and do not replace
+`origin.pem`. Do not commit the certificate. `scripts/setup-vps.sh` leaves the
+search proxy out until this file and `AGGREGATOR_IP` in
+`/etc/news-wp/aggregator.env` are both present.

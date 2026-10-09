@@ -277,8 +277,9 @@ function tr724_related_news_search_posts( string $search, int $category_id, arra
 	$response = wp_remote_get(
 		add_query_arg( $query_args, tr724_search_endpoint() ),
 		[
-			'timeout' => 8,
-			'headers' => [
+			'timeout'            => 8,
+			'reject_unsafe_urls' => false,
+			'headers'            => [
 				'Accept' => 'application/json',
 			],
 		]

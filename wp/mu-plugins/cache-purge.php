@@ -69,6 +69,7 @@ function flush(): void {
 
 	if ( $everything ) {
 		purge_everything();
+		aggregator_purge();
 		warm( default_warm_urls() );
 		return;
 	}
@@ -76,8 +77,40 @@ function flush(): void {
 	$urls = apply_filters( 'news_cache_purge_urls', array_values( array_unique( $urls ) ) );
 	nginx_purge_urls( $urls );
 	cloudflare_purge_urls( $urls );
+	aggregator_purge();
 	warm( array_slice( $urls, 0, WARM_MAX ) );
 	do_action( 'news_cache_purged', $urls );
+}
+
+/**
+ * Tells the aggregator to drop its own cache. Not a public Nginx location.
+ * The JSON body is an empty object until the aggregator documents required fields.
+ */
+function aggregator_purge(): void {
+	if ( ! \News\Aggregator\uses_vps() ) {
+		return;
+	}
+
+	$response = \News\Aggregator\request(
+		'POST',
+		'/api/v1/cache/purge',
+		[
+			'timeout' => 5,
+			'body'    => '{}',
+			'headers' => [
+				'Content-Type' => 'application/json',
+			],
+		]
+	);
+	if ( is_wp_error( $response ) ) {
+		error_log( 'Aggregator cache purge failed.' );
+		return;
+	}
+
+	$code = (int) wp_remote_retrieve_response_code( $response );
+	if ( $code < 200 || $code >= 300 ) {
+		error_log( 'Aggregator cache purge failed: HTTP ' . $code );
+	}
 }
 
 function purge_everything(): void {

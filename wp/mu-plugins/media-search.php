@@ -4,7 +4,7 @@
  * Description: Replaces attachment text search with GET /api/v1/search/media. Core search stays when the service is unreachable or the query has author, parent, date, or non-image constraints.
  * Version:     1.0.1
  *
- * Base URL: SITE_AGGREGATOR_SERVICE_URL (wp-config.php constant, then the environment variable).
+ * VPS calls loopback /api/v1/search/media with no bearer token. Docker uses SITE_AGGREGATOR_SERVICE_URL.
  */
 
 namespace News\MediaSearch;
@@ -177,8 +177,9 @@ function search( string $search, int $page, int $limit ): ?array {
 			service_base_url() . '/api/v1/search/media'
 		),
 		[
-			'timeout' => 5,
-			'headers' => [
+			'timeout'            => 5,
+			'reject_unsafe_urls' => false,
+			'headers'            => [
 				'Accept' => 'application/json',
 			],
 		]
@@ -217,6 +218,9 @@ function ids_from_results( array $results ): array {
 }
 
 function service_base_url(): string {
+	if ( \News\Aggregator\uses_vps() ) {
+		return 'http://127.0.0.1';
+	}
 	if ( defined( 'SITE_AGGREGATOR_SERVICE_URL' ) && is_string( SITE_AGGREGATOR_SERVICE_URL ) && '' !== SITE_AGGREGATOR_SERVICE_URL ) {
 		return untrailingslashit( SITE_AGGREGATOR_SERVICE_URL );
 	}

@@ -66,12 +66,15 @@ function tr724_youtube_normalize_video( array $video ): ?array {
 }
 
 function tr724_youtube_configured(): bool {
-	foreach ( [ 'SITE_AGGREGATOR_SERVICE_URL', 'YOUTUBE_API_KEY', 'YOUTUBE_CHANNEL_ID' ] as $constant ) {
+	foreach ( [ 'YOUTUBE_API_KEY', 'YOUTUBE_CHANNEL_ID' ] as $constant ) {
 		if ( ! defined( $constant ) || ! is_string( constant( $constant ) ) || '' === constant( $constant ) ) {
 			return false;
 		}
 	}
-	return true;
+	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
+		return '' !== \News\Aggregator\token( 'read' );
+	}
+	return defined( 'SITE_AGGREGATOR_SERVICE_URL' ) && is_string( SITE_AGGREGATOR_SERVICE_URL ) && '' !== SITE_AGGREGATOR_SERVICE_URL;
 }
 
 function tr724_youtube_channel_videos_url(): string {
@@ -99,21 +102,35 @@ function tr724_youtube_videos(): array|WP_Error {
 		return $cached;
 	}
 
-	$endpoint = add_query_arg(
-		[
-			'YOUTUBE_API_KEY'    => YOUTUBE_API_KEY,
-			'YOUTUBE_CHANNEL_ID' => YOUTUBE_CHANNEL_ID,
-		],
-		rtrim( SITE_AGGREGATOR_SERVICE_URL, '/' ) . '/api/v1/youtube/videos'
-	);
+	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
+		$response = \News\Aggregator\request(
+			'GET',
+			'/api/v1/youtube/videos',
+			[
+				'timeout' => 8,
+				'query'   => [
+					'YOUTUBE_API_KEY'    => YOUTUBE_API_KEY,
+					'YOUTUBE_CHANNEL_ID' => YOUTUBE_CHANNEL_ID,
+				],
+			]
+		);
+	} else {
+		$endpoint = add_query_arg(
+			[
+				'YOUTUBE_API_KEY'    => YOUTUBE_API_KEY,
+				'YOUTUBE_CHANNEL_ID' => YOUTUBE_CHANNEL_ID,
+			],
+			rtrim( SITE_AGGREGATOR_SERVICE_URL, '/' ) . '/api/v1/youtube/videos'
+		);
 
-	$response = wp_remote_get(
-		$endpoint,
-		[
-			'timeout' => 8,
-			'headers' => tr724_aggregator_headers(),
-		]
-	);
+		$response = wp_remote_get(
+			$endpoint,
+			[
+				'timeout' => 8,
+				'headers' => tr724_aggregator_headers(),
+			]
+		);
+	}
 
 	if ( is_wp_error( $response ) ) {
 		return new WP_Error( 'tr724_youtube_http', __( 'Videos are unavailable.', 'tr724-news' ) );

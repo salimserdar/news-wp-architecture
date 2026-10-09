@@ -222,13 +222,23 @@ function tr724_popular_lists(): array|WP_Error {
 		return $cached;
 	}
 
-	$response = wp_remote_get(
-		tr724_popular_endpoint(),
-		[
-			'timeout' => 8,
-			'headers' => tr724_aggregator_headers(),
-		]
-	);
+	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
+		$response = \News\Aggregator\request(
+			'GET',
+			'/api/v1/popular-posts',
+			[
+				'timeout' => 8,
+			]
+		);
+	} else {
+		$response = wp_remote_get(
+			tr724_popular_endpoint(),
+			[
+				'timeout' => 8,
+				'headers' => tr724_aggregator_headers(),
+			]
+		);
+	}
 
 	$lists = null;
 	if ( ! is_wp_error( $response ) ) {

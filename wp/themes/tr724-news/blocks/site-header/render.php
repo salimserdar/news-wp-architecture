@@ -179,7 +179,7 @@ $wrapper = get_block_wrapper_attributes(
 		class="search-modal"
 		id="<?php echo esc_attr( $search_id ); ?>"
 		hidden
-		data-search-endpoint="<?php echo esc_url( rest_url( 'tr724/v1/search/posts' ) ); ?>"
+		data-search-endpoint="<?php echo esc_url( tr724_search_browser_endpoint() ); ?>"
 		data-search-page="<?php echo esc_url( home_url( '/' ) ); ?>"
 		data-search-empty="<?php esc_attr_e( 'Sonuç bulunamadı', 'tr724-news' ); ?>"
 		data-search-error="<?php esc_attr_e( 'Arama şu anda kullanılamıyor.', 'tr724-news' ); ?>"

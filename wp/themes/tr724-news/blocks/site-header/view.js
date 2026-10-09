@@ -54,6 +54,86 @@
 			if ( more ) more.hidden = true;
 		}
 
+		function sameSiteStoryUrl( value ) {
+			if ( typeof value !== "string" ) return "";
+			var raw = value.trim();
+			if ( ! raw || raw.indexOf( "\\" ) !== -1 || raw.indexOf( ".." ) !== -1 ) return "";
+			var path = raw;
+			if ( raw.indexOf( "://" ) !== -1 || raw.slice( 0, 2 ) === "//" ) {
+				try {
+					path = new URL( raw, window.location.origin ).pathname || "";
+				} catch ( error ) {
+					return "";
+				}
+			}
+			try {
+				path = decodeURIComponent( path );
+			} catch ( error ) {
+				return "";
+			}
+			if ( path.indexOf( "://" ) !== -1 || path.indexOf( "//" ) !== -1 || path.indexOf( "\\" ) !== -1 || path.indexOf( ".." ) !== -1 ) {
+				return "";
+			}
+			if ( path.charAt( 0 ) !== "/" ) path = "/" + path;
+			if ( path.charAt( path.length - 1 ) !== "/" ) path += "/";
+			if ( ! /^\/(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)+$/.test( path ) ) return "";
+			return window.location.origin + path;
+		}
+
+		function relativeTime( value ) {
+			var then = Date.parse( value );
+			if ( isNaN( then ) ) return { time: "", datetime: "" };
+			var seconds = Math.max( 0, Math.round( ( Date.now() - then ) / 1000 ) );
+			var steps = [
+				[ 31536000, "yıl" ],
+				[ 2592000, "ay" ],
+				[ 604800, "hafta" ],
+				[ 86400, "gün" ],
+				[ 3600, "saat" ],
+				[ 60, "dakika" ],
+			];
+			var label = "1 dakika";
+			for ( var i = 0; i < steps.length; i++ ) {
+				if ( seconds >= steps[i][0] ) {
+					var count = Math.round( seconds / steps[i][0] );
+					label = ( count > 0 ? count : 1 ) + " " + steps[i][1];
+					break;
+				}
+			}
+			return { time: label + " önce", datetime: new Date( then ).toISOString() };
+		}
+
+		function normalizeStory( story ) {
+			if ( ! story || typeof story !== "object" ) return null;
+			var title = typeof story.title === "string" ? story.title.trim() : "";
+			title = title.replace( /\s+-\s+TR724\s*$/u, "" ).trim();
+			var source = typeof story.link === "string" && story.link !== "" ? story.link : story.url;
+			var url = sameSiteStoryUrl( source );
+			if ( ! title || ! url ) return null;
+			var kicker = typeof story.kicker === "string" ? story.kicker.trim() : "";
+			if ( ! kicker && story.categories && story.categories[0] && typeof story.categories[0].name === "string" ) {
+				kicker = story.categories[0].name.trim().toLocaleUpperCase( "tr-TR" );
+			}
+			var author = "";
+			if ( typeof story.author === "string" ) author = story.author.trim();
+			else if ( story.author && typeof story.author.name === "string" ) author = story.author.name.trim();
+			var time = typeof story.time === "string" ? story.time : "";
+			var datetime = typeof story.datetime === "string" ? story.datetime : "";
+			if ( ! time && typeof story.date === "string" && story.date ) {
+				var relative = relativeTime( story.date );
+				time = relative.time;
+				datetime = relative.datetime;
+			}
+			return {
+				url: url,
+				title: title,
+				kicker: kicker,
+				author: author,
+				time: time,
+				datetime: datetime,
+			};
+		}
+
 		function renderHits( items, append ) {
 			if ( ! list ) return;
 			if ( ! append ) list.replaceChildren();
@@ -141,6 +221,7 @@
 			url.searchParams.set( "q", query );
 			url.searchParams.set( "page", String( page ) );
 			url.searchParams.set( "limit", String( pageSize ) );
+			url.searchParams.set( "status", "publish" );
 			url.searchParams.set( "sort", currentSort() );
 
 			var options = {
@@ -155,7 +236,7 @@
 				} )
 				.then( function ( data ) {
 					if ( id !== requestId ) return;
-					var items = data && Array.isArray( data.results ) ? data.results : [];
+					var items = data && Array.isArray( data.results ) ? data.results.map( normalizeStory ).filter( Boolean ) : [];
 					total = data && typeof data.total === "number" ? data.total : items.length;
 					if ( ! append && ! items.length ) {
 						setStatus( emptyText );

@@ -139,13 +139,23 @@ function tr724_ticker_instruments(): array|WP_Error {
 		return $cached;
 	}
 
-	$response = wp_remote_get(
-		tr724_ticker_endpoint(),
-		[
-			'timeout' => 8,
-			'headers' => tr724_aggregator_headers(),
-		]
-	);
+	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
+		$response = \News\Aggregator\request(
+			'GET',
+			'/api/v1/exchange-rates',
+			[
+				'timeout' => 8,
+			]
+		);
+	} else {
+		$response = wp_remote_get(
+			tr724_ticker_endpoint(),
+			[
+				'timeout' => 8,
+				'headers' => tr724_aggregator_headers(),
+			]
+		);
+	}
 
 	$instruments = null;
 	if ( ! is_wp_error( $response ) ) {

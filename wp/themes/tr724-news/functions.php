@@ -7,7 +7,8 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Headers for site-aggregator reads. Search stays public.
+ * Headers for Docker aggregator reads. Search stays public.
+ * On the VPS, private reads use the aggregator client instead of these headers.
  *
  * @return array<string, string>
  */

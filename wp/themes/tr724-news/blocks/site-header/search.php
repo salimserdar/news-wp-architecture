@@ -2,20 +2,29 @@
 /**
  * Search against the site aggregator.
  *
- * The header modal searches as you type. The browser calls this route, and the
- * route calls {SITE_AGGREGATOR_SERVICE_URL}/api/v1/search/posts. The search
- * service does not allow cross-origin browser requests, so the modal cannot
- * call it directly. The search page uses the same lookup.
+ * The header modal searches as you type. On the VPS the browser calls this
+ * site's /api/v1/search/posts. PHP search uses the loopback proxy and does
+ * not send a bearer token. Docker keeps the REST route and SERVICE_URL.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 function tr724_search_endpoint(): string {
+	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
+		return 'http://127.0.0.1/api/v1/search/posts';
+	}
 	$base = 'http://127.0.0.1:3000';
 	if ( defined( 'SITE_AGGREGATOR_SERVICE_URL' ) && is_string( SITE_AGGREGATOR_SERVICE_URL ) && '' !== SITE_AGGREGATOR_SERVICE_URL ) {
 		$base = SITE_AGGREGATOR_SERVICE_URL;
 	}
 	return rtrim( $base, '/' ) . '/api/v1/search/posts';
+}
+
+function tr724_search_browser_endpoint(): string {
+	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
+		return home_url( '/api/v1/search/posts' );
+	}
+	return rest_url( 'tr724/v1/search/posts' );
 }
 
 function tr724_search_sort( string $sort ): string {
@@ -148,8 +157,9 @@ function tr724_search_posts( string $query, int $page, string $sort = 'date:desc
 	$response = wp_remote_get(
 		$url,
 		[
-			'timeout' => 8,
-			'headers' => [
+			'timeout'             => 8,
+			'reject_unsafe_urls'  => false,
+			'headers'             => [
 				'Accept' => 'application/json',
 			],
 		]

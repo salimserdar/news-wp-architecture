@@ -2,7 +2,7 @@
 /**
  * Search results from the site aggregator.
  *
- * {SITE_AGGREGATOR_SERVICE_URL}/api/v1/search/posts?q=&page=&limit=20&status=publish&sort=
+ * Loopback /api/v1/search/posts on the VPS, or the Docker service URL.
  */
 
 defined( 'ABSPATH' ) || exit;
