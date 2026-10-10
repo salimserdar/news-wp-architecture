@@ -37,16 +37,7 @@ if ( ! function_exists( 'tr724_category_render_card' ) ) {
 			if ( '' === $alt ) {
 				$alt = $title;
 			}
-			$image = wp_get_attachment_image(
-				$thumb_id,
-				'full',
-				false,
-				[
-					'alt'      => $alt,
-					'loading'  => 'lazy',
-					'decoding' => 'async',
-				]
-			);
+			$image = tr724_story_card_image( (int) $thumb_id, $alt );
 		}
 
 		$published = get_post_timestamp( $post_id );

@@ -188,16 +188,7 @@ while ( $query->have_posts() ) {
 		if ( '' === $alt ) {
 			$alt = get_the_title( $post_id );
 		}
-		$image = wp_get_attachment_image(
-			$thumb_id,
-			'full',
-			false,
-			[
-				'alt'      => $alt,
-				'loading'  => 'lazy',
-				'decoding' => 'async',
-			]
-		);
+		$image = tr724_story_card_image( (int) $thumb_id, $alt );
 	}
 	$image = '<span class="story-card__media">' . $image . '</span>';
 

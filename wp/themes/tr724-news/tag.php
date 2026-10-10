@@ -48,16 +48,7 @@ $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="1
 								if ( '' === $alt ) {
 									$alt = get_the_title( $post_id );
 								}
-								$image = wp_get_attachment_image(
-									$thumb_id,
-									'full',
-									false,
-									[
-										'alt'      => $alt,
-										'loading'  => 'lazy',
-										'decoding' => 'async',
-									]
-								);
+								$image = tr724_story_card_image( $thumb_id, $alt );
 							}
 
 							$published = (int) get_post_timestamp( $post_id );

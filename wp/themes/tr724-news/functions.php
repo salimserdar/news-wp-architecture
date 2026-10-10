@@ -342,6 +342,36 @@ add_filter(
 	}
 );
 
+if ( ! function_exists( 'tr724_story_card_image' ) ) {
+	/**
+	 * Original attachment file, without a srcset of resized copies.
+	 */
+	function tr724_story_card_image( int $attachment_id, string $alt ): string {
+		if ( $attachment_id < 1 ) {
+			return '';
+		}
+
+		$strip_srcset = static function ( array $attr ): array {
+			unset( $attr['srcset'], $attr['sizes'] );
+			return $attr;
+		};
+		add_filter( 'wp_get_attachment_image_attributes', $strip_srcset, 10000 );
+		$html = wp_get_attachment_image(
+			$attachment_id,
+			'full',
+			false,
+			[
+				'alt'      => $alt,
+				'loading'  => 'lazy',
+				'decoding' => 'async',
+			]
+		);
+		remove_filter( 'wp_get_attachment_image_attributes', $strip_srcset, 10000 );
+
+		return is_string( $html ) ? $html : '';
+	}
+}
+
 if ( ! function_exists( 'tr724_archive_upper' ) ) {
 	/**
 	 * Turkish-aware uppercase for archive titles and dates.
