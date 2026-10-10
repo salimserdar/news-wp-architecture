@@ -408,7 +408,7 @@ if ( have_posts() ) {
 						}
 						$hero = wp_get_attachment_image(
 							$thumb_id,
-							'large',
+							'full',
 							false,
 							[
 								'alt'      => $hero_alt,

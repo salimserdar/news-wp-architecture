@@ -39,7 +39,7 @@ if ( ! function_exists( 'tr724_category_render_card' ) ) {
 			}
 			$image = wp_get_attachment_image(
 				$thumb_id,
-				'medium_large',
+				'full',
 				false,
 				[
 					'alt'      => $alt,

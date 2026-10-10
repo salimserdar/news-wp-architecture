@@ -190,7 +190,7 @@ while ( $query->have_posts() ) {
 		}
 		$image = wp_get_attachment_image(
 			$thumb_id,
-			'medium_large',
+			'full',
 			false,
 			[
 				'alt'      => $alt,

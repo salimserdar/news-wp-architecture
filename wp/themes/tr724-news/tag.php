@@ -50,7 +50,7 @@ $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="1
 								}
 								$image = wp_get_attachment_image(
 									$thumb_id,
-									'medium_large',
+									'full',
 									false,
 									[
 										'alt'      => $alt,
