@@ -56,18 +56,22 @@ $play_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d
 
 $social = [
 	[
+		'url'   => tr724_editorial_link( 'facebook' ),
 		'label' => __( 'Facebook', 'tr724-news' ),
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8.5h2.5V5.5H14c-2.2 0-4 1.8-4 4V12H8v3h2v6h3v-6h2.4l.6-3H13v-2c0-.8.7-1.5 1-1.5z"/></svg>',
 	],
 	[
+		'url'   => tr724_editorial_link( 'x' ),
 		'label' => __( 'X', 'tr724-news' ),
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 4h2.4l-5.3 6L20.5 20h-4.5l-3.5-4.6L8.4 20H6l5.6-6.4L4.2 4h4.6l3.2 4.2L16.8 4zm-.8 14.4h1.3L8.1 5.5H6.7l9.3 12.9z"/></svg>',
 	],
 	[
+		'url'   => tr724_editorial_link( 'instagram' ),
 		'label' => __( 'Instagram', 'tr724-news' ),
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4.5h8A3.5 3.5 0 0 1 19.5 8v8a3.5 3.5 0 0 1-3.5 3.5H8A3.5 3.5 0 0 1 4.5 16V8A3.5 3.5 0 0 1 8 4.5zm8 1.6H8A1.9 1.9 0 0 0 6.1 8v8A1.9 1.9 0 0 0 8 17.9h8A1.9 1.9 0 0 0 17.9 16V8A1.9 1.9 0 0 0 16 6.1zM12 8.6A3.4 3.4 0 1 1 8.6 12 3.4 3.4 0 0 1 12 8.6zm0 1.6A1.8 1.8 0 1 0 13.8 12 1.8 1.8 0 0 0 12 10.2zM16.8 7.7a.85.85 0 1 1-.85-.85.85.85 0 0 1 .85.85z"/></svg>',
 	],
 	[
+		'url'   => tr724_editorial_link( 'youtube' ),
 		'label' => __( 'YouTube', 'tr724-news' ),
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.2a2.2 2.2 0 0 0-1.6-1.6C17.6 6.2 12 6.2 12 6.2s-5.6 0-7.2.4a2.2 2.2 0 0 0-1.6 1.6A23 23 0 0 0 2.8 12a23 23 0 0 0 .4 3.8 2.2 2.2 0 0 0 1.6 1.6c1.6.4 7.2.4 7.2.4s5.6 0 7.2-.4a2.2 2.2 0 0 0 1.6-1.6 23 23 0 0 0 .4-3.8 23 23 0 0 0-.4-3.8zM10.2 15.1V8.9l5.4 3.1-5.4 3.1z"/></svg>',
 	],
@@ -75,7 +79,7 @@ $social = [
 
 $patron_item = sprintf(
 	'<li class="wp-block-navigation-item site-nav__patron"><a class="site-nav__patron-link" href="%1$s" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 .48v23.04h4.22V.48zm15.385 0c-4.764 0-8.641 3.88-8.641 8.65 0 4.755 3.877 8.623 8.641 8.623 4.75 0 8.615-3.868 8.615-8.623C24 4.36 20.136.48 15.385.48z"/></svg>%2$s</a></li>',
-	esc_url( 'https://www.patreon.com/tr724' ),
+	esc_url( tr724_editorial_link( 'patreon' ) ),
 	esc_html__( 'Patron ol', 'tr724-news' )
 );
 
@@ -245,22 +249,22 @@ $wrapper = get_block_wrapper_attributes(
 				</div>
 			</div>
 			<div class="drawer__footer">
-				<a class="wa-link drawer__whatsapp" href="https://wa.me/902122121212">
+				<a class="wa-link drawer__whatsapp" href="<?php echo esc_url( tr724_editorial_link( 'whatsapp_url' ) ); ?>">
 					<?php echo $whatsapp_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					<span>
 						<strong><?php esc_html_e( 'WHATSAPP İLETİŞİM HATTI', 'tr724-news' ); ?></strong>
-						0212 212 12 12
+						<?php echo esc_html( tr724_editorial_link( 'whatsapp_phone' ) ); ?>
 					</span>
 				</a>
 				<div class="drawer__apps">
-					<a class="store-badge" href="https://www.apple.com/app-store/" aria-label="<?php esc_attr_e( "App Store'dan indirin", 'tr724-news' ); ?>">
+					<a class="store-badge" href="<?php echo esc_url( tr724_editorial_link( 'ios' ) ); ?>" aria-label="<?php esc_attr_e( "App Store'dan indirin", 'tr724-news' ); ?>">
 						<?php echo $apple_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 						<span>
 							<small><?php esc_html_e( 'Download on the', 'tr724-news' ); ?></small>
 							<?php esc_html_e( 'App Store', 'tr724-news' ); ?>
 						</span>
 					</a>
-					<a class="store-badge" href="https://play.google.com/store" aria-label="<?php esc_attr_e( "Google Play'den indirin", 'tr724-news' ); ?>">
+					<a class="store-badge" href="<?php echo esc_url( tr724_editorial_link( 'android' ) ); ?>" aria-label="<?php esc_attr_e( "Google Play'den indirin", 'tr724-news' ); ?>">
 						<?php echo $play_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 						<span>
 							<small><?php esc_html_e( 'GET IT ON', 'tr724-news' ); ?></small>
@@ -268,13 +272,13 @@ $wrapper = get_block_wrapper_attributes(
 						</span>
 					</a>
 				</div>
-				<a class="drawer__patron" href="https://www.patreon.com/tr724" target="_blank" rel="noopener noreferrer">
+				<a class="drawer__patron" href="<?php echo esc_url( tr724_editorial_link( 'patreon' ) ); ?>" target="_blank" rel="noopener noreferrer">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 .48v23.04h4.22V.48zm15.385 0c-4.764 0-8.641 3.88-8.641 8.65 0 4.755 3.877 8.623 8.641 8.623 4.75 0 8.615-3.868 8.615-8.623C24 4.36 20.136.48 15.385.48z"/></svg>
 					<?php esc_html_e( 'Patron ol', 'tr724-news' ); ?>
 				</a>
 				<div class="drawer__social">
 					<?php foreach ( $social as $item ) : ?>
-						<a class="icon-btn" href="#" aria-label="<?php echo esc_attr( $item['label'] ); ?>">
+						<a class="icon-btn" href="<?php echo esc_url( $item['url'] ); ?>" aria-label="<?php echo esc_attr( $item['label'] ); ?>">
 							<?php echo $item['icon']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 						</a>
 					<?php endforeach; ?>

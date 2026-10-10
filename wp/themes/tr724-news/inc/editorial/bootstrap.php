@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/featured-topics.php';
 require_once __DIR__ . '/featured-topics-page.php';
+require_once __DIR__ . '/links.php';
+require_once __DIR__ . '/links-page.php';
 require_once __DIR__ . '/timeline.php';
 require_once __DIR__ . '/timeline-page.php';
 
@@ -53,6 +55,15 @@ if ( ! function_exists( 'tr724_editorial_pages' ) ) {
 					'menu_title' => 'Featured Topics',
 					'callback'   => 'tr724_editorial_render_featured_topics_page',
 					'enqueue'    => 'tr724_editorial_enqueue_featured_topics_assets',
+				],
+				[
+					'id'         => 'links',
+					'slug'       => 'tr724-editorial-links',
+					'label_key'  => 'links',
+					'title'      => 'Links',
+					'menu_title' => 'Links',
+					'callback'   => 'tr724_editorial_render_links_page',
+					'capability' => tr724_editorial_links_capability(),
 				],
 				[
 					'id'         => 'timeline',
@@ -191,6 +202,10 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 			'featured_topics'        => [
 				'en' => 'Featured Topics',
 				'tr' => 'Öne Çıkan Konular',
+			],
+			'links'                  => [
+				'en' => 'Links',
+				'tr' => 'Bağlantılar',
 			],
 			'timeline'               => [
 				'en' => 'Timeline',
@@ -355,6 +370,74 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 			'timeline_block_empty'   => [
 				'en' => 'No programs yet. Add them in Editorial → Timeline.',
 				'tr' => 'Henüz program yok. Programları Editöryal → Yayın Akışı bölümünden ekleyin.',
+			],
+			'links_description'      => [
+				'en' => 'These addresses are used in the header, the footer, and on article pages.',
+				'tr' => 'Bu adresler üst menüde, alt bilgide ve haber sayfalarında kullanılır.',
+			],
+			'links_social'           => [
+				'en' => 'Social',
+				'tr' => 'Sosyal ağlar',
+			],
+			'links_facebook'         => [
+				'en' => 'Facebook',
+				'tr' => 'Facebook',
+			],
+			'links_x'                => [
+				'en' => 'X',
+				'tr' => 'X',
+			],
+			'links_instagram'        => [
+				'en' => 'Instagram',
+				'tr' => 'Instagram',
+			],
+			'links_youtube'          => [
+				'en' => 'YouTube',
+				'tr' => 'YouTube',
+			],
+			'links_patreon'          => [
+				'en' => 'Patreon',
+				'tr' => 'Patreon',
+			],
+			'links_patreon_url'      => [
+				'en' => 'Patreon URL',
+				'tr' => 'Patreon adresi',
+			],
+			'links_whatsapp'         => [
+				'en' => 'WhatsApp',
+				'tr' => 'WhatsApp',
+			],
+			'links_whatsapp_phone'   => [
+				'en' => 'Phone number',
+				'tr' => 'Telefon numarası',
+			],
+			'links_whatsapp_url'     => [
+				'en' => 'WhatsApp URL',
+				'tr' => 'WhatsApp adresi',
+			],
+			'links_whatsapp_url_help' => [
+				'en' => 'Leave the address empty to build it from the digits in the phone number.',
+				'tr' => 'Adresi boş bırakırsanız telefon numarasındaki rakamlardan oluşturulur.',
+			],
+			'links_whatsapp_channel' => [
+				'en' => 'WhatsApp channel',
+				'tr' => 'WhatsApp kanalı',
+			],
+			'links_apps'             => [
+				'en' => 'Apps',
+				'tr' => 'Uygulamalar',
+			],
+			'links_ios'              => [
+				'en' => 'App Store',
+				'tr' => 'App Store',
+			],
+			'links_android'          => [
+				'en' => 'Google Play',
+				'tr' => 'Google Play',
+			],
+			'links_saved'            => [
+				'en' => 'Links saved.',
+				'tr' => 'Bağlantılar kaydedildi.',
 			],
 		];
 

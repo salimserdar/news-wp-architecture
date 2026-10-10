@@ -3,8 +3,9 @@
  * Front-end layout for the site footer.
  *
  * Link columns are the navigation inner blocks, in order. An empty column
- * still prints its heading. WhatsApp, social, stores, and the legal bar
- * come from block attributes.
+ * still prints its heading. WhatsApp, social, Patreon, and the app stores
+ * come from Editorial → Links. The legal bar and column headings come from
+ * block attributes.
  *
  * @var array    $attributes
  * @var string   $content
@@ -20,9 +21,9 @@ $attr = static function ( string $key, string $default ) use ( $attributes ): st
 	return $default;
 };
 
-$whatsapp_label = $attr( 'whatsappLabel', 'WHATSAPP İLETİŞİM HATTI' );
-$whatsapp_phone = $attr( 'whatsappPhone', '0212 212 12 12' );
-$whatsapp_url   = $attr( 'whatsappUrl', 'https://wa.me/902122121212' );
+$whatsapp_label = __( 'WHATSAPP İLETİŞİM HATTI', 'tr724-news' );
+$whatsapp_phone = tr724_editorial_link( 'whatsapp_phone' );
+$whatsapp_url   = tr724_editorial_link( 'whatsapp_url' );
 $copyright      = $attr( 'copyright', '© 2026 TR724 ' );
 $privacy_label  = $attr( 'privacyLabel', 'Privacy Policy' );
 $privacy_url    = $attr( 'privacyUrl', '#' );
@@ -47,25 +48,25 @@ foreach ( $block->inner_blocks as $inner ) {
 
 $social = [
 	[
-		'url'   => $attr( 'facebookUrl', '#' ),
+		'url'   => tr724_editorial_link( 'facebook' ),
 		'label' => __( 'Facebook', 'tr724-news' ),
 		'mod'   => 'facebook',
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 8.2H17V5h-2.5C11.9 5 10 6.9 10 9.5V11H8v3h2v7h3v-7h2.4l.6-3H13V9.6c0-.8.6-1.4 1.5-1.4z"/></svg>',
 	],
 	[
-		'url'   => $attr( 'xUrl', '#' ),
+		'url'   => tr724_editorial_link( 'x' ),
 		'label' => __( 'X', 'tr724-news' ),
 		'mod'   => 'x',
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.8 4h2.4l-5.3 6L20.5 20h-4.5l-3.5-4.6L8.4 20H6l5.6-6.4L4.2 4h4.6l3.2 4.2L16.8 4zm-.8 14.4h1.3L8.1 5.5H6.7l9.3 12.9z"/></svg>',
 	],
 	[
-		'url'   => $attr( 'instagramUrl', '#' ),
+		'url'   => tr724_editorial_link( 'instagram' ),
 		'label' => __( 'Instagram', 'tr724-news' ),
 		'mod'   => 'instagram',
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4.8h8A3.2 3.2 0 0 1 19.2 8v8a3.2 3.2 0 0 1-3.2 3.2H8A3.2 3.2 0 0 1 4.8 16V8A3.2 3.2 0 0 1 8 4.8zm8 1.5H8A1.7 1.7 0 0 0 6.3 8v8A1.7 1.7 0 0 0 8 17.7h8A1.7 1.7 0 0 0 17.7 16V8A1.7 1.7 0 0 0 16 6.3zM12 8.7A3.3 3.3 0 1 1 8.7 12 3.3 3.3 0 0 1 12 8.7zm0 1.5A1.8 1.8 0 1 0 13.8 12 1.8 1.8 0 0 0 12 10.2zM16.7 8a.8.8 0 1 1-.8-.8.8.8 0 0 1 .8.8z"/></svg>',
 	],
 	[
-		'url'   => $attr( 'youtubeUrl', '#' ),
+		'url'   => tr724_editorial_link( 'youtube' ),
 		'label' => __( 'YouTube', 'tr724-news' ),
 		'mod'   => 'youtube',
 		'icon'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 8.2a2.2 2.2 0 0 0-1.5-1.6C17.5 6.2 12 6.2 12 6.2s-5.5 0-7.1.4a2.2 2.2 0 0 0-1.5 1.6A23 23 0 0 0 3 12a23 23 0 0 0 .4 3.8 2.2 2.2 0 0 0 1.5 1.6c1.6.4 7.1.4 7.1.4s5.5 0 7.1-.4a2.2 2.2 0 0 0 1.5-1.6A23 23 0 0 0 21 12a23 23 0 0 0-.4-3.8zM10.3 15V9l5.2 3-5.2 3z"/></svg>',
@@ -120,7 +121,7 @@ $wrapper = get_block_wrapper_attributes(
 					<div class="site-footer__stores">
 						<a
 							class="store-badge"
-							href="<?php echo esc_url( $attr( 'appStoreUrl', 'https://www.apple.com/app-store/' ) ); ?>"
+							href="<?php echo esc_url( tr724_editorial_link( 'ios' ) ); ?>"
 							aria-label="<?php echo esc_attr__( "App Store'dan indirin", 'tr724-news' ); ?>"
 						>
 							<?php echo $apple_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -131,7 +132,7 @@ $wrapper = get_block_wrapper_attributes(
 						</a>
 						<a
 							class="store-badge"
-							href="<?php echo esc_url( $attr( 'playStoreUrl', 'https://play.google.com/store' ) ); ?>"
+							href="<?php echo esc_url( tr724_editorial_link( 'android' ) ); ?>"
 							aria-label="<?php echo esc_attr__( "Google Play'den indirin", 'tr724-news' ); ?>"
 						>
 							<?php echo $play_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -141,7 +142,7 @@ $wrapper = get_block_wrapper_attributes(
 							</span>
 						</a>
 					</div>
-					<a class="site-footer__patron" href="https://www.patreon.com/tr724" target="_blank" rel="noopener noreferrer">
+					<a class="site-footer__patron" href="<?php echo esc_url( tr724_editorial_link( 'patreon' ) ); ?>" target="_blank" rel="noopener noreferrer">
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 .48v23.04h4.22V.48zm15.385 0c-4.764 0-8.641 3.88-8.641 8.65 0 4.755 3.877 8.623 8.641 8.623 4.75 0 8.615-3.868 8.615-8.623C24 4.36 20.136.48 15.385.48z"/></svg>
 						<?php echo esc_html__( 'Patron ol', 'tr724-news' ); ?>
 					</a>

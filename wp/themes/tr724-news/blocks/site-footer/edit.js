@@ -90,27 +90,6 @@
 					null,
 					el(
 						PanelBody,
-						{ title: __( "WhatsApp", "tr724-news" ), initialOpen: true },
-						field( props, __( "Label", "tr724-news" ), "whatsappLabel" ),
-						field( props, __( "Phone", "tr724-news" ), "whatsappPhone" ),
-						field( props, __( "URL", "tr724-news" ), "whatsappUrl" )
-					),
-					el(
-						PanelBody,
-						{ title: __( "Social", "tr724-news" ), initialOpen: false },
-						field( props, __( "Facebook URL", "tr724-news" ), "facebookUrl" ),
-						field( props, __( "X URL", "tr724-news" ), "xUrl" ),
-						field( props, __( "Instagram URL", "tr724-news" ), "instagramUrl" ),
-						field( props, __( "YouTube URL", "tr724-news" ), "youtubeUrl" )
-					),
-					el(
-						PanelBody,
-						{ title: __( "App stores", "tr724-news" ), initialOpen: false },
-						field( props, __( "App Store URL", "tr724-news" ), "appStoreUrl" ),
-						field( props, __( "Google Play URL", "tr724-news" ), "playStoreUrl" )
-					),
-					el(
-						PanelBody,
 						{ title: __( "Columns", "tr724-news" ), initialOpen: false },
 						field( props, __( "Column 1 heading", "tr724-news" ), "col1Heading" ),
 						field( props, __( "Column 2 heading", "tr724-news" ), "col2Heading" ),
