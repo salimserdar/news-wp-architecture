@@ -84,13 +84,29 @@ if ( ! function_exists( 'tr724_editorial_links_whatsapp_url' ) ) {
 	}
 }
 
-if ( ! function_exists( 'tr724_editorial_get_links' ) ) {
+if ( ! function_exists( 'tr724_editorial_links_memo' ) ) {
+	/**
+	 * Request-local copy. Header, footer, and the article page read the same list many times.
+	 *
+	 * @return array{loaded: bool, links: array<string, string>}
+	 */
+	function &tr724_editorial_links_memo(): array {
+		static $memo = [
+			'loaded' => false,
+			'links'  => [],
+		];
+		return $memo;
+	}
+}
+
+if ( ! function_exists( 'tr724_editorial_read_links' ) ) {
 	/**
 	 * Saved addresses, with defaults for any key that has never been stored.
+	 * The option is autoloaded, so this reads the options already in memory.
 	 *
 	 * @return array<string, string>
 	 */
-	function tr724_editorial_get_links(): array {
+	function tr724_editorial_read_links(): array {
 		$defaults = tr724_editorial_links_defaults();
 		$stored   = get_option( tr724_editorial_links_option(), false );
 		if ( ! is_array( $stored ) ) {
@@ -111,6 +127,24 @@ if ( ! function_exists( 'tr724_editorial_get_links' ) ) {
 		}
 
 		return $links;
+	}
+}
+
+if ( ! function_exists( 'tr724_editorial_get_links' ) ) {
+	/**
+	 * Addresses for this request. The first call loads them; later calls reuse that copy.
+	 *
+	 * @return array<string, string>
+	 */
+	function tr724_editorial_get_links(): array {
+		$memo = &tr724_editorial_links_memo();
+		if ( $memo['loaded'] ) {
+			return $memo['links'];
+		}
+
+		$memo['links']  = tr724_editorial_read_links();
+		$memo['loaded'] = true;
+		return $memo['links'];
 	}
 }
 
@@ -185,6 +219,10 @@ if ( ! function_exists( 'tr724_editorial_purge_links_cache' ) ) {
 	 * These addresses appear in the header, footer, and on article pages.
 	 */
 	function tr724_editorial_purge_links_cache(): void {
+		$memo            = &tr724_editorial_links_memo();
+		$memo['loaded']  = false;
+		$memo['links']   = [];
+
 		if ( function_exists( 'News\CachePurge\queue_everything' ) ) {
 			\News\CachePurge\queue_everything();
 		}
@@ -204,7 +242,7 @@ add_action(
 
 		check_admin_referer( 'tr724_save_links' );
 
-		update_option( tr724_editorial_links_option(), tr724_editorial_sanitize_links_request() );
+		update_option( tr724_editorial_links_option(), tr724_editorial_sanitize_links_request(), true );
 		tr724_editorial_links_redirect(
 			[
 				'updated' => '1',
