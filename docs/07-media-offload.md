@@ -64,8 +64,9 @@ Option B is fine **as well as** A: bind `media.SITE_DOMAIN` to the bucket for
 ops and for a plugin “delivery domain”, but readers keep talking to the site host
 via the Worker.
 
-Do **not** reuse `BACKUP_RCLONE_REMOTE` for live media. That remote is for
-**private** DB/uploads backups. Public media needs its own bucket.
+Do **not** reuse the database backup bucket (`news-db`) or
+`R2_DB_ACCESS_KEY_ID` for live media. That bucket is private and locked.
+Public media needs its own bucket.
 
 ---
 
@@ -123,7 +124,8 @@ Lifecycle (after soak):
 succeeds. rclone stores remotes in `~/.config/rclone/rclone.conf` for **the
 user you are now** (root → `/root/.config/…`; keep using that same user).
 
-This is a **second** rclone remote, not `BACKUP_RCLONE_REMOTE`.
+This is the media rclone remote. Database backups do not use it;
+`scripts/r2-db-backup.sh` builds a separate `r2db` remote from `R2_DB_*`.
 
 Ubuntu 24.04's apt rclone is often 1.60, which has no `provider Cloudflare`.
 Need 1.61+. If `rclone version` is older:
@@ -431,17 +433,13 @@ After local files are gone, **stop** treating uploads as origin data.
 
 | Before                                                                                          | After                                                              |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Nightly `rsync` `WP_ROOT/wp-content/uploads` → `backups/uploads` → `BACKUP_RCLONE_REMOTE` | Drop the uploads half of `scripts/backup.sh`. DB dump unchanged.   |
-| Offsite `uploads/` mirror                                                                       | Keep the last pre-cutover copy; do not keep growing it             |
-| Disk alert on uploads                                                                           | Alert on R2 storage size + Worker 5xx + 404 rate                   |
-| Restore uploads from the backup remote                                                          | Restore from R2 versioning / `rclone copy r2-media:news-media/...` |
+| Nightly `rsync` of `WP_ROOT/wp-content/uploads` → `backups/uploads` | Drop that rsync in `scripts/backup.sh`. Database dumps stay on the locked daily buckets. |
+| Offsite copy of `uploads/` | Do not add one. `news-media` versioning is the media copy. |
+| Disk alert on uploads | Alert on R2 storage size + Worker 5xx + 404 rate |
+| Restore uploads from a backup remote | Restore from R2 versioning / `rclone copy r2-media:news-media/...` |
 
-
-`BACKUP_RCLONE_REMOTE=r2:news-backups` can stay as a **private** backup
-destination. Different bucket, no public Worker route.
-
-This repo does not change `scripts/backup.sh` until you cut over. After Step 7,
-edit that script (or wrap it) so it no longer rsyncs local `uploads/`.
+Do not put uploads in `news-db`. That bucket is append-only database dumps.
+After Step 7, edit `scripts/backup.sh` so it no longer rsyncs local `uploads/`.
 
 ---
 

@@ -15,6 +15,7 @@ Each item states the options, the recommendation, and whether it is **settled** 
 | 2026-09-29 | Public upload URLs are rewritten to `https://media.turkishnote.com/wp-content/uploads/` by `wp/mu-plugins/media-urls.php`. R2 object keys stay `wp-content/uploads/...`. |
 | 2026-09-11 | **MariaDB** (Q4). Distro package on Ubuntu 24.04. |
 | 2026-09-11 | Nginx purge implemented by **deleting cache files** from PHP (same uid) instead of compiling `ngx_cache_purge` — no custom nginx build needed. `open_file_cache` is therefore restricted to static assets. |
+| 2026-10-10 | **Database backups on R2, one locked bucket** (Q13). Each UTC day is a folder (`news-db/YYYYMMDD/`). Media stays in `news-media`. The VPS writer key cannot remove the lock or delete the bucket. |
 
 Still open: Q7 (image optimisation beyond core WebP), Q8 (comments), Q12 (staging).
 
@@ -112,6 +113,18 @@ Prevents random readers from triggering slow cron work in their request.
 Same VPS (separate vhost, DB, PHP pool — cheap, but shares resources) vs a
 separate small VPS (clean, costs money). Recommendation: same VPS, resource-limited via
 systemd, behind Cloudflare Access.
+
+---
+
+## Q13 — Database backups  · settled → **one locked R2 bucket, a folder per day**
+
+| Option | Verdict |
+|--------|---------|
+| **A. `news-db/YYYYMMDD/dump.sql.zst` + bucket lock** — *chosen* | One bucket forever. The lock rejects delete and overwrite of every dump. The VPS key is Object Read & Write on `news-db` only. |
+| B. A new bucket every day (`news-db-YYYYMMDD`) | Same lock, and after a year the account holds hundreds of buckets. |
+| C. One bucket, lifecycle deletes old dumps | A stolen origin key, or a sync that deletes, can remove the backups. |
+
+The account owner can still remove a lock in the Cloudflare dashboard. That admin token stays off the VPS. Leave `R2_DB_RETENTION_DAYS` empty to keep dumps until that happens. Runbook: [05 — Operations](../05-operations.md).
 
 ---
 

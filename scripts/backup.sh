@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Nightly backup: database dump (zstd) + uploads sync. Optional offsite copy
-# with rclone (BACKUP_RCLONE_REMOTE) and/or gcloud storage (GCS_BUCKET).
+# Nightly backup: database dump (zstd) plus a same-disk uploads copy.
+# The database dump is uploaded to today's locked R2 bucket when the writer
+# key is set (scripts/r2-db-backup.sh). That upload cannot delete objects.
 #
 #   scripts/backup.sh            # run now
 # Installed as a cron job by scripts/setup-vps.sh (03:30 daily).
@@ -29,18 +30,15 @@ else
   echo "  (no ${WP_ROOT}/wp-content/uploads yet)"
 fi
 
-echo "[$(date -Is)] pruning DB dumps older than ${KEEP_DAYS} days"
+if [[ -n "${R2_DB_ACCESS_KEY_ID:-}" && -n "${R2_DB_SECRET_ACCESS_KEY:-}" ]]; then
+  echo "[$(date -Is)] offsite db -> r2:${R2_DB_BUCKET:-news-db}/$(date -u +%Y%m%d)/"
+  bash scripts/r2-db-backup.sh upload "$DB_OUT"
+else
+  echo "[$(date -Is)] R2 DB backup skipped (set R2_DB_ACCESS_KEY_ID and R2_DB_SECRET_ACCESS_KEY)"
+fi
+
+echo "[$(date -Is)] pruning local DB dumps older than ${KEEP_DAYS} days"
 find backups/db -name '*.sql.zst' -mtime +"$KEEP_DAYS" -delete
-
-if [[ -n "${BACKUP_RCLONE_REMOTE:-}" ]] && command -v rclone >/dev/null; then
-  echo "[$(date -Is)] offsite rclone -> ${BACKUP_RCLONE_REMOTE}"
-  rclone copy backups/db "${BACKUP_RCLONE_REMOTE}/db" --max-age 2d -q
-  rclone sync backups/uploads "${BACKUP_RCLONE_REMOTE}/uploads" -q
-fi
-
-if [[ -n "${GCS_BUCKET:-}" ]] && command -v gcloud >/dev/null; then
-  echo "[$(date -Is)] offsite gcs -> gs://${GCS_BUCKET#gs://}"
-  bash scripts/gcs.sh backup
-fi
+find backups/db -name '*.sql.zst.sha256' -mtime +"$KEEP_DAYS" -delete
 
 echo "[$(date -Is)] done"

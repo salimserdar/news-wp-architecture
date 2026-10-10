@@ -73,8 +73,8 @@ Leave `PHP_MAX_CHILDREN` and `DB_BUFFER_POOL` at the defaults unless the box is
 smaller than 8 vCPU / 32 GB ([01](01-provision-vps.md),
 [Resource allocation](reference/resources.md)).
 
-Offsite backups use `BACKUP_RCLONE_REMOTE` (an rclone remote such as
-`r2:news-backups`). Leave it empty until [05 — Operations](05-operations.md).
+Offsite database backups are one locked R2 bucket, with a folder per UTC day. Leave the
+writer key empty until [05 — Operations](05-operations.md).
 
 Put the Cloudflare Origin CA certificate in `config/nginx/certs/origin.pem` and
 the key in `config/nginx/certs/origin.key` (see `config/nginx/certs/README.md`),

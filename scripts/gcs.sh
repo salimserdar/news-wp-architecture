@@ -9,7 +9,7 @@
 #   scripts/gcs.sh check | smoke | ls [PREFIX]
 #   scripts/gcs.sh upload LOCAL_PATH [REMOTE_PATH]
 #   scripts/gcs.sh download REMOTE_PATH [LOCAL_PATH]
-#   scripts/gcs.sh backup | restore-db FILE | restore-uploads | pull
+#   scripts/gcs.sh restore-db FILE | restore-uploads | pull
 #   scripts/gcs.sh install | repair-apt | rclone-config
 #   scripts/gcs.sh rclone-upload LOCAL_PATH [REMOTE_PATH]
 #   scripts/gcs.sh rclone-download REMOTE_PATH [LOCAL_PATH]
@@ -206,22 +206,9 @@ case "$cmd" in
     echo "ok — gcloud storage upload + download matched"
     ;;
   backup)
-    need_gcloud
-    need_bucket
-    mkdir -p backups/db backups/uploads
-    if compgen -G 'backups/db/*.sql.zst' >/dev/null; then
-      echo "upload db dumps -> $(uri)/db/"
-      gcloud storage cp backups/db/*.sql.zst "$(uri)/db/"
-    else
-      echo "no backups/db/*.sql.zst to upload"
-    fi
-    if [[ -d backups/uploads ]] && [[ -n "$(ls -A backups/uploads 2>/dev/null || true)" ]]; then
-      echo "sync uploads -> $(uri)/uploads/"
-      gcloud storage rsync backups/uploads "$(uri)/uploads" \
-        --recursive --delete-unmatched-destination-objects
-    else
-      echo "no backups/uploads to sync"
-    fi
+    echo "Nightly database backups go to R2 (scripts/r2-db-backup.sh), not GCS." >&2
+    echo "This command no longer uploads or deletes objects." >&2
+    exit 1
     ;;
   restore-db)
     need_gcloud
@@ -414,7 +401,7 @@ usage: $0 COMMAND
     check | smoke | ls [PREFIX]
     upload LOCAL_PATH [REMOTE_PATH]
     download REMOTE_PATH [LOCAL_PATH]
-    backup | restore-db FILE.sql.zst | restore-uploads
+    restore-db FILE.sql.zst | restore-uploads
     pull [--check|--db-only|--content-only]
 
   admin (from a machine that can change IAM):

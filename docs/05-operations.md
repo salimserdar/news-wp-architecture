@@ -64,52 +64,81 @@ Weekly review: top slow queries, plugins updated, disk growth trend, cache ratio
 
 ## Backups
 
+Database dumps and media do not share a bucket or a key. Media stays in
+`news-media` ([07](07-media-offload.md)). The database uses one private bucket,
+`news-db`. Each UTC day is a folder inside it:
+
+```text
+news-db/20261010/wordpress_2026-10-10_0330.sql.zst
+news-db/20261011/wordpress_2026-10-11_0330.sql.zst
+```
+
+A year of backups is a few hundred files in that one bucket.
+
 | What | How | When | Retention | Where |
 |------|-----|------|-----------|-------|
-| Database | `mariadb-dump --single-transaction --quick` piped to `zstd` | Nightly + before every deploy | 14 daily | Local `backups/db/`, plus rclone when `BACKUP_RCLONE_REMOTE` is set |
-| Uploads | `rclone sync` incremental | Nightly | Mirror on the remote; use the remote's versioning (about 30 days) if you want history | Same remote |
+| Database | `mariadb-dump --single-transaction --quick` piped to `zstd` | Nightly 03:30 | 14 days on the VPS disk. Offsite: bucket lock, forever unless `R2_DB_RETENTION_DAYS` is set | `news-db/YYYYMMDD/` |
+| Media | R2 object versioning on the live media bucket | On upload | Noncurrent versions ~30 days ([07](07-media-offload.md)) | `news-media` |
 | Code + config | git (this repo + the site tree) | On change | — | Git remote |
 | Server config | `/etc` snapshot via `etckeeper` | On change | — | Git |
 
-`BACKUP_RCLONE_REMOTE` is any rclone remote, for example `r2:news-backups` or a
-Backblaze B2 remote. Leave it empty to keep backups only on the VPS disk.
+A bucket lock rejects delete and overwrite for every object in `news-db`. The
+nightly job only has **Object Read & Write** on that bucket, so a stolen VPS
+key cannot remove the lock or delete the bucket. It also cannot see
+`news-media`. The Cloudflare account owner can still remove a lock from the
+dashboard; that token is not on the server.
+
+Create the bucket once, from a laptop, not the VPS. The admin token
+(`Account → Workers R2 Storage → Edit`) never goes in the origin `.env`.
 
 ```bash
-# .env
-BACKUP_RCLONE_REMOTE=r2:news-backups
+# laptop: .env has R2_ACCOUNT_ID. Export the admin token for this command only.
+export R2_BACKUP_ADMIN_TOKEN='...'
+scripts/r2-db-backup.sh provision
+# writes backups/r2-db-writer.env (gitignored)
 
-# once, as the user that runs the nightly cron (often root)
-rclone config    # create that remote; do not commit the config
+# VPS .env — writer key only
+R2_DB_BUCKET=news-db
+R2_DB_ACCESS_KEY_ID=...
+R2_DB_SECRET_ACCESS_KEY=...
 
 # on the VPS
-make backup      # writes backups/db/*.sql.zst and syncs uploads
+make backup
+scripts/r2-db-backup.sh check
 ```
 
-Nightly `scripts/backup.sh` copies `backups/db` and syncs `backups/uploads` to
-`BACKUP_RCLONE_REMOTE` when it is set and `rclone` is on `PATH`. Ubuntu 24.04's
-apt rclone is often too old for the Cloudflare provider. If `rclone version` is
-below 1.61:
+`provision` creates `news-db`, locks it, and tries to mint the writer key. If
+the admin token cannot create API tokens, create the key in
+**R2 → Manage R2 API tokens → Object Read & Write** and select only `news-db`.
+Do not include `news-media`. The same bucket is reused every night.
+
+Ubuntu 24.04's apt rclone is often too old for the Cloudflare provider. If
+`rclone version` is below 1.61:
 
 ```bash
 curl -fsSL https://rclone.org/install.sh | sudo bash
 ```
 
-Restore a database dump:
+Leave `R2_DB_RETENTION_DAYS` empty to keep dumps until an admin removes the
+lock. Set it (for example `30`) only if you want the lock to expire. The VPS
+still has no delete command either way.
+
+Restore a database dump (download only; it does not import):
 
 ```bash
-zstd -dc backups/db/FILE.sql.zst | mysql "$DB_NAME"
+scripts/r2-db-backup.sh restore YYYYMMDD wordpress_STAMP.sql.zst
+zstd -dc backups/db/wordpress_STAMP.sql.zst | mysql "$DB_NAME"
 ```
 
 Restore drill: quarterly, into a staging vhost, timed. A backup that has never
 been restored is a hope, not a backup.
 
 After media cut-over ([07](07-media-offload.md)): stop the origin `uploads/`
-rsync in `scripts/backup.sh`. R2 object versioning is the media backup; restore
-with `rclone copy` from the **media** bucket (`news-media`), not from
-`BACKUP_RCLONE_REMOTE`. Database dumps stay as they are.
+rsync in `scripts/backup.sh`. Do not copy uploads into `news-db`.
+R2 object versioning is the media backup.
 
-Do not mount object storage (rclone mount or similar) as the live
-`wp-content/uploads` tree or as the MariaDB datadir.
+Do not mount R2 (rclone mount or similar) as the live `wp-content/uploads`
+tree or as the MariaDB datadir.
 
 ## Day-to-day commands
 
@@ -125,7 +154,7 @@ Do not mount object storage (rclone mount or similar) as the live
 | Apply PHP / pool config edits | re-run `scripts/setup-vps.sh` or `systemctl reload php8.3-fpm` |
 | WordPress core / plugin updates | wp-admin as usual, or `scripts/wp.sh core update && scripts/wp.sh plugin update --all` |
 | Backup now | `make backup` |
-| Restore DB | `zstd -dc backups/db/FILE.sql.zst \| mysql "$DB_NAME"` |
+| Restore DB | `scripts/r2-db-backup.sh restore YYYYMMDD FILE.sql.zst`, then `zstd -dc` into mysql |
 
 ### Where the knobs are
 

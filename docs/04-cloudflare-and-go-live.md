@@ -75,7 +75,7 @@ syslog) shows the API error (usually token permissions or the wrong zone ID).
 
 - [ ] `scripts/cache-stats.sh` shows > 90 % HIT on HTML after a few hours of traffic
 - [ ] `free -h` and `ps -ylC php-fpm8.3 --sort:rss` — FPM well below the RAM budget; MariaDB buffer pool fits
-- [ ] `scripts/backup.sh` ran once manually; `backups/db/*.sql.zst` exists; `BACKUP_RCLONE_REMOTE` set if you want offsite copies ([05](05-operations.md))
+- [ ] `scripts/backup.sh` ran once manually; `backups/db/*.sql.zst` exists; today's dump is in `news-db/YYYYMMDD/` ([05](05-operations.md))
 - [ ] Cloudflare Origin CA certificate in place, SSL mode Full (strict), 80/443 locked to Cloudflare
 - [ ] Old server kept read-only for a week as a fallback
 - [ ] Uptime monitor pointed at `https://SITE_DOMAIN/-/health` (nginx-only, no PHP)

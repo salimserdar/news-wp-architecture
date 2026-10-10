@@ -1,4 +1,4 @@
-.PHONY: purge warm stats backup post-import reload-nginx gcs pull-gcs create-gce loadtest-urls loadtest-observe wp
+.PHONY: purge warm stats backup r2-db-backup post-import reload-nginx gcs pull-gcs create-gce loadtest-urls loadtest-observe wp
 
 wp:            ## make wp ARGS="plugin list"
 	scripts/wp.sh $(ARGS)
@@ -10,6 +10,8 @@ stats:         ## cache hit ratios, top misses, FPM / MariaDB
 	scripts/cache-stats.sh
 backup:
 	scripts/backup.sh
+r2-db-backup:  ## ARGS="provision|upload FILE|check|restore YYYYMMDD FILE"
+	scripts/r2-db-backup.sh $(ARGS)
 gcs:           ## make gcs ARGS="check|smoke|grant-sa|grant-vm VM ZONE"
 	scripts/gcs.sh $(ARGS)
 create-gce:    ## laptop: grant bucket IAM then create the Ubuntu VM
