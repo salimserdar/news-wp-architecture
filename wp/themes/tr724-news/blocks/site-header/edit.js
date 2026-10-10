@@ -1,4 +1,4 @@
-( function ( blocks, element, blockEditor, components, i18n ) {
+( function ( blocks, element, blockEditor, components, i18n, data ) {
 	var el = element.createElement;
 	var InnerBlocks = blockEditor.InnerBlocks;
 	var useBlockProps = blockEditor.useBlockProps;
@@ -56,12 +56,18 @@
 		],
 		[
 			"core/navigation",
-			{ overlayMenu: "never", ariaLabel: "Bölümler", lock: blockLock },
+			{
+				metadata: { name: "Üst menü" },
+				overlayMenu: "never",
+				ariaLabel: "Bölümler",
+				lock: blockLock,
+			},
 			links,
 		],
 		[
 			"core/navigation",
 			{
+				metadata: { name: "Hamburger menü" },
 				className: "is-drawer-nav",
 				overlayMenu: "never",
 				ariaLabel: "Tüm bölümler",
@@ -81,9 +87,69 @@
 		],
 	];
 
+	function drawerBlock() {
+		return blocks.createBlock(
+			"core/navigation",
+			{
+				metadata: { name: "Hamburger menü" },
+				className: "is-drawer-nav",
+				overlayMenu: "never",
+				ariaLabel: "Tüm bölümler",
+				lock: blockLock,
+			},
+			drawerLinks.map( function ( link ) {
+				return blocks.createBlock( link[0], link[1] );
+			} )
+		);
+	}
+
 	blocks.registerBlockType( "tr724/site-header", {
 		edit: function ( props ) {
 			var attributes = props.attributes;
+			var clientId = props.clientId;
+			var inserted = element.useRef( false );
+			var innerBlocks = data.useSelect(
+				function ( select ) {
+					return select( "core/block-editor" ).getBlocks( clientId );
+				},
+				[ clientId ]
+			);
+			var insertBlock = data.useDispatch( "core/block-editor" ).insertBlock;
+
+			element.useEffect(
+				function () {
+					if ( inserted.current || ! innerBlocks.length ) {
+						return;
+					}
+
+					var hasDrawer = innerBlocks.some( function ( block ) {
+						var className = block.attributes.className || "";
+						return (
+							"core/navigation" === block.name &&
+							className.indexOf( "is-drawer-nav" ) !== -1
+						);
+					} );
+
+					if ( hasDrawer ) {
+						return;
+					}
+
+					inserted.current = true;
+
+					var index = innerBlocks.findIndex( function ( block ) {
+						return "core/search" === block.name;
+					} );
+
+					insertBlock(
+						drawerBlock(),
+						index < 0 ? innerBlocks.length : index,
+						clientId,
+						false
+					);
+				},
+				[ innerBlocks, clientId, insertBlock ]
+			);
+
 			return el(
 				"div",
 				useBlockProps(),
@@ -133,4 +199,4 @@
 			return el( InnerBlocks.Content );
 		},
 	} );
-} )( window.wp.blocks, window.wp.element, window.wp.blockEditor, window.wp.components, window.wp.i18n );
+} )( window.wp.blocks, window.wp.element, window.wp.blockEditor, window.wp.components, window.wp.i18n, window.wp.data );
