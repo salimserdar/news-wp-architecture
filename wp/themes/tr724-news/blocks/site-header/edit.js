@@ -7,7 +7,16 @@
 	var TextControl = components.TextControl;
 	var __ = i18n.__;
 
-	var links = [
+	function navLinks( labels ) {
+		return labels.map( function ( label ) {
+			return [
+				"core/navigation-link",
+				{ label: label, url: "#", kind: "custom", type: "custom" },
+			];
+		} );
+	}
+
+	var links = navLinks( [
 		"SON DAKİKA",
 		"YAZARLAR",
 		"GÜNDEM",
@@ -20,12 +29,24 @@
 		"FİNANS",
 		"EĞİTİM",
 		"RESMİ İLANLAR",
-	].map( function ( label ) {
-		return [
-			"core/navigation-link",
-			{ label: label, url: "#", kind: "custom", type: "custom" },
-		];
-	} );
+	] );
+
+	var drawerLinks = navLinks( [
+		"SON DAKİKA",
+		"YAZARLAR",
+		"GÜNDEM",
+		"EKONOMİ",
+		"DÜNYA",
+		"GÜNÜN İÇİNDEN",
+		"SPOR",
+		"HAYAT",
+		"MAGAZİN",
+		"E-GAZETE",
+		"OTOMOTİV",
+		"FİNANS",
+		"EĞİTİM",
+		"RESMİ İLANLAR",
+	] );
 
 	var blockLock = { remove: true, move: true };
 	var template = [
@@ -37,6 +58,16 @@
 			"core/navigation",
 			{ overlayMenu: "never", ariaLabel: "Bölümler", lock: blockLock },
 			links,
+		],
+		[
+			"core/navigation",
+			{
+				className: "is-drawer-nav",
+				overlayMenu: "never",
+				ariaLabel: "Tüm bölümler",
+				lock: blockLock,
+			},
+			drawerLinks,
 		],
 		[
 			"core/search",

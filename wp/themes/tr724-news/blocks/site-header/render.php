@@ -4,7 +4,8 @@
  *
  * The logo and navigation inner blocks are placed into the bar,
  * the category strip, and the hamburger drawer. Search runs in the modal.
- * Navigation is rendered twice so the strip and the drawer stay one menu.
+ * The strip and the drawer are separate menus. A header that still has
+ * a single navigation block keeps that menu in both places.
  *
  * @var array    $attributes
  * @var string   $content
@@ -16,13 +17,29 @@ defined( 'ABSPATH' ) || exit;
 $logo       = '';
 $nav_strip  = '';
 $nav_drawer = '';
+$nav_blocks = [];
 
 foreach ( $block->inner_blocks as $inner ) {
 	if ( 'core/site-logo' === $inner->name ) {
 		$logo = $inner->render();
 	} elseif ( 'core/navigation' === $inner->name ) {
-		$nav_strip  = $inner->render();
-		$nav_drawer = $inner->render();
+		$nav_blocks[] = $inner;
+	}
+}
+
+if ( 1 === count( $nav_blocks ) ) {
+	$shared     = $nav_blocks[0]->render();
+	$nav_strip  = $shared;
+	$nav_drawer = $shared;
+} else {
+	foreach ( $nav_blocks as $inner ) {
+		$class_name = isset( $inner->attributes['className'] ) ? (string) $inner->attributes['className'] : '';
+
+		if ( false !== strpos( $class_name, 'is-drawer-nav' ) ) {
+			$nav_drawer = $inner->render();
+		} else {
+			$nav_strip = $inner->render();
+		}
 	}
 }
 
