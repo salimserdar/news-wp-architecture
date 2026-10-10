@@ -346,9 +346,12 @@ if ( ! function_exists( 'tr724_story_card_image' ) ) {
 	/**
 	 * Original attachment file, without a srcset of resized copies.
 	 */
-	function tr724_story_card_image( int $attachment_id, string $alt ): string {
+	function tr724_story_card_image( int $attachment_id, string $alt, string $loading = 'lazy' ): string {
 		if ( $attachment_id < 1 ) {
 			return '';
+		}
+		if ( ! in_array( $loading, [ 'lazy', 'eager' ], true ) ) {
+			$loading = 'lazy';
 		}
 
 		$strip_srcset = static function ( array $attr ): array {
@@ -362,7 +365,7 @@ if ( ! function_exists( 'tr724_story_card_image' ) ) {
 			false,
 			[
 				'alt'      => $alt,
-				'loading'  => 'lazy',
+				'loading'  => $loading,
 				'decoding' => 'async',
 			]
 		);

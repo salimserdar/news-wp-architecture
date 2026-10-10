@@ -406,16 +406,7 @@ if ( have_posts() ) {
 						if ( '' === $hero_alt ) {
 							$hero_alt = $title;
 						}
-						$hero = wp_get_attachment_image(
-							$thumb_id,
-							'full',
-							false,
-							[
-								'alt'      => $hero_alt,
-								'loading'  => 'eager',
-								'decoding' => 'async',
-							]
-						);
+						$hero = tr724_story_card_image( $thumb_id, $hero_alt, 'eager' );
 						$caption = wp_get_attachment_caption( $thumb_id );
 						if ( $hero ) {
 							echo '<figure class="post__hero">';
