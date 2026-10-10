@@ -1,4 +1,4 @@
-# 04 — Resource Allocation (8 vCPU / 32 GB RAM)
+# Resource Allocation (8 vCPU / 32 GB RAM)
 
 > The authoritative values live in `config/php/pool-www.conf`,
 > `config/mariadb/zz-tuning.cnf`, `.env` (`DB_BUFFER_POOL`, `PHP_MAX_CHILDREN`),
@@ -56,7 +56,7 @@ php_admin_value[memory_limit] = 512M
 
 One pool serves cache misses *and* editors. 20 children at ~200 ms/render ≈ **100 renders/s**
 theoretical. Our target is < 20/s. Raise `PHP_MAX_CHILDREN` only if a purge-storm listen
-queue is sustained (doc 09).
+queue is sustained ([Load test](../06-load-test.md)).
 
 `pm = dynamic` keeps idle memory small. Cache hits never fork a child.
 
@@ -110,7 +110,7 @@ Applied by `scripts/setup-vps.sh`.
 - Rough usage: OS 10 GB · WordPress + uploads 20–100 GB (grows with media!) · DB 5–10 GB ·
   Nginx cache 4 GB · logs 5 GB · local backup staging 10 GB.
 - Uploads are the growth risk. Offloading media to **Cloudflare R2** (S3-compatible, zero egress
-  fees) is the natural escape valve — see [doc 10](10-r2-media-offload.md) (decision: doc 05 Q6).
+  fees) is the natural escape valve — see [Media offload](../07-media-offload.md) ([Decisions](decisions.md) Q6).
 
 ## What happens in a 10× spike (sanity check)
 

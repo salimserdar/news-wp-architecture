@@ -557,7 +557,7 @@ echo "  credentials: ${CRED_FILE}"
 echo
 echo "Next:"
 echo "  1. Put a Cloudflare Origin CA cert in /etc/nginx/certs/origin.{pem,key} (optional but recommended)"
-echo "  2. Cloudflare Cache Rules (docs/08-implementation-guide.md) so HTML is HIT at the edge, not DYNAMIC"
+echo "  2. Cloudflare Cache Rules (docs/04-cloudflare-and-go-live.md) so HTML is HIT at the edge, not DYNAMIC"
 echo "  3. curl -sk -H 'Host: ${SITE_DOMAIN:-your-domain}' -o /dev/null -w 'fcgi=%header{x-fastcgi-cache}\\n' https://127.0.0.1/"
 echo
 echo "Lock 80/443 to Cloudflare later:"

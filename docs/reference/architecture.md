@@ -1,4 +1,4 @@
-# 02 — Architecture Overview
+# Architecture Overview
 
 ## The stack
 
@@ -96,10 +96,10 @@ wp-admin, wp-login.php, REST API writes, and `POST` requests are never cached.
   (many PoPs each with their own cache, short TTLs, purge propagation).
 - **Nginx FastCGI cache instead of Varnish** because it removes a whole process and hop,
   is trivially reliable, and WordPress doesn't need ESI when dynamic fragments are done
-  client-side. Full comparison in doc 05.
+  client-side. Full comparison in [Decisions](decisions.md).
 - **No Redis object cache.** Cache hits never reach PHP. Misses and editors still hit
   MariaDB, but the volume is small enough that a tuned InnoDB buffer pool is enough.
-  Object cache remains an option later if miss TTFB is the bottleneck (doc 05 Q3).
-- **Native packages** (doc 05 Q5). Unix sockets (nginx ↔ PHP-FPM, PHP ↔ MariaDB),
+  Object cache remains an option later if miss TTFB is the bottleneck ([Decisions](decisions.md) Q3).
+- **Native packages** ([Decisions](decisions.md) Q5). Unix sockets (nginx ↔ PHP-FPM, PHP ↔ MariaDB),
   Ubuntu's nginx/PHP/MariaDB, and `www-data` owning both the cache dir and FPM so the
   purge plugin can delete cache files with no extra module.

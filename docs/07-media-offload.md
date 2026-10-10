@@ -1,8 +1,9 @@
-# 10 — Offload `uploads/` from the VM to Cloudflare R2
+# 07 — Offload `uploads/` from the VPS to Cloudflare R2
 
 Later-phase runbook. Media stays on **local disk** until you actually run these
-steps (doc 05 Q6 → A). Do this when `uploads/` grows past ~50 GB, disk hits 80 %
-(doc 07), or nightly backups should stop copying media.
+steps ([Decisions](reference/decisions.md) Q6 → A). Do this when `uploads/` grows
+past ~50 GB, disk hits 80 % ([05 — Operations](05-operations.md)), or nightly
+backups should stop copying media.
 
 **Public upload URLs use the R2 custom domain.** `wp/mu-plugins/media-urls.php`
 rewrites `/wp-content/uploads/` (attachment URLs and hardcoded `<img src>` in
@@ -10,8 +11,8 @@ post HTML, on output) to `https://media.turkishnote.com/wp-content/uploads/...`.
 The path after the host is the R2 object key. Object bytes are not moved.
 
 rclone is already on the box (`scripts/setup-vps.sh`). Use it for the bulk copy.
-Do **not** `rclone mount` (or gcsfuse) as the live `uploads/` tree — same rule as
-doc 07 for GCS.
+Do **not** `rclone mount` the live `uploads/` tree — same rule as
+[05 — Operations](05-operations.md).
 
 Themes, plugins, and `mu-plugins` stay on the VM. Image **generation** stays on
 the VM (`perf-tweaks.php` WebP + 2560px cap). Only the **bytes** leave.
@@ -56,7 +57,7 @@ Readers
 | **A. Worker on** `/wp-content/uploads/`* **+ R2 binding** — *chosen* | URLs unchanged. Edge never needs the VM for media. Matches Q6 “switch on later without URL changes”.                                |
 | B. Custom domain `media.SITE_DOMAIN` + rewrite attachment URLs       | Cleaner hostname, but every historical `<img src>` in `post_content` still points at the old path unless you 301 or rewrite the DB. |
 | C. nginx `proxy_pass` to R2                                          | Disk goes to zero, but every Cloudflare miss still hits the origin. Extra hop, extra origin bandwidth. Fallback only.               |
-| D. rclone/gcsfuse mount of `uploads/`                                | Latency, lock, and outage risk. Rejected (same as live GCS mounts).                                                                 |
+| D. rclone mount of `uploads/`                                        | Latency, lock, and outage risk. Rejected (same as mounting any object store as the live tree).                                       |
 
 
 Option B is fine **as well as** A: bind `media.SITE_DOMAIN` to the bucket for
@@ -75,12 +76,12 @@ Do **not** reuse `BACKUP_RCLONE_REMOTE` for live media. That remote is for
 
 | Item                                          | Notes                                                                                         |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Cloudflare account that already owns the zone | Same account as the site ([doc 08](08-implementation-guide.md) step 8)                        |
+| Cloudflare account that already owns the zone | Same account as the site ([04 — Cloudflare](04-cloudflare-and-go-live.md))                    |
 | R2 enabled on that account                    | Dashboard → R2                                                                                |
 | Two buckets, not one                          | `news-media` (public via Worker / custom domain) and the existing private backup remote       |
 | API token for S3                              | **Object Read & Write** on `news-media` only. Account ID + Access Key + Secret. Never commit. |
-| Disk snapshot or GCS `uploads/` mirror        | Take this **before** deleting local files                                                     |
-| Plugin budget                                 | [Doc 07](07-operations.md): keep under 15 active plugins. Offload is a must-use plugin in this repo, not another wp-admin plugin. |
+| Disk snapshot or an offsite copy of `uploads/` | Take this **before** deleting local files                                                    |
+| Plugin budget                                 | [05 — Operations](05-operations.md): keep under 15 active plugins. Offload is a must-use plugin in this repo, not another wp-admin plugin. |
 
 
 Estimate size first:
@@ -99,7 +100,7 @@ find /var/www/html/wp-content/uploads -type f | wc -l
 In **R2 → Create bucket**:
 
 - Name: `news-media` (or `tr724-media`)
-- Location: automatic, or the region closest to the GCE zone ([doc 00](00-create-gce-vm.md))
+- Location: automatic, or the region closest to the VPS
 - Object versioning: **on** (this replaces nightly `rsync` of uploads after cut-over)
 - Public development URL (`*.r2.dev`): leave **disabled**. It is rate-limited and the wrong public hostname.
 
@@ -128,7 +129,7 @@ Ubuntu 24.04's apt rclone is often 1.60, which has no `provider Cloudflare`.
 Need 1.61+. If `rclone version` is older:
 
 ```bash
-sudo bash scripts/gcs.sh install   # official rclone; already used for GCS
+curl -fsSL https://rclone.org/install.sh | sudo bash
 rclone version
 ```
 
@@ -188,7 +189,7 @@ grep -E '^\[r2-media\]|^endpoint ' "$conf"
 `no_check_bucket` is required for R2 API tokens that are Object Read & Write
 only (HeadBucket / ListBuckets are otherwise denied). If later commands say
 `unknown provider Cloudflare`, the binary is still too old — re-run
-`scripts/gcs.sh install`.
+`curl -fsSL https://rclone.org/install.sh | sudo bash`.
 
 Do **not** `rclone lsd r2-media:` (no bucket). That calls ListBuckets, which a
 bucket-scoped Object Read & Write token cannot do (403 Access Denied). List
@@ -220,16 +221,6 @@ rclone sync /var/www/html/wp-content/uploads/ \
   r2-media:news-media/wp-content/uploads/ \
   --checksum --transfers 16 --checkers 16 \
   --fast-list -P
-```
-
-Or from the GCS backup without touching the live disk (good if the VM is already
-tight):
-
-```bash
-# after scripts/gcs.sh rclone-config  (remote name: gcs)
-rclone sync gcs:tr724-backup/wp-content/uploads/ \
-  r2-media:news-media/wp-content/uploads/ \
-  --checksum --fast-list -P
 ```
 
 Re-run is safe. Spot-check:
@@ -281,7 +272,7 @@ export default {
 ```
 
 Cache: either honour that `Cache-Control` with the existing **Rule 1** in
-[doc 08](08-implementation-guide.md) (`http.host eq SITE_DOMAIN` already covers
+[04 — Cloudflare](04-cloudflare-and-go-live.md) (`http.host eq SITE_DOMAIN` already covers
 this path), or add an explicit Cache Rule:
 
 - When: `starts_with(http.request.uri.path, "/wp-content/uploads/")`
@@ -417,8 +408,7 @@ Only then delete local files (Step 7). `r2-offload.php` never removes them.
 When `rclone check` is clean and Worker 404s are only for truly missing files:
 
 ```bash
-# last local copy → GCS, then R2, then snapshot
-scripts/gcs.sh backup
+# last local copy → R2, then a disk snapshot if the provider offers one
 rclone sync /var/www/html/wp-content/uploads/ r2-media:news-media/wp-content/uploads/ --checksum --fast-list -P
 
 # keep an empty tree so WordPress and nginx still have a directory
@@ -428,8 +418,7 @@ sudo -u www-data find /var/www/html/wp-content/uploads -type f -delete
 Safer than `rm -rf`: keep the year/month directories so a misbehaving plugin that
 writes locally still has a path.
 
-Optional: shrink the GCE disk later ([doc 00](00-create-gce-vm.md)). That is a VM
-recreation/resize, not an R2 step.
+Optional: shrink the VPS disk later. That is a provider resize, not an R2 step.
 
 ---
 
@@ -442,10 +431,10 @@ After local files are gone, **stop** treating uploads as origin data.
 
 | Before                                                                                          | After                                                              |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Nightly `rsync` `WP_ROOT/wp-content/uploads` → `backups/uploads` → GCS / `BACKUP_RCLONE_REMOTE` | Drop the uploads half of `scripts/backup.sh`. DB dump unchanged.   |
-| GCS `uploads/` mirror                                                                           | Keep the last pre-cutover mirror; do not keep growing it           |
+| Nightly `rsync` `WP_ROOT/wp-content/uploads` → `backups/uploads` → `BACKUP_RCLONE_REMOTE` | Drop the uploads half of `scripts/backup.sh`. DB dump unchanged.   |
+| Offsite `uploads/` mirror                                                                       | Keep the last pre-cutover copy; do not keep growing it             |
 | Disk alert on uploads                                                                           | Alert on R2 storage size + Worker 5xx + 404 rate                   |
-| Restore uploads from GCS                                                                        | Restore from R2 versioning / `rclone copy r2-media:news-media/...` |
+| Restore uploads from the backup remote                                                          | Restore from R2 versioning / `rclone copy r2-media:news-media/...` |
 
 
 `BACKUP_RCLONE_REMOTE=r2:news-backups` can stay as a **private** backup
@@ -465,7 +454,7 @@ edit that script (or wrap it) so it no longer rsyncs local `uploads/`.
 - Worker: GET/HEAD only. Never PUT/DELETE from the public route.
 - Deny `.php` / `.phtml` keys in the Worker (mirror `wordpress-hardening.conf`).
 - Do not offload `wp-content/plugins`, `themes`, or anything executable.
-- Authenticated Origin Pulls (doc 05 Q11) do not apply to R2; R2 is not the VPS.
+- Authenticated Origin Pulls ([Decisions](reference/decisions.md) Q11) do not apply to R2; R2 is not the VPS.
 
 ---
 
@@ -473,11 +462,11 @@ edit that script (or wrap it) so it no longer rsyncs local `uploads/`.
 
 ## What does not change
 
-- HTML caching, FastCGI cache, purge-on-publish (docs 03, 08)
+- HTML caching, FastCGI cache, purge-on-publish ([Caching](reference/caching.md), [04](04-cloudflare-and-go-live.md))
 - Image *processing* on upload (`perf-tweaks.php`)
 - Cloudflare Cache Rule 1 for `/wp-content/*` (still valid if URLs stay on `SITE_DOMAIN`)
 - Editor workflow in wp-admin
-- GCS as the **database** backup source of truth
+- The database dump in `scripts/backup.sh` (only the uploads half changes)
 
 ---
 
@@ -506,10 +495,10 @@ going to R2 and to disk) or delete it from `wp-content/mu-plugins`.
 
 ## Decision log (when you actually do this)
 
-Add to [doc 05](05-alternatives-and-decisions.md):
+Add to [Decisions](reference/decisions.md):
 
 > **YYYY-MM-DD** — Media serving moved to **Cloudflare R2** (Q6 → B). Public URLs
 > unchanged (`/wp-content/uploads/` on `SITE_DOMAIN` via Worker). Local files
 > removed after soak. Uploads no longer part of nightly origin backup; R2
-> versioning is the media backup. See doc 10.
+> versioning is the media backup. See docs/07-media-offload.md.
 

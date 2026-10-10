@@ -1,23 +1,20 @@
 # news-wp-architecture
 
-High-traffic WordPress news site on a single 8 vCPU / 32 GB Ubuntu VPS:
+High-traffic WordPress news site on a single Ubuntu 24.04 VPS:
 **Cloudflare → nginx FastCGI full-page cache → PHP-FPM → MariaDB.**
 
-- **Start here:** [`docs/00-create-gce-vm.md`](docs/00-create-gce-vm.md) (create the VM + grant `gs://tr724-backup` first), then [`docs/08-implementation-guide.md`](docs/08-implementation-guide.md).
+- **Start here:** [`docs/01-provision-vps.md`](docs/01-provision-vps.md), then install, import, and Cloudflare in that order.
 - Full index: [`docs/README.md`](docs/README.md).
 
 ```bash
-# laptop
-gcloud config set project YOUR_PROJECT_ID
-gcloud config set compute/zone europe-west1-b
-scripts/create-gce-vm.sh
-
-# on the VM
-cp .env.example .env            # fill in domain, DB passwords, Cloudflare zone/token
+# on the VPS (Ubuntu 24.04)
+sudo apt-get update && sudo apt-get install -y git
+git clone <this-repo> /opt/news-wp && cd /opt/news-wp
+cp .env.example .env            # domain, DB password, Cloudflare zone and token
 sudo bash scripts/setup-vps.sh
-scripts/gcs.sh check
-scripts/pull-gcs-backup.sh      # gs://tr724-backup -> import/
-scripts/import-db.sh import/wp_tr724.sql old-domain.com
+
+# copy the SQL dump and wp-content into import/ (scp or rsync), then:
+scripts/import-db.sh import/dump.sql old-domain.com
 scripts/import-wp-content.sh import/wp-content
 scripts/post-import.sh
 make stats

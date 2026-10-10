@@ -1,4 +1,4 @@
-# 05 — Alternatives & Decisions
+# Alternatives & Decisions
 
 Each item states the options, the recommendation, and whether it is **settled** or
 **open for discussion**.
@@ -75,7 +75,7 @@ Chosen for origin performance and operational simplicity on a single VPS.
 | **B. Offload to Cloudflare R2** (S3-compatible, no egress fees) via a media-offload plugin | Disk stays small; backups faster; effectively unlimited media. Adds a plugin dependency and some setup. |
 
 Recommendation: start with **A**, design the upload path so **B** can be switched on later
-without URL changes. The runbook is **[doc 10](10-r2-media-offload.md)**: copy `uploads/`
+without URL changes. The runbook is **[Media offload](../07-media-offload.md)**: copy `uploads/`
 to R2, serve reads via a Worker on `/wp-content/uploads/*`, keep public URLs on
 `SITE_DOMAIN`. Do not flip this log line until that cut-over actually happens.
 
@@ -121,4 +121,4 @@ systemd, behind Cloudflare Access.
 2. **Q8** — Comments: off, native (JS-loaded), or third-party? Native comments set a
    `comment_author_*` cookie which bypasses both caches for that reader.
 3. **Q12** — Staging: a second vhost on the same VPS (behind Cloudflare Access) is the cheap option.
-4. Confirm assumptions in doc 01 (traffic targets, disk size, editor count).
+4. Confirm assumptions in [Requirements](requirements.md) (traffic targets, disk size, editor count).

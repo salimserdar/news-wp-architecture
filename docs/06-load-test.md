@@ -1,6 +1,6 @@
-# 09 — Origin load test (k6)
+# 06 — Origin load test (k6)
 
-Harness for Phase 7 in [doc 06](06-implementation-roadmap.md). This test hits the
+Run this after [go-live](04-cloudflare-and-go-live.md). The test hits the
 **origin VPS directly** (Cloudflare bypassed) so the numbers are nginx FastCGI + PHP-FPM
 + MariaDB — not the edge cache.
 
@@ -19,7 +19,7 @@ Scripts:
 Fill in the results tables at the bottom after a run. Do not change `pm.max_children`,
 `DB_BUFFER_POOL`, or TTLs until those tables have numbers.
 
-## Pass / fail (from [doc 01](01-requirements-and-assumptions.md))
+## Pass / fail (from [Requirements](reference/requirements.md))
 
 | Scenario | Load | Must hold |
 |----------|------|-----------|

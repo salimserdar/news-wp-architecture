@@ -2,7 +2,7 @@
 
 Target: a WordPress news site that must survive traffic spikes (breaking news, social
 virality) on a **single Ubuntu 24.04 VPS**, with Cloudflare in front, running
-**native packages** (nginx, PHP-FPM, MariaDB).
+**native packages** (nginx, PHP-FPM, MariaDB). Any VPS provider works.
 
 The guiding principle is simple: **the origin should almost never render a page.**
 Every layer exists to keep requests away from PHP and MySQL.
@@ -13,40 +13,48 @@ Reader ──> Cloudflare (edge cache, WAF, TLS)
                     └──> PHP-FPM  ──> MariaDB
 ```
 
-## Contents
+## Deploy, in order
 
-1. [Start here](#start-here)
-2. [Documents](#documents)
-3. [Status](#status)
+| Step | Document |
+|------|----------|
+| 1 | [**01 — Provision the VPS**](01-provision-vps.md) — Ubuntu 24.04, size, SSH, ports |
+| 2 | [**02 — Install and configure**](02-install-and-configure.md) — nginx, PHP-FPM, MariaDB, `.env`, Origin CA |
+| 3 | [**03 — Import the site**](03-import-the-site.md) — copy the dump and `wp-content`, then import |
+| 4 | [**04 — Cloudflare and go-live**](04-cloudflare-and-go-live.md) — DNS, Cache Rules, WAF, lock the firewall |
+| 5 | [**05 — Operations**](05-operations.md) — security, monitoring, rclone backups, deploys |
+| 6 | [**06 — Load test**](06-load-test.md) — origin k6 runbook and empty results tables |
+| 7 | [**07 — R2 media offload**](07-media-offload.md) — later, when `uploads/` outgrows the disk |
 
-## Start here
+## Reference
 
-| Order | Do this |
-|-------|---------|
-| 1 | [**00 — Create the GCE VM**](00-create-gce-vm.md) — `gcloud` from your laptop; **grant `gs://tr724-backup` before the VM exists** |
-| 2 | [**08 — Implementation guide**](08-implementation-guide.md) — nginx/PHP/MariaDB, pull backup, import, Cloudflare |
+Read these when you are choosing or tuning, not while you are installing.
 
-## Documents
+| Document | What it covers |
+|----------|----------------|
+| [Requirements](reference/requirements.md) | Traffic goals, constraints, what "high traffic" means here |
+| [Architecture](reference/architecture.md) | Layers, request flow, component responsibilities |
+| [Caching](reference/caching.md) | Cache layers, TTLs, bypass rules, invalidation |
+| [Resource allocation](reference/resources.md) | How CPU and RAM are divided on an 8 vCPU / 32 GB box |
+| [Decisions](reference/decisions.md) | Options considered, decision log, open questions |
 
-| # | Document | What it covers |
-|---|----------|----------------|
-| **00** | [**Create the GCE VM**](00-create-gce-vm.md) | `gcloud` one-shot: bucket IAM first, then Ubuntu instance |
-| 01 | [Requirements & Assumptions](01-requirements-and-assumptions.md) | Traffic goals, constraints, what "high traffic" means for us |
-| 02 | [Architecture Overview](02-architecture-overview.md) | Layers, request flow, component responsibilities |
-| 03 | [Caching Strategy](03-caching-strategy.md) | Cache layers, TTLs, bypass rules, **invalidation** |
-| 04 | [Resource Allocation](04-resource-allocation.md) | How CPU / RAM is divided; 2 vCPU / 8–16 GB vs 8 / 32 GB |
-| 05 | [Alternatives & Decisions](05-alternatives-and-decisions.md) | Options considered, **decision log**, remaining open questions |
-| 06 | [Implementation Roadmap](06-implementation-roadmap.md) | Phases; what is done, what is next |
-| 07 | [Operations](07-operations.md) | Monitoring, backups, security hardening, deploy flow |
-| **08** | [**Implementation Guide**](08-implementation-guide.md) | **Step-by-step on the VPS: stack, import, Cloudflare** |
-| 09 | [Load test results](09-load-test-results.md) | Origin k6 runbook, SLOs, empty tables to fill after Phase 7 |
-| 10 | [R2 media offload](10-r2-media-offload.md) | Copy `uploads/` to Cloudflare R2; public URLs use media.turkishnote.com |
+## Already in this repo
+
+| Piece | Where |
+|-------|-------|
+| Base server (sysctl, swap, fail2ban, Cloudflare-aware firewall, weekly IP refresh, nightly backup cron) | `scripts/setup-vps.sh`, `scripts/cloudflare-ips.sh` |
+| MariaDB tuning | `config/mariadb/` |
+| PHP 8.3-FPM, OPcache, wp-config constants, system cron | `config/php/`, `scripts/setup-vps.sh` |
+| nginx FastCGI cache, bypass maps, stale-while-revalidate, Cloudflare real IP, TLS | `config/nginx/` |
+| TTLs, purge-on-publish, warmer, admin-bar button, `wp news-cache` | `wp/mu-plugins/` |
+| DB import (MySQL 8 → MariaDB, domain rewrite), wp-content import, post-import cleanup | `scripts/import-db.sh`, `scripts/import-wp-content.sh`, `scripts/post-import.sh` |
+| Backups (DB zstd + uploads rsync + rclone), cache statistics, WP-CLI wrapper | `scripts/backup.sh`, `scripts/`, `Makefile` |
 
 ## Status
 
-- [x] Architecture written and decisions taken (doc 05)
+- [x] Architecture written and decisions taken ([Decisions](reference/decisions.md))
 - [x] Native stack: nginx FastCGI cache, PHP-FPM, MariaDB, mu-plugins, scripts
-- [ ] GCE VM created with bucket access ([doc 00](00-create-gce-vm.md))
-- [ ] Deployed, DB + wp-content imported ([doc 08](08-implementation-guide.md))
-- [ ] Cloudflare configured (doc 08)
-- [ ] Load test on the VPS (doc 06 phase 7, runbook in [doc 09](09-load-test-results.md))
+- [ ] VPS provisioned ([01](01-provision-vps.md))
+- [ ] Stack installed and `.env` filled ([02](02-install-and-configure.md))
+- [ ] Database and `wp-content` imported ([03](03-import-the-site.md))
+- [ ] Cloudflare configured and origin firewall locked ([04](04-cloudflare-and-go-live.md))
+- [ ] Load test recorded ([06](06-load-test.md))

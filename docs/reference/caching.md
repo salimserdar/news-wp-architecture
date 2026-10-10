@@ -1,4 +1,4 @@
-# 03 — Caching Strategy
+# Caching Strategy
 
 Four cache layers, from the reader inward. Each one exists to shield the next.
 
@@ -21,7 +21,7 @@ Combined effect: for every 1 000 HTML requests during a spike, roughly **≤ 5 r
   except `ver`. WordPress appends `?ver=` to enqueued assets, so it self-busts on updates.
 - Browser TTL: 1 year via `Cache-Control: public, max-age=31536000, immutable` set by Nginx.
 
-### HTML (the important decision — see doc 05, Q1)
+### HTML (the important decision — see [Decisions](decisions.md), Q1)
 
 Recommended: **Cache Everything with cookie bypass + purge-on-publish.**
 
@@ -41,7 +41,7 @@ upper-tier PoP instead of all hitting the origin at once.
 
 Alternative: **Cloudflare APO** (Automatic Platform Optimization for WordPress). It does the
 above automatically and handles purge through the official Cloudflare plugin. Costs $5/mo on
-Free, included on Pro+. Less control, less setup. Either is fine; see doc 05.
+Free, included on Pro+. Less control, less setup. Either is fine; see [Decisions](decisions.md).
 
 ### Purge
 On `publish_post`, `edit_post`, `delete_post`, `transition_comment_status`:
@@ -178,7 +178,7 @@ don't want that reader to be a real person:
 
 ## Observability of the cache
 
-Track daily (see doc 07):
+Track daily (see [Operations](../05-operations.md)):
 - Cloudflare: cache hit ratio for HTML content type, origin requests/s, bandwidth saved.
 - Nginx: count of `X-FastCGI-Cache` values from the access log (`HIT/MISS/BYPASS/STALE`).
   A rising BYPASS ratio usually means a plugin started setting cookies on anonymous users.

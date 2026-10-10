@@ -1,4 +1,4 @@
-# 01 — Requirements & Assumptions
+# Requirements & Assumptions
 
 ## Hard constraints
 

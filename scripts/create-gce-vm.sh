@@ -172,4 +172,4 @@ echo "  sudo bash scripts/setup-vps.sh"
 echo "  sudo bash scripts/gcs.sh check"
 echo "  sudo bash scripts/pull-gcs-backup.sh"
 echo
-echo "Next: docs/08-implementation-guide.md"
+echo "Next: docs/02-install-and-configure.md"
