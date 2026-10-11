@@ -83,15 +83,13 @@ while ( $query->have_posts() ) {
 	$slide_label = ( ! $hide_title && '' !== $upper_title ) ? $upper_title . ' ' . $slide_title : $slide_title;
 	$image       = '';
 	if ( $thumb_id ) {
-		$image = wp_get_attachment_image(
+		$image = tr724_story_card_image(
 			$thumb_id,
-			'large',
-			false,
+			$slide_title,
+			0 === $index ? 'eager' : 'lazy',
 			[
-				'alt'           => $slide_title,
-				'loading'       => 0 === $index ? 'eager' : 'lazy',
+				'class'         => 'news-slide__img',
 				'fetchpriority' => 0 === $index ? 'high' : 'low',
-				'decoding'      => 'async',
 			]
 		);
 	}

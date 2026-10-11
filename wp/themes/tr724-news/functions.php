@@ -346,7 +346,7 @@ if ( ! function_exists( 'tr724_story_card_image' ) ) {
 	/**
 	 * Original attachment file, without a srcset of resized copies.
 	 */
-	function tr724_story_card_image( int $attachment_id, string $alt, string $loading = 'lazy' ): string {
+	function tr724_story_card_image( int $attachment_id, string $alt, string $loading = 'lazy', array $attr = [] ): string {
 		if ( $attachment_id < 1 ) {
 			return '';
 		}
@@ -354,26 +354,41 @@ if ( ! function_exists( 'tr724_story_card_image' ) ) {
 			$loading = 'lazy';
 		}
 
-		$strip_srcset = static function ( array $attr ): array {
-			unset( $attr['srcset'], $attr['sizes'] );
-			return $attr;
+		$strip_srcset = static function ( array $image_attr ): array {
+			unset( $image_attr['srcset'], $image_attr['sizes'] );
+			return $image_attr;
 		};
 		add_filter( 'wp_get_attachment_image_attributes', $strip_srcset, 10000 );
 		$html = wp_get_attachment_image(
 			$attachment_id,
 			'full',
 			false,
-			[
-				'alt'      => $alt,
-				'loading'  => $loading,
-				'decoding' => 'async',
-			]
+			array_merge(
+				[
+					'alt'      => $alt,
+					'loading'  => $loading,
+					'decoding' => 'async',
+				],
+				$attr
+			)
 		);
 		remove_filter( 'wp_get_attachment_image_attributes', $strip_srcset, 10000 );
 
 		return is_string( $html ) ? $html : '';
 	}
 }
+
+add_filter(
+	'wp_content_img_tag',
+	static function ( string $image ): string {
+		if ( ! str_contains( $image, 'news-slide__img' ) ) {
+			return $image;
+		}
+		$stripped = preg_replace( '/\s(?:srcset|sizes)=("[^"]*"|\'[^\']*\')/', '', $image );
+		return is_string( $stripped ) ? $stripped : $image;
+	},
+	100
+);
 
 if ( ! function_exists( 'tr724_archive_upper' ) ) {
 	/**
