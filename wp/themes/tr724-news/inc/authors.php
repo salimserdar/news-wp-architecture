@@ -30,18 +30,18 @@ if ( ! function_exists( 'tr724_yazarlar_avatar' ) ) {
 	/**
 	 * Author photo from the custom avatar fields, then the WordPress avatar.
 	 *
+	 * Custom photos use the original file only. No srcset or intermediate sizes.
+	 *
 	 * @param array $args {
-	 *     @type string $class      Extra class on the image.
-	 *     @type string $alt        Alt text.
-	 *     @type int    $size       Pixel size for the WordPress avatar.
-	 *     @type string $image_size Attachment size for a custom photo.
+	 *     @type string $class Extra class on the image.
+	 *     @type string $alt   Alt text.
+	 *     @type int    $size  Pixel size for the WordPress avatar fallback.
 	 * }
 	 */
 	function tr724_yazarlar_avatar( int $user_id, array $args = [] ): string {
-		$class      = isset( $args['class'] ) ? (string) $args['class'] : '';
-		$alt        = isset( $args['alt'] ) ? (string) $args['alt'] : '';
-		$size       = isset( $args['size'] ) ? max( 1, (int) $args['size'] ) : 96;
-		$image_size = isset( $args['image_size'] ) ? (string) $args['image_size'] : 'thumbnail';
+		$class = isset( $args['class'] ) ? (string) $args['class'] : '';
+		$alt   = isset( $args['alt'] ) ? (string) $args['alt'] : '';
+		$size  = isset( $args['size'] ) ? max( 1, (int) $args['size'] ) : 96;
 
 		$attachment_id = (int) get_user_meta( $user_id, 'wp_user_avatar', true );
 		if ( $attachment_id <= 0 ) {
@@ -51,35 +51,32 @@ if ( ! function_exists( 'tr724_yazarlar_avatar' ) ) {
 			$attachment_id = (int) get_user_meta( $user_id, 'yazar_photo', true );
 		}
 
-		$image_attrs = [
-			'alt'      => $alt,
+		if ( $attachment_id > 0 ) {
+			$url = wp_get_original_image_url( $attachment_id );
+			if ( ! is_string( $url ) || '' === $url ) {
+				$url = (string) wp_get_attachment_url( $attachment_id );
+			}
+			if ( '' !== $url ) {
+				$class_attr = '' !== $class ? ' class="' . esc_attr( $class ) . '"' : '';
+				return sprintf(
+					'<img src="%1$s" alt="%2$s"%3$s loading="lazy" decoding="async" />',
+					esc_url( $url ),
+					esc_attr( $alt ),
+					$class_attr
+				);
+			}
+		}
+
+		$avatar_args = [
 			'loading'  => 'lazy',
 			'decoding' => 'async',
 		];
 		if ( '' !== $class ) {
-			$image_attrs['class'] = $class;
+			$avatar_args['class'] = $class;
 		}
-
-		$avatar = '';
-		if ( $attachment_id > 0 ) {
-			$avatar = wp_get_attachment_image(
-				$attachment_id,
-				'' !== $image_size ? $image_size : 'thumbnail',
-				false,
-				$image_attrs
-			);
-		}
-		if ( '' === $avatar ) {
-			$avatar_args = [
-				'loading'  => 'lazy',
-				'decoding' => 'async',
-			];
-			if ( '' !== $class ) {
-				$avatar_args['class'] = $class;
-			}
-			$avatar = get_avatar( $user_id, $size, '', $alt, $avatar_args );
-		}
-		return $avatar;
+		$avatar = get_avatar( $user_id, $size, '', $alt, $avatar_args );
+		$avatar = preg_replace( '/\s(?:srcset|sizes)=([\'"]).*?\1/s', '', $avatar );
+		return is_string( $avatar ) ? $avatar : '';
 	}
 }
 

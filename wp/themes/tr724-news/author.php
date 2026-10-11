@@ -59,10 +59,9 @@ $heading   = __( 'YAZAR PROFİL', 'tr724-news' );
 			echo tr724_yazarlar_avatar(
 				$user_id,
 				[
-					'class'      => 'author-profile__avatar',
-					'alt'        => $name,
-					'size'       => 192,
-					'image_size' => 'medium',
+					'class' => 'author-profile__avatar',
+					'alt'   => $name,
+					'size'  => 192,
 				]
 			);
 			?>
