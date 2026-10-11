@@ -5,7 +5,7 @@
  * Version:     1.0.0
  *
  * Readers, feeds, the block editor, and the media library receive
- * https://media.turkishnote.com/wp-content/uploads/...
+ * https://media.tr724.com/wp-content/uploads/...
  * Local paths stay on disk so image generation and r2-offload.php can still read them.
  * Stored post HTML is rewritten when WordPress prints or edits it, not by a database search-replace.
  *
@@ -18,7 +18,7 @@ namespace News\MediaUrls;
 
 defined( 'ABSPATH' ) || exit;
 
-const DEFAULT_ORIGIN = 'https://media.turkishnote.com';
+const DEFAULT_ORIGIN = 'https://media.tr724.com';
 
 add_filter( 'upload_dir', __NAMESPACE__ . '\filter_upload_dir', 9999 );
 add_filter( 'wp_get_attachment_url', __NAMESPACE__ . '\rewrite_string' );

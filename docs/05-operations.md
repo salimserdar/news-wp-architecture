@@ -65,7 +65,7 @@ Weekly review: top slow queries, plugins updated, disk growth trend, cache ratio
 ## Backups
 
 Database dumps and media do not share a bucket or a key. Media stays in
-`news-media` ([07](07-media-offload.md)). The database uses one private bucket,
+`tr724-media` ([07](07-media-offload.md)). The database uses one private bucket,
 `news-db`. Each UTC day is a folder inside it:
 
 ```text
@@ -78,14 +78,14 @@ A year of backups is a few hundred files in that one bucket.
 | What | How | When | Retention | Where |
 |------|-----|------|-----------|-------|
 | Database | `mariadb-dump --single-transaction --quick` piped to `zstd` | Nightly 03:30 | 14 days on the VPS disk. Offsite: bucket lock, forever unless `R2_DB_RETENTION_DAYS` is set | `news-db/YYYYMMDD/` |
-| Media | R2 object versioning on the live media bucket | On upload | Noncurrent versions ~30 days ([07](07-media-offload.md)) | `news-media` |
+| Media | R2 object versioning on the live media bucket | On upload | Noncurrent versions ~30 days ([07](07-media-offload.md)) | `tr724-media` |
 | Code + config | git (this repo + the site tree) | On change | — | Git remote |
 | Server config | `/etc` snapshot via `etckeeper` | On change | — | Git |
 
 A bucket lock rejects delete and overwrite for every object in `news-db`. The
 nightly job only has **Object Read & Write** on that bucket, so a stolen VPS
 key cannot remove the lock or delete the bucket. It also cannot see
-`news-media`. The Cloudflare account owner can still remove a lock from the
+`tr724-media`. The Cloudflare account owner can still remove a lock from the
 dashboard; that token is not on the server.
 
 Create the bucket once, from a laptop, not the VPS. The admin token
@@ -110,7 +110,7 @@ scripts/r2-db-backup.sh check
 `provision` creates `news-db`, locks it, and tries to mint the writer key. If
 the admin token cannot create API tokens, create the key in
 **R2 → Manage R2 API tokens → Object Read & Write** and select only `news-db`.
-Do not include `news-media`. The same bucket is reused every night.
+Do not include `tr724-media`. The same bucket is reused every night.
 
 Ubuntu 24.04's apt rclone is often too old for the Cloudflare provider. If
 `rclone version` is below 1.61:

@@ -7,7 +7,7 @@ backups should stop copying media.
 
 **Public upload URLs use the R2 custom domain.** `wp/mu-plugins/media-urls.php`
 rewrites `/wp-content/uploads/` (attachment URLs and hardcoded `<img src>` in
-post HTML, on output) to `https://media.turkishnote.com/wp-content/uploads/...`.
+post HTML, on output) to `https://media.tr724.com/wp-content/uploads/...`.
 The path after the host is the R2 object key. Object bytes are not moved.
 
 rclone is already on the box (`scripts/setup-vps.sh`). Use it for the bulk copy.
@@ -21,7 +21,7 @@ the VM (`perf-tweaks.php` WebP + 2560px cap). Only the **bytes** leave.
 Readers
   └── Cloudflare edge (already caches /wp-content/* for 1 year)
         ├── HTML / PHP  →  VPS (unchanged)
-        └── https://media.turkishnote.com/wp-content/uploads/*  →  R2
+        └── https://media.tr724.com/wp-content/uploads/*  →  R2
               ▲
               └── PHP-FPM writes new files via S3 API (mu-plugin r2-offload.php)
 ```
@@ -79,8 +79,8 @@ Public media needs its own bucket.
 | --------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Cloudflare account that already owns the zone | Same account as the site ([04 — Cloudflare](04-cloudflare-and-go-live.md))                    |
 | R2 enabled on that account                    | Dashboard → R2                                                                                |
-| Two buckets, not one                          | `news-media` (public via Worker / custom domain) and the existing private backup remote       |
-| API token for S3                              | **Object Read & Write** on `news-media` only. Account ID + Access Key + Secret. Never commit. |
+| Two buckets, not one                          | `tr724-media` (public via Worker / custom domain) and the existing private backup remote       |
+| API token for S3                              | **Object Read & Write** on `tr724-media` only. Account ID + Access Key + Secret. Never commit. |
 | Disk snapshot or an offsite copy of `uploads/` | Take this **before** deleting local files                                                    |
 | Plugin budget                                 | [05 — Operations](05-operations.md): keep under 15 active plugins. Offload is a must-use plugin in this repo, not another wp-admin plugin. |
 
@@ -100,7 +100,7 @@ find /var/www/html/wp-content/uploads -type f | wc -l
 
 In **R2 → Create bucket**:
 
-- Name: `news-media` (or `tr724-media`)
+- Name: `tr724-media`
 - Location: automatic, or the region closest to the VPS
 - Object versioning: **on** (this replaces nightly `rsync` of uploads after cut-over)
 - Public development URL (`*.r2.dev`): leave **disabled**. It is rate-limited and the wrong public hostname.
@@ -142,7 +142,7 @@ Fill the commented `R2_*` keys in `.env` first (never commit):
 R2_ACCOUNT_ID=your_32_char_account_id
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
-R2_BUCKET=news-media
+R2_BUCKET=tr724-media
 ```
 
 Write the remote into rclone's config (same user you will run `sync` as —
@@ -176,10 +176,15 @@ access_key_id = ${R2_ACCESS_KEY_ID}
 secret_access_key = ${R2_SECRET_ACCESS_KEY}
 region = auto
 endpoint = https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
-acl = private
 no_check_bucket = true
+upload_checksum = false
+request_checksum_calculation = when_required
+response_checksum_validation = when_required
 EOF
 chmod 600 "$conf"
+# Do not set acl. R2 rejects x-amz-acl with HTTP 501.
+# The three checksum lines need a current rclone. Older binaries reject them;
+# pass --s3-disable-checksum on the copy instead, or install from rclone.org.
 
 rclone listremotes
 # must print:  r2-media:
@@ -199,7 +204,7 @@ bucket-scoped Object Read & Write token cannot do (403 Access Denied). List
 already created it.
 
 ```bash
-rclone lsf r2-media:news-media
+rclone lsf r2-media:tr724-media
 # empty bucket → no output, exit 0
 # "didn't find section" → the block above did not run as this user, or conf was deleted
 # 403 → token cannot see this bucket (wrong key, or scoped to another name)
@@ -220,7 +225,7 @@ From the live tree:
 
 ```bash
 rclone sync /var/www/html/wp-content/uploads/ \
-  r2-media:news-media/wp-content/uploads/ \
+  r2-media:tr724-media/wp-content/uploads/ \
   --checksum --transfers 16 --checkers 16 \
   --fast-list -P
 ```
@@ -228,8 +233,8 @@ rclone sync /var/www/html/wp-content/uploads/ \
 Re-run is safe. Spot-check:
 
 ```bash
-rclone ls r2-media:news-media/wp-content/uploads/2024/01/ | head
-rclone check /var/www/html/wp-content/uploads r2-media:news-media/wp-content/uploads --one-way
+rclone ls r2-media:tr724-media/wp-content/uploads/2024/01/ | head
+rclone check /var/www/html/wp-content/uploads r2-media:tr724-media/wp-content/uploads --one-way
 ```
 
 Do **not** delete local files yet.
@@ -244,7 +249,7 @@ Do **not** delete local files yet.
 
 ### 4a. Worker (recommended)
 
-Create a Worker with an R2 binding named `MEDIA`, bound to `news-media`. Route:
+Create a Worker with an R2 binding named `MEDIA`, bound to `tr724-media`. Route:
 
 `SITE_DOMAIN/wp-content/uploads/*`
 
@@ -323,7 +328,7 @@ the Worker 404s the photo (it never reads the VM disk).
 `wp/mu-plugins/r2-offload.php` does that PUT. `scripts/setup-vps.sh` installs it
 with the other mu-plugins. It does not appear in the wp-admin plugin list.
 `wp/mu-plugins/media-urls.php` rewrites the public URL to
-`https://media.turkishnote.com/wp-content/uploads/...` (override with `MEDIA_URL`
+`https://media.tr724.com/wp-content/uploads/...` (override with `MEDIA_URL`
 → `NEWS_MEDIA_URL`). The object key stays `wp-content/uploads/...`.
 
 Credentials live in `.env`, not in the database and not in the plugin file.
@@ -335,7 +340,7 @@ Setup copies non-empty values into `wp-config.php` (mode 640, `www-data`):
 | `R2_ACCOUNT_ID`         | `NEWS_R2_ACCOUNT_ID`          |
 | `R2_ACCESS_KEY_ID`      | `NEWS_R2_ACCESS_KEY_ID`       |
 | `R2_SECRET_ACCESS_KEY`  | `NEWS_R2_SECRET_ACCESS_KEY`   |
-| `R2_BUCKET`             | `NEWS_R2_BUCKET` (`news-media`) |
+| `R2_BUCKET`             | `NEWS_R2_BUCKET` (`tr724-media`) |
 
 
 If any constant is missing, the mu-plugin does nothing and logs once. Endpoint
@@ -377,9 +382,9 @@ Acceptance, on the VM:
    That refreshes mu-plugins and constants. It does not wipe the database.
 2. Upload a test image in wp-admin. The media request should not return before
    the objects exist.
-3. Confirm the objects: `rclone ls r2-media:news-media/wp-content/uploads/$(date +%Y/%m)/ | grep test`
+3. Confirm the objects: `rclone ls r2-media:tr724-media/wp-content/uploads/$(date +%Y/%m)/ | grep test`
    — original and WebP sizes.
-4. Confirm the article HTML uses `https://media.turkishnote.com/wp-content/uploads/...`.
+4. Confirm the article HTML uses `https://media.tr724.com/wp-content/uploads/...`.
 5. `curl -sI` that URL → `200`, and `cf-cache-status: HIT` on the second request.
 6. Confirm no new cookie on anonymous HTML (`make stats` BYPASS ratio unchanged).
 
@@ -411,7 +416,7 @@ When `rclone check` is clean and Worker 404s are only for truly missing files:
 
 ```bash
 # last local copy → R2, then a disk snapshot if the provider offers one
-rclone sync /var/www/html/wp-content/uploads/ r2-media:news-media/wp-content/uploads/ --checksum --fast-list -P
+rclone sync /var/www/html/wp-content/uploads/ r2-media:tr724-media/wp-content/uploads/ --checksum --fast-list -P
 
 # keep an empty tree so WordPress and nginx still have a directory
 sudo -u www-data find /var/www/html/wp-content/uploads -type f -delete
@@ -434,9 +439,9 @@ After local files are gone, **stop** treating uploads as origin data.
 | Before                                                                                          | After                                                              |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | Nightly `rsync` of `WP_ROOT/wp-content/uploads` → `backups/uploads` | Drop that rsync in `scripts/backup.sh`. Database dumps stay on the locked daily buckets. |
-| Offsite copy of `uploads/` | Do not add one. `news-media` versioning is the media copy. |
+| Offsite copy of `uploads/` | Do not add one. `tr724-media` versioning is the media copy. |
 | Disk alert on uploads | Alert on R2 storage size + Worker 5xx + 404 rate |
-| Restore uploads from a backup remote | Restore from R2 versioning / `rclone copy r2-media:news-media/...` |
+| Restore uploads from a backup remote | Restore from R2 versioning / `rclone copy r2-media:tr724-media/...` |
 
 Do not put uploads in `news-db`. That bucket is append-only database dumps.
 After Step 7, edit `scripts/backup.sh` so it no longer rsyncs local `uploads/`.
@@ -448,7 +453,7 @@ After Step 7, edit `scripts/backup.sh` so it no longer rsyncs local `uploads/`.
 ## Security
 
 - Bucket itself: **private**. The Worker (or the custom domain on the Cloudflare zone) is the only public reader.
-- Token: scoped to `news-media`, not account-wide. Rotate if it ever lands in git.
+- Token: scoped to `tr724-media`, not account-wide. Rotate if it ever lands in git.
 - Worker: GET/HEAD only. Never PUT/DELETE from the public route.
 - Deny `.php` / `.phtml` keys in the Worker (mirror `wordpress-hardening.conf`).
 - Do not offload `wp-content/plugins`, `themes`, or anything executable.
@@ -478,7 +483,7 @@ again.
 After Step 7:
 
 ```bash
-rclone sync r2-media:news-media/wp-content/uploads/ \
+rclone sync r2-media:tr724-media/wp-content/uploads/ \
   /var/www/html/wp-content/uploads/ \
   --checksum --fast-list -P
 sudo chown -R www-data:www-data /var/www/html/wp-content/uploads

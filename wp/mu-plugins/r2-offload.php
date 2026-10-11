@@ -8,7 +8,7 @@
  *   NEWS_R2_ACCOUNT_ID
  *   NEWS_R2_ACCESS_KEY_ID
  *   NEWS_R2_SECRET_ACCESS_KEY
- *   NEWS_R2_BUCKET            e.g. news-media
+ *   NEWS_R2_BUCKET            e.g. tr724-media
  *
  * Local Docker sets NEWS_R2_OFFLOAD=0 (env or constant). That skips every PUT,
  * retry, and admin error even when the four constants above are present.

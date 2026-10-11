@@ -87,15 +87,10 @@ while ( $query->have_posts() ) {
 	$thumb_id  = (int) get_post_thumbnail_id( $post_id );
 	$image     = '';
 	if ( $thumb_id > 0 ) {
-		$image = wp_get_attachment_image(
+		$image = tr724_story_card_image(
 			$thumb_id,
-			'medium_large',
-			false,
-			[
-				'alt'      => '',
-				'loading'  => $index < 2 ? 'eager' : 'lazy',
-				'decoding' => 'async',
-			]
+			'',
+			$index < 2 ? 'eager' : 'lazy'
 		);
 	}
 

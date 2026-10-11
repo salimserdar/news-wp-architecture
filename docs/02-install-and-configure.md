@@ -31,7 +31,7 @@ config/
 wp/mu-plugins/             cache-control.php (TTL headers), cache-purge.php (nginx+Cloudflare purge,
                            warmer, admin-bar button, WP-CLI), perf-tweaks.php,
                            r2-offload.php (new uploads → R2 during the upload request),
-                           media-urls.php (public uploads → https://media.turkishnote.com)
+                           media-urls.php (public uploads → https://media.tr724.com)
 scripts/                   setup-vps.sh, import-db.sh, import-wp-content.sh, post-import.sh,
                            wp.sh, backup.sh
 import/                    (git-ignored) drop DB dumps and wp-content here

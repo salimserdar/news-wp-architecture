@@ -18,7 +18,7 @@
 #   CF_ZONE_ID / CF_API_TOKEN  # optional; enables Cloudflare purge-on-publish
 #   R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_BUCKET
 #                              # optional; immediate upload offload (mu-plugin r2-offload.php)
-#   MEDIA_URL=https://media.turkishnote.com
+#   MEDIA_URL=https://media.tr724.com
 #                              # optional; public uploads origin (mu-plugin media-urls.php)
 #   AGGREGATOR_IP / SYNC_TOKEN / READ_TOKEN
 #                              # optional; copied into /etc/news-wp/aggregator.env

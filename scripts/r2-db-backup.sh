@@ -32,7 +32,7 @@ need_account() {
 
 need_bucket_name() {
   [[ "$BUCKET" =~ ^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$ ]] || die "R2_DB_BUCKET must be a lowercase R2 bucket name"
-  [[ "$BUCKET" != "${R2_BUCKET:-news-media}" ]] || die "R2_DB_BUCKET must be a different bucket from the media bucket (${R2_BUCKET:-news-media})"
+  [[ "$BUCKET" != "${R2_BUCKET:-tr724-media}" ]] || die "R2_DB_BUCKET must be a different bucket from the media bucket (${R2_BUCKET:-tr724-media})"
 }
 
 utc_day() {
