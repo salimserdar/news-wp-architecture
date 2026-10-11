@@ -7,8 +7,7 @@
 
 .post-layout__aside .ads,
 .category-archive .column--aside .ads {
-	width: 196px;
-	max-width: 100%;
+	width: 100%;
 }
 
 .post-layout__aside .ad,

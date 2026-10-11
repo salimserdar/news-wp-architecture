@@ -196,7 +196,7 @@ while ( $query->have_posts() ) {
 	$time_text = sprintf(
 		/* translators: %s: human-readable interval, such as "2 saat". */
 		__( '%s önce', 'tr724-news' ),
-		human_time_diff( $published )
+		tr724_human_time( (int) $published )
 	);
 	$datetime = get_post_time( DATE_W3C, true, $post_id );
 

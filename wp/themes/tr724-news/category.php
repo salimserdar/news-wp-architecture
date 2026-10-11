@@ -63,7 +63,7 @@ $clock_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="1
 								? sprintf(
 									/* translators: %s: human-readable interval, such as "2 saat". */
 									__( '%s önce', 'tr724-news' ),
-									human_time_diff( $published )
+									tr724_human_time( $published )
 								)
 								: '';
 							$datetime = get_post_time( DATE_W3C, true, $post_id );

@@ -46,7 +46,7 @@ if ( ! function_exists( 'tr724_category_render_card' ) ) {
 			$time_text = sprintf(
 				/* translators: %s: human-readable interval, such as "2 gün". */
 				__( '%s önce', 'tr724-news' ),
-				human_time_diff( $published )
+				tr724_human_time( (int) $published )
 			);
 			$time_html = '<time class="card__time" datetime="' . esc_attr( get_post_time( DATE_W3C, true, $post_id ) ) . '">' . esc_html( $time_text ) . '</time>';
 		}

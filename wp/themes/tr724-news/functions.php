@@ -342,6 +342,40 @@ add_filter(
 	}
 );
 
+if ( ! function_exists( 'tr724_human_time' ) ) {
+	/**
+	 * Relative interval in Turkish, such as "35 dakika" or "2 saat".
+	 */
+	function tr724_human_time( int $from, int $to = 0 ): string {
+		if ( $to <= 0 ) {
+			$to = time();
+		}
+
+		$diff  = (int) abs( $to - $from );
+		$steps = [
+			[ YEAR_IN_SECONDS, 'yıl' ],
+			[ MONTH_IN_SECONDS, 'ay' ],
+			[ WEEK_IN_SECONDS, 'hafta' ],
+			[ DAY_IN_SECONDS, 'gün' ],
+			[ HOUR_IN_SECONDS, 'saat' ],
+			[ MINUTE_IN_SECONDS, 'dakika' ],
+		];
+
+		foreach ( $steps as $step ) {
+			if ( $diff < $step[0] ) {
+				continue;
+			}
+			$count = (int) round( $diff / $step[0] );
+			if ( $count < 1 ) {
+				$count = 1;
+			}
+			return $count . ' ' . $step[1];
+		}
+
+		return max( 1, $diff ) . ' saniye';
+	}
+}
+
 if ( ! function_exists( 'tr724_story_card_image' ) ) {
 	/**
 	 * Original attachment file, without a srcset of resized copies.

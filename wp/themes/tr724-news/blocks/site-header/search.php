@@ -111,7 +111,7 @@ function tr724_search_read_result( array $item ): ?array {
 			$time     = sprintf(
 				/* translators: %s: human-readable interval, such as "2 saat". */
 				__( '%s önce', 'tr724-news' ),
-				human_time_diff( $published )
+				tr724_human_time( (int) $published )
 			);
 			$datetime = gmdate( 'c', $published );
 		}
