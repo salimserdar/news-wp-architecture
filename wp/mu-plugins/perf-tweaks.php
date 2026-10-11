@@ -71,7 +71,7 @@ add_filter( 'max_srcset_image_width', fn() => 1600 );
 add_filter( 'big_image_size_threshold', fn() => 2560 );
 
 // WebP for JPEG sub-sizes an administrator uploads (core feature, opt-in since 6.1).
-// single-image.php stores every other upload as one 640×360 WebP and skips these sizes.
+// single-image.php stores every other upload as one 1280×720 WebP and skips these sizes.
 add_filter( 'image_editor_output_format', function ( array $formats ): array {
 	$formats['image/jpeg'] = 'image/webp';
 	return $formats;

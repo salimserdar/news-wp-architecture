@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: News Single Image
- * Description: Non-administrators must upload a 16:9 JPEG, PNG, or WebP of at least 640×360. It is stored once, as a 640×360 WebP. Administrators keep the normal sizes.
+ * Description: Non-administrators must upload a 16:9 JPEG, PNG, or WebP of at least 1280×720. It is stored once, as a 1280×720 WebP. Administrators keep the normal sizes.
  * Version:     1.0.0
  */
 
@@ -9,14 +9,14 @@ namespace News\SingleImage;
 
 defined( 'ABSPATH' ) || exit;
 
-const WIDTH      = 640;
-const HEIGHT     = 360;
+const WIDTH      = 1280;
+const HEIGHT     = 720;
 const RATIO_SLACK = 0.02;
 const META_KEY   = '_news_single_image';
 const MSG_TYPE   = 'Görsel JPEG, PNG veya WebP olmalı.';
 const MSG_RATIO  = 'Görsel 16:9 olmalı.';
-const MSG_SIZE   = 'Görsel en az 640×360 olmalı.';
-const MSG_SAVE   = 'Görsel 640×360 WebP olarak kaydedilemedi.';
+const MSG_SIZE   = 'Görsel en az 1280×720 olmalı.';
+const MSG_SAVE   = 'Görsel 1280×720 WebP olarak kaydedilemedi.';
 
 add_filter( 'wp_handle_upload_prefilter', __NAMESPACE__ . '\reject_wrong_picture' );
 add_filter( 'wp_handle_upload', __NAMESPACE__ . '\store_single_webp' );
@@ -54,7 +54,7 @@ function reject_wrong_picture( array $file ): array {
 }
 
 /**
- * Replace an accepted upload with one 640×360 WebP and drop the file the editor sent.
+ * Replace an accepted upload with one 1280×720 WebP and drop the file the editor sent.
  *
  * @param array<string,mixed> $upload
  * @return array<string,mixed>
@@ -200,6 +200,7 @@ function write_single_webp( string $path ): string|\WP_Error {
 	if ( $write === $path || is_file( $write ) ) {
 		$write = $dir . '/' . wp_unique_filename( $dir, $stem . '-single.webp' );
 	}
+	$editor->set_quality( 90 );
 	$saved = $editor->save( $write, 'image/webp' );
 	if ( is_wp_error( $saved ) || empty( $saved['path'] ) || ! is_string( $saved['path'] ) ) {
 		if ( is_file( $write ) && $write !== $path ) {
