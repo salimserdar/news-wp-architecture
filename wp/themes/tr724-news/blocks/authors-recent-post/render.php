@@ -122,40 +122,9 @@ while ( $query->have_posts() ) {
 		$name = get_the_author_meta( 'user_login', $author_id );
 	}
 
-	$attachment_id = (int) get_user_meta( $author_id, 'wp_user_avatar', true );
-	if ( $attachment_id <= 0 ) {
-		$attachment_id = (int) get_user_meta( $author_id, 'yazar_photo', true );
-	}
-
-	$avatar = '';
-	if ( $attachment_id > 0 ) {
-		$avatar = wp_get_attachment_image(
-			$attachment_id,
-			'thumbnail',
-			false,
-			[
-				'alt'      => '',
-				'loading'  => 'lazy',
-				'decoding' => 'async',
-			]
-		);
-	}
-	if ( '' === $avatar ) {
-		$avatar = get_avatar(
-			$author_id,
-			96,
-			'',
-			'',
-			[
-				'loading'  => 'lazy',
-				'decoding' => 'async',
-			]
-		);
-	}
-
 	echo '<li>';
 	echo '<a class="author" href="' . esc_url( get_permalink( $post_id ) ) . '">';
-	echo '<span class="author__avatar">' . $avatar . '</span>';
+	echo '<span class="author__avatar">' . tr724_yazarlar_avatar( $author_id ) . '</span>';
 	echo '<span class="author__copy">';
 	echo '<span class="author__name">' . esc_html( $name ) . '</span>';
 	echo '<span class="author__title">' . esc_html( get_the_title( $post_id ) ) . '</span>';
