@@ -378,6 +378,65 @@
 	text-align: left;
 }
 
+/* Classic editor galleries. Full-size originals have no intermediate file, so the img width attribute would otherwise spill past the article column. */
+.post__text .gallery {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	width: 100%;
+	max-width: 100%;
+	margin: 4px 0 20px;
+}
+
+.post__text .gallery-columns-1 {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.post__text .gallery-columns-2 {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.post__text .gallery-columns-3 {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.post__text .gallery-columns-4 {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.post__text .gallery-columns-5,
+.post__text .gallery-columns-6,
+.post__text .gallery-columns-7,
+.post__text .gallery-columns-8,
+.post__text .gallery-columns-9 {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.post__text .gallery > br {
+	display: none;
+}
+
+.post__text .gallery-item,
+.post__text .gallery-icon,
+.post__text .gallery-caption {
+	float: none;
+	width: auto;
+	max-width: 100%;
+	min-width: 0;
+	margin: 0;
+}
+
+.post__text .gallery-item a {
+	display: block;
+}
+
+.post__text .gallery-item img {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	height: auto;
+}
+
 .post__tags {
 	display: flex;
 	flex-wrap: wrap;
@@ -804,6 +863,10 @@
 
 	.post__text p {
 		text-align: left;
+	}
+
+	.post__text .gallery:not(.gallery-columns-1) {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
 	.post__follow-link {
