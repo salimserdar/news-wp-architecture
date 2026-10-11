@@ -437,6 +437,57 @@
 	height: auto;
 }
 
+/* Classic captions keep an inline pixel width from the old editor. max-width clamps that to the article column. */
+.post__text::after {
+	content: "";
+	display: block;
+	clear: both;
+}
+
+.post__text .wp-caption {
+	max-width: 100%;
+	height: auto;
+	margin: 0 0 16px;
+}
+
+.post__text .wp-caption.aligncenter,
+.post__text img.aligncenter {
+	display: block;
+	margin-right: auto;
+	margin-left: auto;
+}
+
+.post__text .wp-caption.alignleft,
+.post__text img.alignleft {
+	float: left;
+	margin: 4px 16px 8px 0;
+}
+
+.post__text .wp-caption.alignright,
+.post__text img.alignright {
+	float: right;
+	margin: 4px 0 8px 16px;
+}
+
+.post__text .wp-caption img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+.post__text p > img,
+.post__text p > a > img {
+	max-width: 100%;
+	height: auto;
+}
+
+.post__text .wp-caption-text {
+	margin: 8px 0 0;
+	color: #8a8a8a;
+	font-size: 13px;
+	line-height: 1.4;
+}
+
 .post__tags {
 	display: flex;
 	flex-wrap: wrap;
