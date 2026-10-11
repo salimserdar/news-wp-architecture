@@ -51,6 +51,14 @@
 	background: var(--color-text);
 }
 
+.news-slide:hover,
+.news-slide:focus,
+.news-slide:active,
+.news-slide:visited {
+	color: #fff;
+	text-decoration: none;
+}
+
 .news-slide img {
 	position: absolute;
 	inset: 0;
@@ -88,6 +96,14 @@
 	font-size: 26px;
 	font-weight: 800;
 	line-height: 1.2;
+	color: #fff;
+}
+
+.news-slide:hover .news-slide__title,
+.news-slide:focus .news-slide__title,
+.news-slide:active .news-slide__title,
+.news-slide:visited .news-slide__title {
+	color: #fff;
 }
 
 .news-swiper__nav {
