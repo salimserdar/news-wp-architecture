@@ -132,44 +132,6 @@ if ( ! function_exists( 'tr724_single_gallery_images' ) ) {
 	}
 }
 
-if ( ! function_exists( 'tr724_single_author_avatar' ) ) {
-	function tr724_single_author_avatar( int $author_id ): string {
-		$attachment_id = (int) get_user_meta( $author_id, 'wp_user_avatar', true );
-		if ( $attachment_id <= 0 ) {
-			$attachment_id = (int) get_user_meta( $author_id, 'yazar_photo', true );
-		}
-
-		$avatar = '';
-		if ( $attachment_id > 0 ) {
-			$avatar = wp_get_attachment_image(
-				$attachment_id,
-				'thumbnail',
-				false,
-				[
-					'class'    => 'post__avatar',
-					'alt'      => '',
-					'loading'  => 'lazy',
-					'decoding' => 'async',
-				]
-			);
-		}
-		if ( '' === $avatar ) {
-			$avatar = get_avatar(
-				$author_id,
-				96,
-				'',
-				'',
-				[
-					'class'    => 'post__avatar',
-					'loading'  => 'lazy',
-					'decoding' => 'async',
-				]
-			);
-		}
-		return $avatar;
-	}
-}
-
 if ( ! function_exists( 'tr724_single_is_columnist' ) ) {
 	/**
 	 * Columnist posts are written by the Author or Archive Author role.
@@ -365,7 +327,14 @@ if ( have_posts() ) {
 						</p>
 					<?php endif; ?>
 					<div class="post__author">
-						<?php echo tr724_single_author_avatar( $author_id ); ?>
+						<?php
+						echo tr724_yazarlar_avatar(
+							$author_id,
+							[
+								'class' => 'post__avatar',
+							]
+						);
+						?>
 						<span class="post__author-copy">
 							<a class="post__author-name" href="<?php echo esc_url( get_author_posts_url( $author_id ) ); ?>"><?php echo esc_html( tr724_single_upper( $author ) ); ?></a>
 							<?php if ( $published ) : ?>
