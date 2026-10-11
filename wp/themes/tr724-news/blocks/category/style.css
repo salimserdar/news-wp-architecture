@@ -164,6 +164,7 @@
 .category .ads__sticky {
 	position: sticky;
 	top: 129px;
+	isolation: isolate;
 }
 
 .category .ad {

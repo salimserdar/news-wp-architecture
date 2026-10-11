@@ -30,6 +30,11 @@
 	height: auto;
 }
 
+.post-layout__aside .ads__sticky,
+.category-archive .column--aside .ads__sticky {
+	isolation: isolate;
+}
+
 .post-layout__aside .ads__unit,
 .category-archive .column--aside .ads__unit {
 	display: flex;

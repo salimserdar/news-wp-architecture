@@ -500,6 +500,21 @@
 	display: none;
 }
 
+/* Side-rail and in-page AdSense units use a stacking context above the
+   drawer. Lift the header while the menu is open, and keep those units under it. */
+html.tr724-drawer-open .tr724-site-header {
+	position: relative;
+	z-index: 1000;
+}
+
+html.tr724-drawer-open ins.adsbygoogle,
+html.tr724-drawer-open .google-auto-placed,
+html.tr724-drawer-open .adsbygoogle-noablate,
+html.tr724-drawer-open iframe[id^="aswift_"],
+html.tr724-drawer-open [id^="google_ads_iframe"] {
+	z-index: 1 !important;
+}
+
 .drawer__backdrop {
 	position: fixed;
 	top: var(--header-height);
@@ -646,15 +661,6 @@
 .drawer__nav .wp-block-navigation .wp-block-navigation-item.current-menu-item > .wp-block-navigation-item__content,
 .drawer__nav .wp-block-navigation .wp-block-navigation-item__content[aria-current="page"] {
 	color: var(--color-accent);
-}
-
-.drawer__nav .site-nav__patron {
-	padding: 8px 28px 4px;
-}
-
-.drawer__nav .site-nav__patron-link {
-	padding: 11px 16px;
-	font-size: 14px;
 }
 
 .drawer__footer {

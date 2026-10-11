@@ -26,6 +26,56 @@
 		var controller = null;
 		var reduceMotion = window.matchMedia( "(prefers-reduced-motion: reduce)" ).matches;
 		var drawerOpen = false;
+		var buriedAds = [];
+
+		function buryGoogleAds( open ) {
+			var index;
+
+			if ( ! open ) {
+				for ( index = 0; index < buriedAds.length; index++ ) {
+					if ( buriedAds[ index ].priority ) {
+						buriedAds[ index ].el.style.setProperty( "z-index", buriedAds[ index ].value, buriedAds[ index ].priority );
+					} else if ( buriedAds[ index ].value ) {
+						buriedAds[ index ].el.style.setProperty( "z-index", buriedAds[ index ].value );
+					} else {
+						buriedAds[ index ].el.style.removeProperty( "z-index" );
+					}
+				}
+				buriedAds = [];
+				document.documentElement.classList.remove( "tr724-drawer-open" );
+				return;
+			}
+
+			document.documentElement.classList.add( "tr724-drawer-open" );
+
+			var nodes = document.querySelectorAll(
+				"ins.adsbygoogle, .google-auto-placed, .adsbygoogle-noablate, iframe[id^='aswift_'], iframe[name^='google_ads_iframe'], [id^='google_ads_iframe'], [id^='aswift_']"
+			);
+			nodes.forEach( function ( node ) {
+				var current = node;
+				while ( current && current !== document.body ) {
+					if ( current.closest( ".tr724-site-header" ) ) return;
+					var style = window.getComputedStyle( current );
+					var zIndex = parseInt( style.zIndex, 10 );
+					var overlay = style.position === "fixed" || style.position === "sticky" || ( ! isNaN( zIndex ) && zIndex > 20 );
+					if ( overlay ) {
+						var seen = false;
+						for ( index = 0; index < buriedAds.length; index++ ) {
+							if ( buriedAds[ index ].el === current ) seen = true;
+						}
+						if ( ! seen ) {
+							buriedAds.push( {
+								el: current,
+								value: current.style.getPropertyValue( "z-index" ),
+								priority: current.style.getPropertyPriority( "z-index" ),
+							} );
+							current.style.setProperty( "z-index", "1", "important" );
+						}
+					}
+					current = current.parentElement;
+				}
+			} );
+		}
 
 		function currentSort() {
 			return sort && sort.value === "date:asc" ? "date:asc" : "date:desc";
@@ -265,6 +315,7 @@
 
 		function setDrawer( open ) {
 			drawerOpen = open;
+			buryGoogleAds( open );
 			if ( open && ! modal.hidden ) {
 				modal.hidden = true;
 			}
@@ -311,6 +362,7 @@
 				drawer.classList.remove( "is-open" );
 				drawer.hidden = true;
 				drawerOpen = false;
+				buryGoogleAds( false );
 				menuButton.setAttribute( "aria-expanded", "false" );
 				menuButton.setAttribute( "aria-label", "Menü" );
 			}

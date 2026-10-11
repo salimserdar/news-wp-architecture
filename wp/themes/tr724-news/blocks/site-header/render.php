@@ -141,8 +141,7 @@ $append_patron = static function ( string $html, string $item ): string {
 	return $html;
 };
 
-$nav_strip  = $append_patron( $nav_strip, $patron_item );
-$nav_drawer = $append_patron( $nav_drawer, $patron_item );
+$nav_strip = $append_patron( $nav_strip, $patron_item );
 
 $wrapper = get_block_wrapper_attributes(
 	[
@@ -247,7 +246,7 @@ $wrapper = get_block_wrapper_attributes(
 		</div>
 	</div>
 
-	<div class="drawer" id="<?php echo esc_attr( $drawer_id ); ?>" hidden>
+	<div class="drawer" id="<?php echo esc_attr( $drawer_id ); ?>" hidden google-side-rail-overlap="false">
 		<div class="drawer__backdrop" data-drawer-close></div>
 		<div class="drawer__panel" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Menü', 'tr724-news' ); ?>">
 			<div class="drawer__scroll">
