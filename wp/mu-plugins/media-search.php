@@ -235,6 +235,7 @@ function search( string $search, int $page, int $limit ): ?array {
 				'q'     => $search,
 				'page'  => $page,
 				'limit' => $limit,
+				'sort'  => 'date:desc',
 			],
 			service_base_url() . '/api/v1/search/media'
 		),
