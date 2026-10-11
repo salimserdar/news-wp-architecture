@@ -41,6 +41,14 @@
 	background: var(--color-text);
 }
 
+.category-carousel__slide:hover,
+.category-carousel__slide:focus,
+.category-carousel__slide:active,
+.category-carousel__slide:visited {
+	color: #fff;
+	text-decoration: none;
+}
+
 .category-carousel__slide img {
 	position: absolute;
 	inset: 0;
@@ -78,6 +86,14 @@
 	font-size: 26px;
 	font-weight: 800;
 	line-height: 1.2;
+	color: #fff;
+}
+
+.category-carousel__slide:hover .category-carousel__title,
+.category-carousel__slide:focus .category-carousel__title,
+.category-carousel__slide:active .category-carousel__title,
+.category-carousel__slide:visited .category-carousel__title {
+	color: #fff;
 }
 
 .category-carousel__nav {
