@@ -2,9 +2,10 @@
 /**
  * Plugin Name: News Media Search
  * Description: Replaces attachment text search with GET /api/v1/search/media. Core search stays when the service is unreachable or the query has author, parent, date, or non-image constraints.
- * Version:     1.0.1
+ * Version:     1.0.2
  *
  * VPS calls loopback /api/v1/search/media with no bearer token. Docker uses SITE_AGGREGATOR_SERVICE_URL.
+ * Generated sizes were removed from disk. Search previews use the original file.
  */
 
 namespace News\MediaSearch;
@@ -13,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 add_action( 'pre_get_posts', __NAMESPACE__ . '\handle_query', 20 );
 add_filter( 'found_posts', __NAMESPACE__ . '\filter_found_posts', 20, 2 );
+add_filter( 'image_downsize', __NAMESPACE__ . '\downsize_original', 10, 3 );
 add_action( 'wp_enqueue_media', __NAMESPACE__ . '\enqueue_order_script' );
 
 /**
@@ -22,8 +24,8 @@ function enqueue_order_script(): void {
 	wp_enqueue_script(
 		'news-media-search',
 		plugins_url( 'media-search-order.js', __FILE__ ),
-		[ 'media-models' ],
-		'1.0.1',
+		[ 'media-views' ],
+		'1.0.2',
 		true
 	);
 }
@@ -69,6 +71,66 @@ function filter_found_posts( $found, \WP_Query $query ): int {
 		return (int) $query->news_media_search_found_posts;
 	}
 	return (int) $found;
+}
+
+/**
+ * List view asks for a 60×60 match and receives a deleted generated file.
+ * Point that lookup at the original. Named sizes stay unchanged.
+ *
+ * @param mixed        $downsize Existing result.
+ * @param int          $id       Attachment ID.
+ * @param string|int[] $size     Requested size.
+ * @return mixed
+ */
+function downsize_original( mixed $downsize, int $id, mixed $size ): mixed {
+	if ( false !== $downsize || ! is_array( $size ) || ! library_search_screen() ) {
+		return $downsize;
+	}
+	if ( $id < 1 || ! wp_attachment_is_image( $id ) ) {
+		return $downsize;
+	}
+
+	$url = wp_get_attachment_url( $id );
+	if ( ! is_string( $url ) || '' === $url ) {
+		return $downsize;
+	}
+
+	$meta   = wp_get_attachment_metadata( $id );
+	$width  = 0;
+	$height = 0;
+	if ( is_array( $meta ) ) {
+		$width  = (int) ( $meta['width'] ?? 0 );
+		$height = (int) ( $meta['height'] ?? 0 );
+	}
+
+	return [ $url, $width, $height, false ];
+}
+
+/**
+ * Upload screen whose attachment query is a text search.
+ */
+function library_search_screen(): bool {
+	if ( ! is_admin() ) {
+		return false;
+	}
+	global $wp_query;
+	if ( ! $wp_query instanceof \WP_Query ) {
+		return false;
+	}
+	if ( isset( $wp_query->news_media_search_found_posts ) ) {
+		return true;
+	}
+
+	$search = $wp_query->get( 's' );
+	if ( ! is_string( $search ) || '' === trim( $search ) ) {
+		return false;
+	}
+
+	$post_type = $wp_query->get( 'post_type' );
+	if ( is_array( $post_type ) ) {
+		return in_array( 'attachment', $post_type, true );
+	}
+	return 'attachment' === $post_type;
 }
 
 function should_handle( \WP_Query $query ): bool {
