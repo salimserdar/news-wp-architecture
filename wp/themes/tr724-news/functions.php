@@ -440,9 +440,66 @@ if ( ! function_exists( 'tr724_archive_upper' ) ) {
 	}
 }
 
+/**
+ * Category and tag archives stop here. Author archives stop here only when
+ * the queried user has the editor role. Page 21 is a 404 in pre_get_posts
+ * and, except for /author/, a 410 at nginx.
+ */
+const TR724_ARCHIVE_MAX_PAGE = 20;
+
+if ( ! function_exists( 'tr724_user_is_editor' ) ) {
+	function tr724_user_is_editor( WP_User $user ): bool {
+		return in_array( 'editor', (array) $user->roles, true );
+	}
+}
+
+if ( ! function_exists( 'tr724_query_author_is_editor' ) ) {
+	function tr724_query_author_is_editor( WP_Query $query ): bool {
+		$object = $query->get_queried_object();
+		if ( $object instanceof WP_User ) {
+			return tr724_user_is_editor( $object );
+		}
+
+		$author_id = (int) $query->get( 'author' );
+		if ( $author_id <= 0 ) {
+			$slug = $query->get( 'author_name' );
+			if ( is_string( $slug ) && '' !== $slug ) {
+				$user = get_user_by( 'slug', $slug );
+				if ( $user instanceof WP_User ) {
+					$author_id = (int) $user->ID;
+				}
+			}
+		}
+		if ( $author_id <= 0 ) {
+			return false;
+		}
+
+		$user = get_userdata( $author_id );
+		return $user instanceof WP_User && tr724_user_is_editor( $user );
+	}
+}
+
+if ( ! function_exists( 'tr724_archive_page_cap_applies' ) ) {
+	/**
+	 * Category, tag, and editor-role author archives. Other authors paginate fully.
+	 */
+	function tr724_archive_page_cap_applies(): bool {
+		if ( is_category() || is_tag() ) {
+			return true;
+		}
+		if ( ! is_author() ) {
+			return false;
+		}
+
+		$author = get_queried_object();
+		return $author instanceof WP_User && tr724_user_is_editor( $author );
+	}
+}
+
 if ( ! function_exists( 'tr724_archive_pages' ) ) {
 	/**
 	 * Page numbers to show, with gaps when the archive is long.
+	 * The caller decides whether $total is already capped.
 	 *
 	 * @return array<int, int|string>
 	 */
@@ -478,6 +535,9 @@ if ( ! function_exists( 'tr724_archive_pagination' ) ) {
 		global $wp_query;
 
 		$total = isset( $wp_query->max_num_pages ) ? (int) $wp_query->max_num_pages : 0;
+		if ( tr724_archive_page_cap_applies() ) {
+			$total = min( $total, TR724_ARCHIVE_MAX_PAGE );
+		}
 		if ( $total < 2 ) {
 			return;
 		}
@@ -543,11 +603,38 @@ add_action( 'pre_get_posts', function ( WP_Query $query ): void {
 	if ( is_admin() || ! $query->is_main_query() ) {
 		return;
 	}
-	if ( ! $query->is_category() && ! $query->is_tag() && ! $query->is_author() ) {
+	$is_term_archive = $query->is_category() || $query->is_tag();
+	$is_editor_author = $query->is_author() && tr724_query_author_is_editor( $query );
+	if ( ! $is_term_archive && ! $query->is_author() ) {
 		return;
 	}
+	if ( $query->is_author() && ! $is_editor_author ) {
+		$query->set( 'posts_per_page', 10 );
+		return;
+	}
+
+	$paged = (int) $query->get( 'paged' );
+	if ( $paged > TR724_ARCHIVE_MAX_PAGE ) {
+		$query->set( 'no_found_rows', true );
+		$query->set( 'tr724_archive_over_cap', 1 );
+		$query->set_404();
+		status_header( 404 );
+		nocache_headers();
+		return;
+	}
+
 	$query->set( 'posts_per_page', 10 );
 } );
+
+add_filter( 'posts_pre_query', static function ( $posts, WP_Query $query ) {
+	if ( ! $query->get( 'tr724_archive_over_cap' ) ) {
+		return $posts;
+	}
+
+	$query->found_posts   = 0;
+	$query->max_num_pages = 0;
+	return [];
+}, 10, 2 );
 
 add_action( 'wp_enqueue_scripts', function (): void {
 	$path = get_stylesheet_directory() . '/style.css';

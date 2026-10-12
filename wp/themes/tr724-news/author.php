@@ -34,8 +34,9 @@ $months = [
 	12 => 'ARALIK',
 ];
 
-$watermark = __( 'YAZAR', 'tr724-news' );
-$heading   = __( 'YAZAR PROFİL', 'tr724-news' );
+$is_editor = $author instanceof WP_User && tr724_user_is_editor( $author );
+$watermark = $is_editor ? __( 'EDİTÖR', 'tr724-news' ) : __( 'YAZAR', 'tr724-news' );
+$heading   = $is_editor ? __( 'EDİTÖR PROFİL', 'tr724-news' ) : __( 'YAZAR PROFİL', 'tr724-news' );
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
