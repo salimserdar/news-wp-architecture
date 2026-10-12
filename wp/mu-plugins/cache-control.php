@@ -7,6 +7,14 @@
  * nginx defaults to 10 min for 200/301/302 (config/nginx/snippets/fastcgi-cache.conf).
  * X-Accel-Expires overrides that per response: nginx honours it and strips it.
  * Cache-Control is passed through to Cloudflare (Cache Rules may override Edge TTL).
+ *
+ * Search HTML and redirects are not stored at the edge. nginx's cache key includes
+ * the query string, so a 10s search microcache cannot replace `/`. A Cloudflare
+ * cache key that drops the query string can: `/?s=` HTML or a `/?p=` 302 to
+ * media.tr724.com is then served for the homepage until s-maxage expires.
+ * template_redirect priority 0 runs before redirect_canonical, so a 302 was
+ * inheriting the page TTL. Same-host redirects (apex ↔ www, trailing slash)
+ * stay in the nginx cache. Off-site targets are not cached anywhere.
  */
 
 namespace News\CacheControl;
@@ -20,16 +28,52 @@ const TTL_REST   = 10;
 const TTL_404    = 60;
 
 /**
+ * Tell Cloudflare not to store this response. nginx ignores Cache-Control.
+ *
+ * @param bool $replace overwrite headers template_redirect already sent
+ */
+function bypass_edge( bool $replace = false ): void {
+	if ( headers_sent() ) {
+		return;
+	}
+	header( 'Cache-Control: private, no-store', $replace );
+	header( 'CDN-Cache-Control: no-store', $replace );
+}
+
+/**
+ * Apex and www are the same site. A missing host is a relative Location.
+ */
+function is_offsite_location( string $location ): bool {
+	$host = wp_parse_url( $location, PHP_URL_HOST );
+	if ( ! is_string( $host ) || '' === $host ) {
+		return false;
+	}
+	$home = wp_parse_url( home_url(), PHP_URL_HOST );
+	if ( ! is_string( $home ) || '' === $home ) {
+		return true;
+	}
+	$host = strtolower( $host );
+	$bare = strtolower( $home );
+	if ( str_starts_with( $bare, 'www.' ) ) {
+		$bare = substr( $bare, 4 );
+	}
+	return $host !== $bare && $host !== 'www.' . $bare;
+}
+
+/**
  * @param int $nginx_ttl  seconds for the nginx FastCGI cache (0 = do not cache)
- * @param int $edge_ttl   seconds for Cloudflare's s-maxage
+ * @param int $edge_ttl   seconds for Cloudflare's s-maxage (0 = do not store at the edge)
  */
 function send( int $nginx_ttl, int $edge_ttl ): void {
 	if ( headers_sent() ) {
 		return;
 	}
 	header( 'X-Accel-Expires: ' . $nginx_ttl );
-	if ( $nginx_ttl === 0 ) {
-		nocache_headers();
+	if ( $edge_ttl === 0 ) {
+		bypass_edge();
+		if ( $nginx_ttl === 0 ) {
+			nocache_headers();
+		}
 		return;
 	}
 	// max-age=0: browsers always revalidate with the edge (a stale page in a
@@ -51,7 +95,7 @@ add_action( 'template_redirect', function (): void {
 		return;
 	}
 	if ( is_search() ) {
-		send( TTL_SEARCH, TTL_SEARCH );
+		send( TTL_SEARCH, 0 );
 		return;
 	}
 	if ( is_feed() ) {
@@ -64,6 +108,25 @@ add_action( 'template_redirect', function (): void {
 	}
 	send( TTL_PAGE, 120 );
 }, 0 );
+
+// redirect_canonical (priority 10) runs after the headers above, so a 302 was
+// cached with the page TTL. Drop it from the edge. Off-site targets (media
+// files) are not stored in nginx either.
+add_filter(
+	'wp_redirect',
+	static function ( $location, $status ) {
+		if ( headers_sent() || ! is_string( $location ) || (int) $status < 300 || (int) $status > 399 ) {
+			return $location;
+		}
+		bypass_edge( true );
+		if ( is_offsite_location( $location ) ) {
+			header( 'X-Accel-Expires: 0', true );
+		}
+		return $location;
+	},
+	0,
+	2
+);
 
 // REST API: anonymous GETs are cacheable for a few seconds (tickers, "most
 // read", live-blog polling). Anything authenticated carries the login cookie
