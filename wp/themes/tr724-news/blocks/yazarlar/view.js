@@ -9,24 +9,22 @@
 		if ( ! root || root.dataset.tr724Ready === "1" ) return;
 		if ( ! root.classList.contains( "yazarlar--collapse" ) ) return;
 
-		var button = root.querySelector( ".writers__toggle" );
-		var label = root.querySelector( ".writers__toggle-text" );
+		var title = root.querySelector( ".writers__title" );
 		var grid = root.querySelector( ".writers__grid" );
-		if ( ! button || ! label || ! grid ) return;
+		if ( ! title || ! grid ) return;
 
 		root.dataset.tr724Ready = "1";
+		title.tabIndex = 0;
+		title.setAttribute( "role", "button" );
+		if ( grid.id ) title.setAttribute( "aria-controls", grid.id );
 
-		var more = root.dataset.labelMore || label.textContent;
-		var less = root.dataset.labelLess || "";
 		var collapsed = root.classList.contains( "is-collapsed" );
 
 		function apply( scroll ) {
 			if ( ! root.isConnected ) return;
 
 			root.classList.toggle( "is-collapsed", collapsed );
-			button.hidden = false;
-			button.setAttribute( "aria-expanded", collapsed ? "false" : "true" );
-			label.textContent = collapsed ? more : less;
+			title.setAttribute( "aria-expanded", collapsed ? "false" : "true" );
 
 			if ( scroll && collapsed ) {
 				var clearance = headerClearance();
@@ -41,10 +39,16 @@
 			}
 		}
 
-		button.addEventListener( "click", function ( event ) {
+		function toggle( event ) {
 			event.preventDefault();
 			collapsed = ! collapsed;
 			apply( true );
+		}
+
+		title.addEventListener( "click", toggle );
+		title.addEventListener( "keydown", function ( event ) {
+			if ( event.key !== "Enter" && event.key !== " " ) return;
+			toggle( event );
 		} );
 
 		apply( false );

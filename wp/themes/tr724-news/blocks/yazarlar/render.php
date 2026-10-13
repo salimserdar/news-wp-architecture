@@ -36,12 +36,6 @@ $collapse     = ! empty( $attributes['collapseInitially'] ) && $author_count > 0
 $block_id     = $collapse ? wp_unique_id( 'yazarlar-' ) : '';
 $grid_id      = $collapse ? $block_id . '-grid' : '';
 $title_id     = wp_unique_id( 'yazarlar-title-' );
-$more_label   = sprintf(
-	/* translators: %s: number of authors in the archive. */
-	__( 'Arşivdeki %s yazarı görmek için tıklayın.', 'tr724-news' ),
-	number_format_i18n( $author_count )
-);
-$less_label   = __( 'Yazarları gizle', 'tr724-news' );
 
 $wrapper = [
 	'class'           => 'yazarlar' . ( $collapse ? ' yazarlar--collapse is-collapsed' : '' ),
@@ -50,15 +44,13 @@ $wrapper = [
 ];
 
 if ( $collapse ) {
-	$wrapper['id']              = $block_id;
-	$wrapper['data-label-more'] = $more_label;
-	$wrapper['data-label-less'] = $less_label;
+	$wrapper['id'] = $block_id;
 }
 
 echo '<div ' . get_block_wrapper_attributes( $wrapper ) . '>';
 
 if ( $collapse ) {
-	echo '<noscript><style>.yazarlar.is-collapsed .writers__grid{display:grid !important}.yazarlar.is-collapsed .writers__toggle{display:none !important}</style></noscript>';
+	echo '<noscript><style>.yazarlar.is-collapsed .writers__grid{display:grid !important}</style></noscript>';
 }
 
 echo '<h2 class="section-title writers__title" id="' . esc_attr( $title_id ) . '">' . esc_html( $section ) . '</h2>';
@@ -90,12 +82,5 @@ foreach ( $authors as $author ) {
 	echo '</div></article>';
 }
 echo '</div>';
-
-if ( $collapse ) {
-	echo '<button class="writers__toggle" type="button" aria-expanded="false" aria-controls="' . esc_attr( $grid_id ) . '">';
-	echo '<span class="writers__toggle-text">' . esc_html( $more_label ) . '</span>';
-	echo '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>';
-	echo '</button>';
-}
 
 echo '</div>';

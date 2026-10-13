@@ -67,7 +67,7 @@
 						} ),
 						el( ToggleControl, {
 							label: __( "Start collapsed", "tr724-news" ),
-							help: __( "Hide every author until a visitor opens the list. The button states how many authors are in the archive. Off shows every author.", "tr724-news" ),
+							help: __( "Hide every author until a visitor clicks the section title. Off shows every author.", "tr724-news" ),
 							checked: collapse,
 							onChange: function ( value ) {
 								props.setAttributes( { collapseInitially: !! value } );

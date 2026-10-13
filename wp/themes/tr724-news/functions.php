@@ -441,9 +441,9 @@ if ( ! function_exists( 'tr724_archive_upper' ) ) {
 }
 
 /**
- * Category and tag archives stop here. Author archives stop here only when
- * the queried user has the editor role. Page 21 is a 404 in pre_get_posts
- * and, except for /author/, a 410 at nginx.
+ * Category and tag archives stop here. Editor author archives stop here too.
+ * The author and archive_author roles paginate fully. Page 21 is a 404 in
+ * pre_get_posts and, except for those author URLs, a 410 at nginx.
  */
 const TR724_ARCHIVE_MAX_PAGE = 20;
 
@@ -453,11 +453,20 @@ if ( ! function_exists( 'tr724_user_is_editor' ) ) {
 	}
 }
 
-if ( ! function_exists( 'tr724_query_author_is_editor' ) ) {
-	function tr724_query_author_is_editor( WP_Query $query ): bool {
+if ( ! function_exists( 'tr724_user_skips_archive_page_cap' ) ) {
+	/**
+	 * Columnist archives keep every page. archive_author is exempt with author.
+	 */
+	function tr724_user_skips_archive_page_cap( WP_User $user ): bool {
+		return (bool) array_intersect( (array) $user->roles, [ 'author', 'archive_author' ] );
+	}
+}
+
+if ( ! function_exists( 'tr724_query_author_user' ) ) {
+	function tr724_query_author_user( WP_Query $query ): ?WP_User {
 		$object = $query->get_queried_object();
 		if ( $object instanceof WP_User ) {
-			return tr724_user_is_editor( $object );
+			return $object;
 		}
 
 		$author_id = (int) $query->get( 'author' );
@@ -465,23 +474,32 @@ if ( ! function_exists( 'tr724_query_author_is_editor' ) ) {
 			$slug = $query->get( 'author_name' );
 			if ( is_string( $slug ) && '' !== $slug ) {
 				$user = get_user_by( 'slug', $slug );
-				if ( $user instanceof WP_User ) {
-					$author_id = (int) $user->ID;
-				}
+				return $user instanceof WP_User ? $user : null;
 			}
-		}
-		if ( $author_id <= 0 ) {
-			return false;
+			return null;
 		}
 
 		$user = get_userdata( $author_id );
-		return $user instanceof WP_User && tr724_user_is_editor( $user );
+		return $user instanceof WP_User ? $user : null;
+	}
+}
+
+if ( ! function_exists( 'tr724_author_archive_is_capped' ) ) {
+	/**
+	 * Editor archives stop at 20 pages. author and archive_author never do,
+	 * even when one of those roles is combined with editor.
+	 */
+	function tr724_author_archive_is_capped( WP_User $user ): bool {
+		if ( tr724_user_skips_archive_page_cap( $user ) ) {
+			return false;
+		}
+		return tr724_user_is_editor( $user );
 	}
 }
 
 if ( ! function_exists( 'tr724_archive_page_cap_applies' ) ) {
 	/**
-	 * Category, tag, and editor-role author archives. Other authors paginate fully.
+	 * Category, tag, and editor author archives. author and archive_author paginate fully.
 	 */
 	function tr724_archive_page_cap_applies(): bool {
 		if ( is_category() || is_tag() ) {
@@ -492,7 +510,7 @@ if ( ! function_exists( 'tr724_archive_page_cap_applies' ) ) {
 		}
 
 		$author = get_queried_object();
-		return $author instanceof WP_User && tr724_user_is_editor( $author );
+		return $author instanceof WP_User && tr724_author_archive_is_capped( $author );
 	}
 }
 
@@ -603,12 +621,13 @@ add_action( 'pre_get_posts', function ( WP_Query $query ): void {
 	if ( is_admin() || ! $query->is_main_query() ) {
 		return;
 	}
-	$is_term_archive = $query->is_category() || $query->is_tag();
-	$is_editor_author = $query->is_author() && tr724_query_author_is_editor( $query );
+	$is_term_archive  = $query->is_category() || $query->is_tag();
+	$author           = $query->is_author() ? tr724_query_author_user( $query ) : null;
+	$author_is_capped = $author instanceof WP_User && tr724_author_archive_is_capped( $author );
 	if ( ! $is_term_archive && ! $query->is_author() ) {
 		return;
 	}
-	if ( $query->is_author() && ! $is_editor_author ) {
+	if ( $query->is_author() && ! $author_is_capped ) {
 		$query->set( 'posts_per_page', 10 );
 		return;
 	}
