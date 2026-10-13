@@ -49,7 +49,7 @@ want long retention.
 
 | Signal | Source | Alert threshold |
 |--------|--------|-----------------|
-| Nginx cache status distribution | access log `$upstream_cache_status` → GoAccess / Netdata log parser | BYPASS > 10 % or MISS > 20 % of HTML for 10 min |
+| Nginx cache status distribution | access log via `make stats`, `make log-attack`, `make log-goaccess` | BYPASS > 10 % or MISS > 20 % of HTML for 10 min |
 | Cloudflare cache hit ratio (HTML) | Cloudflare Analytics / GraphQL API | < 70 % for 30 min |
 | PHP-FPM active vs max children | FPM `/status` via `cgi-fcgi` | active ≥ 80 % of max for 2 min |
 | PHP-FPM listen queue | FPM status `listen queue` | > 0 sustained |
@@ -149,6 +149,8 @@ tree or as the MariaDB datadir.
 | Purge everything (nginx + Cloudflare) | `make purge` or the admin-bar button |
 | Purge specific URLs | `scripts/wp.sh news-cache purge https://SITE_DOMAIN/some/url/` |
 | Cache statistics | `make stats` |
+| Access log triage | `make log-attack` · `make log-attack ARGS="--since 15m"` · `scripts/access-log.sh errors` · `bots` · `top` |
+| GoAccess | `make log-goaccess` · `make log-goaccess ARGS="html"` · `make log-goaccess ARGS="live"` |
 | Origin load test | [06](06-load-test.md) · `make loadtest-urls` · `make loadtest-observe` |
 | Reload nginx after config edits | `make reload-nginx` (as root) |
 | Apply PHP / pool config edits | re-run `scripts/setup-vps.sh` or `systemctl reload php8.3-fpm` |
@@ -200,9 +202,25 @@ git push → on the VPS:
 
 ## Runbooks
 
-- Traffic spike: check the cache status ratio → check the FPM queue → check DB
-  threads → if PHP is saturated, temporarily raise the nginx TTL and disable
-  non-essential plugins via WP-CLI.
+- Traffic spike or suspected attack: `make log-attack` (last 20 000 lines) or
+  `make log-attack ARGS="--since 15m"`. Same window in GoAccess:
+  `make log-goaccess` (terminal), `ARGS="html"` (writes `logs/goaccess.html`,
+  not served by nginx), or `ARGS="live"` (follows the log; WebSocket on
+  127.0.0.1 only). Other views: `scripts/access-log.sh errors`, `bots`, `top`.
+  - Many `MISS` / `BYPASS` and a high unique-URL count: query strings or a
+    scan are missing the cache. Check the FPM queue and DB threads before
+    raising PHP. If PHP is saturated, temporarily raise the nginx TTL and
+    disable non-essential plugins via WP-CLI.
+  - `POST /wp-login.php`: nginx `limit_req` zone `login` (5 req/min) plus the
+    Cloudflare WAF on that path. The log confirms it; it does not ban anyone.
+  - Many empty `ray=` values: those requests did not come through Cloudflare.
+    Check `WEB_OPEN` and Authenticated Origin Pulls.
+  - High `bot=1` while CPU stays low: those user agents are already 403 before PHP.
+  - 502/504 with high `urt`: PHP-FPM or MariaDB is saturated; nginx itself is up.
+  - Static assets, favicon, `/-/health`, `wp-config`, `xmlrpc`, and dotfiles are
+    `access_log off`, so they never appear in this log.
+  - No nginx fail2ban jail. `$remote_addr` is the visitor IP behind Cloudflare;
+    an automatic ban would cut off shared NATs.
 - "Site shows stale content": purge the single URL (nginx, then Cloudflare) →
   verify headers → check purge plugin logs
   (`grep news-cache /var/log/php8.3-fpm.log` or syslog).

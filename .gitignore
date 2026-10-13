@@ -24,3 +24,5 @@ loadtest/results/*
 # OS / editor
 .DS_Store
 *.swp
+
+nginx_logs

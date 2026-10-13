@@ -1,4 +1,4 @@
-.PHONY: purge warm stats backup r2-db-backup post-import reload-nginx gcs pull-gcs create-gce loadtest-urls loadtest-observe wp
+.PHONY: purge warm stats backup r2-db-backup post-import reload-nginx gcs pull-gcs create-gce loadtest-urls loadtest-observe wp log-attack log-goaccess
 
 wp:            ## make wp ARGS="plugin list"
 	scripts/wp.sh $(ARGS)
@@ -8,6 +8,10 @@ warm:
 	scripts/wp.sh news-cache warm
 stats:         ## cache hit ratios, top misses, FPM / MariaDB
 	scripts/cache-stats.sh
+log-attack:    ## ARGS="--since 15m" or "errors|bots|top [flags]"
+	scripts/access-log.sh $(if $(ARGS),$(ARGS),attack)
+log-goaccess:  ## ARGS="term|html|live" (html → logs/goaccess.html, live on 127.0.0.1)
+	scripts/access-log.sh goaccess $(ARGS)
 backup:
 	scripts/backup.sh
 r2-db-backup:  ## ARGS="provision|upload FILE|check|restore YYYYMMDD FILE"
