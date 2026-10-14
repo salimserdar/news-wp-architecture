@@ -15,6 +15,24 @@
 					"name": "Brand"
 				}
 			]
+		},
+		"blocks": {
+			"core/paragraph": {
+				"typography": {
+					"customFontSize": false,
+					"defaultFontSizes": false,
+					"fontSizes": []
+				}
+			}
+		}
+	},
+	"styles": {
+		"blocks": {
+			"core/paragraph": {
+				"typography": {
+					"fontSize": "18px"
+				}
+			}
 		}
 	},
 	"templateParts": [
