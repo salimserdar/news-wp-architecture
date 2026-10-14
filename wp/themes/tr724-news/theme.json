@@ -18,10 +18,115 @@
 		},
 		"blocks": {
 			"core/paragraph": {
+				"color": {
+					"text": false,
+					"background": false,
+					"link": false,
+					"custom": false,
+					"customGradient": false,
+					"defaultGradients": false,
+					"gradients": [],
+					"heading": false,
+					"button": false,
+					"caption": false
+				},
 				"typography": {
 					"customFontSize": false,
 					"defaultFontSizes": false,
-					"fontSizes": []
+					"fontSizes": [],
+					"fontFamilies": [],
+					"fontStyle": false,
+					"fontWeight": false,
+					"letterSpacing": false,
+					"lineHeight": false,
+					"textAlign": false,
+					"textDecoration": false,
+					"textTransform": false,
+					"dropCap": false,
+					"writingMode": false
+				},
+				"spacing": {
+					"margin": false,
+					"padding": false,
+					"blockGap": false
+				},
+				"dimensions": {
+					"minHeight": false,
+					"minWidth": false,
+					"aspectRatio": false
+				},
+				"border": {
+					"color": false,
+					"radius": false,
+					"style": false,
+					"width": false
+				},
+				"background": {
+					"backgroundImage": false,
+					"backgroundSize": false
+				},
+				"shadow": {
+					"defaultPresets": false,
+					"presets": []
+				},
+				"position": {
+					"sticky": false
+				}
+			},
+			"core/heading": {
+				"color": {
+					"text": false,
+					"background": false,
+					"link": false,
+					"custom": false,
+					"customGradient": false,
+					"defaultGradients": false,
+					"gradients": [],
+					"heading": false,
+					"button": false,
+					"caption": false
+				},
+				"typography": {
+					"customFontSize": false,
+					"defaultFontSizes": false,
+					"fontSizes": [],
+					"fontFamilies": [],
+					"fontStyle": false,
+					"fontWeight": false,
+					"letterSpacing": false,
+					"lineHeight": false,
+					"textAlign": false,
+					"textDecoration": false,
+					"textTransform": false,
+					"dropCap": false,
+					"writingMode": false
+				},
+				"spacing": {
+					"margin": false,
+					"padding": false,
+					"blockGap": false
+				},
+				"dimensions": {
+					"minHeight": false,
+					"minWidth": false,
+					"aspectRatio": false
+				},
+				"border": {
+					"color": false,
+					"radius": false,
+					"style": false,
+					"width": false
+				},
+				"background": {
+					"backgroundImage": false,
+					"backgroundSize": false
+				},
+				"shadow": {
+					"defaultPresets": false,
+					"presets": []
+				},
+				"position": {
+					"sticky": false
 				}
 			}
 		}

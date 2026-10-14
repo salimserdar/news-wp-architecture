@@ -235,6 +235,52 @@ add_filter(
 );
 
 /**
+ * Paragraph and heading copy stay on the theme's type. Hide the inspector
+ * panels (color, background, dimensions, border, elements, advanced)
+ * so an editor cannot restyle them. Heading level stays available.
+ */
+add_filter(
+	'register_block_type_args',
+	static function ( array $args, string $block_type ): array {
+		if ( 'core/paragraph' !== $block_type && 'core/heading' !== $block_type ) {
+			return $args;
+		}
+
+		$supports = isset( $args['supports'] ) && is_array( $args['supports'] ) ? $args['supports'] : [];
+		$supports['anchor']               = false;
+		$supports['customClassName']      = false;
+		$supports['customCSS']            = false;
+		$supports['color']                = false;
+		$supports['typography']           = false;
+		$supports['spacing']              = false;
+		$supports['dimensions']           = false;
+		$supports['border']               = false;
+		$supports['__experimentalBorder'] = false;
+		$supports['background']           = false;
+		$supports['shadow']               = false;
+		$args['supports']                 = $supports;
+
+		return $args;
+	},
+	10,
+	2
+);
+
+add_filter(
+	'block_bindings_supported_attributes_core/paragraph',
+	static function (): array {
+		return [];
+	}
+);
+
+add_filter(
+	'block_bindings_supported_attributes_core/heading',
+	static function (): array {
+		return [];
+	}
+);
+
+/**
  * Block handles get a static version from the asset file. Swap in filemtime
  * so a theme deploy busts the cache the same way style.css does.
  */
