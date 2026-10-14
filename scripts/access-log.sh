@@ -2,11 +2,12 @@
 # Read the nginx "news" access log (config/nginx/http.conf). No nginx changes.
 #
 #   scripts/access-log.sh attack [--lines N] [--since 15m|2h|1d] [logfile]
-#   scripts/access-log.sh errors|bots|top [same flags] [logfile]
+#   scripts/access-log.sh errors|bots|top|pressure [same flags] [logfile]
 #   scripts/access-log.sh goaccess [term|html|live] [same flags] [logfile]
 #
 # make log-attack ARGS="--since 15m"
 # make log-attack ARGS="errors --since 1h"
+# make log-pressure ARGS="--since 1d"
 # make log-goaccess ARGS="html"
 #
 # Static files, favicon, /-/health, wp-config, xmlrpc, and dotfiles are
@@ -33,13 +34,16 @@ trap cleanup EXIT
 
 usage() {
   cat <<'EOF'
-Usage: scripts/access-log.sh <attack|errors|bots|top|goaccess> [options] [logfile]
+Usage: scripts/access-log.sh <attack|errors|bots|top|pressure|goaccess> [options] [logfile]
 
   attack    Request rate, status, cache, IPs, paths, user agents, bot=1,
             rt>1s, 5xx, unique URLs, Cloudflare ray, wp-login / wp-json / author=
   errors    5xx and upstream times over 1s
   bots      Requests already marked bot=1
   top       Paths, referrers, and MISS / BYPASS / EXPIRED paths
+  pressure  IPs that crawl sitemaps/feeds, switch browser identity, or hold
+            PHP across many URLs. bot=0 Chrome spoofing is included.
+            Prints ip.src lines for a Cloudflare custom rule. Does not ban.
   goaccess  term (default), html, or live
 
 Options:
@@ -61,7 +65,7 @@ EOF
 cmd="attack"
 if [[ $# -gt 0 ]]; then
   case "$1" in
-    attack|errors|bots|top|goaccess)
+    attack|errors|bots|top|pressure|goaccess)
       cmd="$1"
       shift
       ;;
@@ -704,6 +708,124 @@ cmd_top() {
   top_n 15 "$(rank_values "$(collect_field 6 miss)")"
 }
 
+# IPs whose behaviour adds origin load. A long rt alone is not enough: during a
+# stall every client looks slow. Crawl shape, mixed browser OS, and PHP time
+# across many URLs are the signals. Known search/social crawlers are listed
+# apart and are not offered as ban lines.
+cmd_pressure() {
+  print_header
+  if [[ "$parsed" -eq 0 ]]; then
+    return
+  fi
+  local rows
+  rows=$(awk -F "$(printf '\037')" '
+    function num(s) {
+      if (match(s, /[0-9]+(\.[0-9]+)?/)) return substr(s, RSTART, RLENGTH) + 0
+      return 0
+    }
+    function is_crawl(p) {
+      if (p ~ /sitemap/) return 1
+      if (p ~ /(^|\/)feed(\/|$)/) return 1
+      if (p ~ /^\/rss(\/|$)/) return 1
+      if (p ~ /(^|\/)atom\.xml$/) return 1
+      if (p ~ /^\/index\.xml$/) return 1
+      return 0
+    }
+    function known(ua) {
+      return ua ~ /(Googlebot|bingbot|Applebot|Twitterbot|facebookexternalhit|Slackbot|LinkedInBot|news-cache-warmer|UptimeRobot|Cloudflare-Healthchecks)/
+    }
+    function osfam(ua) {
+      if (ua ~ /Android/) return "android"
+      if (ua ~ /iPhone|iPad/) return "ios"
+      if (ua ~ /Windows NT/) return "windows"
+      if (ua ~ /Macintosh/) return "mac"
+      if (ua ~ /CrOS/) return "cros"
+      if (ua ~ /Linux/) return "linux"
+      return ""
+    }
+    NF >= 14 {
+      ip = $1
+      n[ip]++
+      paths[ip " " $6] = 1
+      if (is_crawl($6)) crawl[ip]++
+      php[ip] += num($10)
+      if (num($9) > 10) slow[ip]++
+      if ($12 == "1") botn[ip]++
+      if ($14 == "" || $14 == "-") emptyref[ip]++
+      if (known($13)) knownn[ip]++
+      else if (sample[ip] == "") sample[ip] = $13
+      fam = osfam($13)
+      if (fam != "" && $13 ~ /Mozilla\/5\.0/) osseen[ip " " fam] = 1
+    }
+    END {
+      for (ip in n) {
+        pc = 0
+        for (k in paths) if (index(k, ip " ") == 1) pc++
+        oc = 0
+        for (k in osseen) if (index(k, ip " ") == 1) oc++
+        why = ""
+        if (crawl[ip] + 0 >= 8) why = why "sitemap/feed crawl; "
+        if (oc >= 2 && n[ip] >= 8) why = why "several browser identities; "
+        if (n[ip] >= 40 && pc >= 30 && emptyref[ip] / n[ip] >= 0.8 && knownn[ip] + 0 < n[ip])
+          why = why "walks many URLs with an empty referer; "
+        if (php[ip] >= 60 && n[ip] >= 8 && pc >= 8 && knownn[ip] + 0 < n[ip])
+          why = why "holds PHP across many URLs; "
+        if (why == "") continue
+        sub(/; $/, "", why)
+        kind = "review"
+        if (knownn[ip] + 0 == n[ip]) kind = "allowed"
+        if (ip == "127.0.0.1" || ip == "::1") kind = "local"
+        score = (crawl[ip] + 0) * 1000 + php[ip] + (oc >= 2 ? 5000 : 0)
+        ua = sample[ip]
+        if (ua == "") ua = "(known crawler)"
+        gsub(/\t/, " ", ua)
+        printf "%s\t%.0f\t%s\t%d\t%d\t%d\t%.0f\t%d\t%s\t%s\n", kind, score, ip, n[ip], pc, crawl[ip] + 0, php[ip], slow[ip] + 0, why, ua
+      }
+    }
+  ' "$TSV")
+
+  section "ips that add load"
+  local review allowed bans
+  review=$(printf '%s\n' "$rows" | awk -F '\t' '$1 == "review" || $1 == "local"')
+  allowed=$(printf '%s\n' "$rows" | awk -F '\t' '$1 == "allowed"')
+  if [[ -z "$review" ]]; then
+    echo "  (none)"
+  else
+    printf '  %-40s %6s %6s %6s %7s %6s  %s\n' "ip" "reqs" "paths" "crawl" "php_s" "rt>10" "why"
+    printf '%s\n' "$review" | sort -t "$(printf '\t')" -k2,2nr | awk -F '\t' '
+      {
+        tag = $3
+        if ($1 == "local") tag = $3 " (local, do not ban)"
+        printf "  %-40s %6d %6d %6d %7d %6d  %s\n", tag, $4, $5, $6, $7, $8, $9
+        ua = $10
+        if (length(ua) > 120) ua = substr(ua, 1, 117) "..."
+        printf "    %s\n", ua
+      }
+    '
+  fi
+
+  section "allowed crawlers with the same shape"
+  if [[ -z "$allowed" ]]; then
+    echo "  (none)"
+  else
+    printf '%s\n' "$allowed" | sort -t "$(printf '\t')" -k2,2nr | awk -F '\t' '
+      {
+        printf "  %-40s %6d reqs  crawl=%d  php_s=%.0f  %s\n", $3, $4, $6, $7, $9
+      }
+    '
+    echo "  These user agents stay allowed (Googlebot, Bingbot, Applebot, and the cache warmer)."
+  fi
+
+  section "cloudflare ip.src lines"
+  bans=$(printf '%s\n' "$review" | awk -F '\t' '$1 == "review" { print $3 }')
+  if [[ -z "$bans" ]]; then
+    echo "  (none)"
+  else
+    echo "  Paste under the existing or-list. This report does not ban anyone."
+    printf '%s\n' "$bans" | awk '{ printf "  or ip.src eq %s\n", $0 }'
+  fi
+}
+
 require_goaccess() {
   if ! command -v goaccess >/dev/null 2>&1; then
     echo "goaccess is not installed" >&2
@@ -769,5 +891,6 @@ case "$cmd" in
   errors) load_window; cmd_errors ;;
   bots) load_window; cmd_bots ;;
   top) load_window; cmd_top ;;
+  pressure) load_window; cmd_pressure ;;
   goaccess) cmd_goaccess ;;
 esac

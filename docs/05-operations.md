@@ -149,7 +149,7 @@ tree or as the MariaDB datadir.
 | Purge everything (nginx + Cloudflare) | `make purge` or the admin-bar button |
 | Purge specific URLs | `scripts/wp.sh news-cache purge https://SITE_DOMAIN/some/url/` |
 | Cache statistics | `make stats` |
-| Access log triage | `make log-attack` · `make log-attack ARGS="--since 15m"` · `scripts/access-log.sh errors` · `bots` · `top` |
+| Access log triage | `make log-attack` · `make log-attack ARGS="--since 15m"` · `scripts/access-log.sh errors` · `bots` · `top` · `make log-pressure ARGS="--since 1d"` |
 | GoAccess | `make log-goaccess` · `make log-goaccess ARGS="html"` · `make log-goaccess ARGS="live"` |
 | Origin load test | [06](06-load-test.md) · `make loadtest-urls` · `make loadtest-observe` |
 | Reload nginx after config edits | `make reload-nginx` (as root) |
@@ -207,6 +207,9 @@ git push → on the VPS:
   `make log-goaccess` (terminal), `ARGS="html"` (writes `logs/goaccess.html`,
   not served by nginx), or `ARGS="live"` (follows the log; WebSocket on
   127.0.0.1 only). Other views: `scripts/access-log.sh errors`, `bots`, `top`.
+  IPs that crawl sitemaps or feeds, claim more than one browser OS, or hold
+  PHP across many URLs (including `bot=0` Chrome spoofing): `make log-pressure ARGS="--since 1d"`.
+  The report prints `ip.src` lines for a Cloudflare custom rule. It does not ban anyone.
   - Many `MISS` / `BYPASS` and a high unique-URL count: query strings or a
     scan are missing the cache. Check the FPM queue and DB threads before
     raising PHP. If PHP is saturated, temporarily raise the nginx TTL and
