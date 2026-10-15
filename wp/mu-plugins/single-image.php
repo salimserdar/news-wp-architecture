@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: News Single Image
- * Description: Non-administrators must upload a 16:9 JPEG, PNG, or WebP of at least 1280×720. It is stored once, as a 1280×720 WebP. Administrators keep the normal sizes.
- * Version:     1.0.0
+ * Description: Non-administrators: a featured image must be a 16:9 JPEG, PNG, or WebP of at least 1280×720, stored as one 1280×720 WebP. An image uploaded into the article may use any aspect ratio, but it cannot be wider than 1280px, and it is stored as one WebP. Administrators keep the normal sizes.
+ * Version:     1.1.0
  */
 
 namespace News\SingleImage;
@@ -16,12 +16,19 @@ const META_KEY   = '_news_single_image';
 const MSG_TYPE   = 'Görsel JPEG, PNG veya WebP olmalı.';
 const MSG_RATIO  = 'Görsel 16:9 olmalı.';
 const MSG_SIZE   = 'Görsel en az 1280×720 olmalı.';
-const MSG_SAVE   = 'Görsel 1280×720 WebP olarak kaydedilemedi.';
+const MSG_WIDTH  = 'Görsel en fazla 1280 px genişliğinde olmalı.';
+const MSG_SAVE   = 'Görsel WebP olarak kaydedilemedi.';
 
 add_filter( 'wp_handle_upload_prefilter', __NAMESPACE__ . '\reject_wrong_picture' );
 add_filter( 'wp_handle_upload', __NAMESPACE__ . '\store_single_webp' );
 add_action( 'add_attachment', __NAMESPACE__ . '\mark_attachment', 0 );
 add_filter( 'intermediate_image_sizes_advanced', __NAMESPACE__ . '\skip_subsizes', 999, 3 );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_featured_guard' );
+add_filter( 'add_post_metadata', __NAMESPACE__ . '\block_bad_thumbnail', 10, 4 );
+add_filter( 'update_post_metadata', __NAMESPACE__ . '\block_bad_thumbnail', 10, 4 );
+add_action( 'wp_ajax_set-post-thumbnail', __NAMESPACE__ . '\ajax_guard_featured', 0 );
+add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_editor_script' );
+add_action( 'wp_enqueue_media', __NAMESPACE__ . '\enqueue_editor_script' );
 
 /**
  * Administrators keep the original file and the usual generated sizes.
@@ -46,7 +53,7 @@ function reject_wrong_picture( array $file ): array {
 	if ( null === $picture ) {
 		return $file;
 	}
-	$reason = picture_error( $picture['mime'], $picture['width'], $picture['height'] );
+	$reason = upload_error( $picture['mime'], $picture['width'], $picture['height'] );
 	if ( '' !== $reason ) {
 		$file['error'] = $reason;
 	}
@@ -54,7 +61,8 @@ function reject_wrong_picture( array $file ): array {
 }
 
 /**
- * Replace an accepted upload with one 1280×720 WebP and drop the file the editor sent.
+ * Replace an accepted upload with one WebP and drop the file the editor sent.
+ * Featured images are cropped to 1280×720. Article images keep their size.
  *
  * @param array<string,mixed> $upload
  * @return array<string,mixed>
@@ -72,7 +80,7 @@ function store_single_webp( array $upload ): array {
 		return $upload;
 	}
 
-	$saved = write_single_webp( $path );
+	$saved = write_single_webp( $path, is_featured_upload() );
 	if ( is_wp_error( $saved ) ) {
 		wp_delete_file( $path );
 		return [ 'error' => failure_message( $saved ) ];
@@ -116,6 +124,25 @@ function skip_subsizes( array $sizes, array $metadata, int $attachment_id ): arr
 	return $sizes;
 }
 
+/**
+ * Featured-image uploads keep the 16:9 rule. Anything else is an article image.
+ * Missing or unknown context stays on the stricter rule.
+ */
+function is_featured_upload(): bool {
+	$use = '';
+	if ( isset( $_POST['news_image_use'] ) ) {
+		$use = wp_unslash( $_POST['news_image_use'] );
+	}
+	return ! ( is_string( $use ) && 'content' === $use );
+}
+
+function upload_error( string $mime, int $width, int $height ): string {
+	if ( is_featured_upload() ) {
+		return picture_error( $mime, $width, $height );
+	}
+	return content_picture_error( $mime, $width, $height );
+}
+
 function picture_error( string $mime, int $width, int $height ): string {
 	if ( ! in_array( $mime, [ 'image/jpeg', 'image/png', 'image/webp' ], true ) ) {
 		return MSG_TYPE;
@@ -129,6 +156,22 @@ function picture_error( string $mime, int $width, int $height ): string {
 	}
 	if ( $width < WIDTH || $height < HEIGHT ) {
 		return MSG_SIZE;
+	}
+	return '';
+}
+
+/**
+ * Article images may use any aspect ratio. Width is the only size limit.
+ */
+function content_picture_error( string $mime, int $width, int $height ): string {
+	if ( ! in_array( $mime, [ 'image/jpeg', 'image/png', 'image/webp' ], true ) ) {
+		return MSG_TYPE;
+	}
+	if ( $width < 1 || $height < 1 ) {
+		return MSG_SAVE;
+	}
+	if ( $width > WIDTH ) {
+		return MSG_WIDTH;
 	}
 	return '';
 }
@@ -163,7 +206,7 @@ function read_picture( string $path ): ?array {
 /**
  * @return string|\WP_Error Final path. The source file is removed when a new file replaces it.
  */
-function write_single_webp( string $path ): string|\WP_Error {
+function write_single_webp( string $path, bool $featured ): string|\WP_Error {
 	$editor = wp_get_image_editor( $path );
 	if ( is_wp_error( $editor ) ) {
 		return $editor;
@@ -180,17 +223,23 @@ function write_single_webp( string $path ): string|\WP_Error {
 	$height = (int) ( $size['height'] ?? 0 );
 	// get_mime_type() is protected on WP_Image_Editor; calling it fatals the upload.
 	$mime   = wp_get_image_mime( $path );
-	$reason = picture_error( is_string( $mime ) ? $mime : '', $width, $height );
+	$mime   = is_string( $mime ) ? $mime : '';
+	$reason = $featured ? picture_error( $mime, $width, $height ) : content_picture_error( $mime, $width, $height );
 	if ( '' !== $reason ) {
 		return new \WP_Error( 'news_single_image', $reason );
 	}
-	if ( WIDTH === $width && HEIGHT === $height && 'image/webp' === $mime ) {
+	$ready = $featured
+		? ( WIDTH === $width && HEIGHT === $height && 'image/webp' === $mime )
+		: ( 'image/webp' === $mime );
+	if ( $ready ) {
 		return $path;
 	}
 
-	$resized = $editor->resize( WIDTH, HEIGHT, true );
-	if ( is_wp_error( $resized ) ) {
-		return $resized;
+	if ( $featured ) {
+		$resized = $editor->resize( WIDTH, HEIGHT, true );
+		if ( is_wp_error( $resized ) ) {
+			return $resized;
+		}
 	}
 
 	$dir       = dirname( $path );
@@ -237,4 +286,117 @@ function failure_message( \WP_Error $error ): string {
 		return $error->get_error_message();
 	}
 	return MSG_SAVE;
+}
+
+/**
+ * Tell the editor which upload is the featured image. Article uploads send news_image_use=content.
+ */
+function enqueue_editor_script(): void {
+	if ( is_exempt() ) {
+		return;
+	}
+	wp_enqueue_script(
+		'news-single-image',
+		plugins_url( 'single-image.js', __FILE__ ),
+		[ 'wp-api-fetch', 'wp-plupload' ],
+		'1.1.0',
+		true
+	);
+}
+
+function register_featured_guard(): void {
+	foreach ( get_post_types( [ 'show_in_rest' => true ] ) as $type ) {
+		if ( 'attachment' === $type ) {
+			continue;
+		}
+		add_filter( "rest_pre_insert_{$type}", __NAMESPACE__ . '\reject_bad_featured_media', 10, 2 );
+	}
+}
+
+/**
+ * Picking an article image from the library must not bypass the featured-image rule.
+ * An image that is already the featured image stays, so older posts can still be saved.
+ *
+ * @param mixed $prepared
+ * @return mixed
+ */
+function reject_bad_featured_media( $prepared, \WP_REST_Request $request ) {
+	if ( is_exempt() || ! $request->has_param( 'featured_media' ) ) {
+		return $prepared;
+	}
+	$media_id = (int) $request->get_param( 'featured_media' );
+	if ( $media_id <= 0 ) {
+		return $prepared;
+	}
+	$post_id = (int) $request->get_param( 'id' );
+	if ( $post_id > 0 && (int) get_post_thumbnail_id( $post_id ) === $media_id ) {
+		return $prepared;
+	}
+	$reason = featured_assignment_error( $media_id );
+	if ( '' === $reason ) {
+		return $prepared;
+	}
+	return new \WP_Error( 'news_single_image', $reason, [ 'status' => 400 ] );
+}
+
+/**
+ * @param mixed  $check
+ * @param int    $object_id
+ * @param string $meta_key
+ * @param mixed  $meta_value
+ * @return mixed
+ */
+function block_bad_thumbnail( $check, $object_id, $meta_key, $meta_value ) {
+	if ( null !== $check || '_thumbnail_id' !== $meta_key || is_exempt() ) {
+		return $check;
+	}
+	$attachment_id = (int) $meta_value;
+	if ( $attachment_id <= 0 ) {
+		return $check;
+	}
+	if ( (int) get_post_meta( (int) $object_id, '_thumbnail_id', true ) === $attachment_id ) {
+		return $check;
+	}
+	if ( '' === featured_assignment_error( $attachment_id ) ) {
+		return $check;
+	}
+	return false;
+}
+
+function ajax_guard_featured(): void {
+	if ( is_exempt() ) {
+		return;
+	}
+	$post_id      = isset( $_REQUEST['post_id'] ) ? (int) $_REQUEST['post_id'] : 0;
+	$thumbnail_id = isset( $_REQUEST['thumbnail_id'] ) ? (int) $_REQUEST['thumbnail_id'] : 0;
+	if ( $post_id <= 0 || $thumbnail_id <= 0 || ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+	if ( (int) get_post_thumbnail_id( $post_id ) === $thumbnail_id ) {
+		return;
+	}
+	$reason = featured_assignment_error( $thumbnail_id );
+	if ( '' === $reason ) {
+		return;
+	}
+	wp_die( esc_html( $reason ) );
+}
+
+function featured_assignment_error( int $attachment_id ): string {
+	$meta   = wp_get_attachment_metadata( $attachment_id );
+	$width  = is_array( $meta ) ? (int) ( $meta['width'] ?? 0 ) : 0;
+	$height = is_array( $meta ) ? (int) ( $meta['height'] ?? 0 ) : 0;
+	$mime   = (string) get_post_mime_type( $attachment_id );
+	if ( $width < 1 || $height < 1 ) {
+		$path = get_attached_file( $attachment_id );
+		if ( is_string( $path ) && is_file( $path ) ) {
+			$picture = read_picture( $path );
+			if ( null !== $picture ) {
+				$width  = $picture['width'];
+				$height = $picture['height'];
+				$mime   = $picture['mime'];
+			}
+		}
+	}
+	return picture_error( $mime, $width, $height );
 }
