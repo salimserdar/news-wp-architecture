@@ -24,8 +24,15 @@
 .editor-styles-wrapper .authors__list,
 .editor-styles-wrapper .authors__list > li {
 	margin: 0;
-	padding: 0;
 	max-width: 100%;
+}
+
+.editor-styles-wrapper .authors__list {
+	padding: 16px;
+}
+
+.editor-styles-wrapper .authors__list > li {
+	padding: 0;
 }
 
 .editor-styles-wrapper .authors .author,
