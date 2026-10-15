@@ -26,3 +26,4 @@ loadtest/results/*
 *.swp
 
 nginx_logs
+access.log

@@ -1,6 +1,7 @@
 .authors {
 	--color-text: #111;
 	--color-brand: #003399;
+	--color-accent: #ff4f00;
 	--color-accent-link: #ff6c00;
 	--color-accent-press: #e86000;
 	--focus-ring: #ff6200;
@@ -10,6 +11,7 @@
 	height: 480px;
 	min-height: 0;
 	overflow: hidden;
+	border: 1px solid #e6e6e6;
 	font-family: Inter, "Segoe UI", sans-serif;
 }
 
@@ -55,12 +57,22 @@
 }
 
 .authors__title {
-	margin: 0 0 12px;
+	margin: 0;
+	padding: 16px;
 	color: var(--color-text);
 	font-size: 15px;
 	font-weight: 800;
 	line-height: 1;
 	letter-spacing: 0.06em;
+}
+
+.authors__title::after {
+	content: "";
+	display: block;
+	width: 36px;
+	height: 3px;
+	margin-top: 8px;
+	background: var(--color-accent);
 }
 
 .authors__title-link {
