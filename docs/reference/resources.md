@@ -12,11 +12,11 @@ if it owned the whole box, then the OOM-killer picks a victim during the first t
 | Service | Allocation | Notes |
 |---------|-----------:|-------|
 | MariaDB | **10 GB** | `innodb_buffer_pool_size = 8G` + ~2 GB for connections, temp tables, log buffer |
-| PHP-FPM | **~2–4 GB** | 20 children × ~80–120 MB (Newspaper admin pages are heavier; 512 MB cap) |
+| PHP-FPM | **~5–8 GB** | 48 public + 16 editor children × ~80–120 MB (admin pages are heavier; 512 MB cap) |
 | OPcache | 0.3 GB | 256 MB code (JIT off) |
 | Nginx | 0.5 GB | Workers + `keys_zone` 100 MB |
-| OS + page cache | **~17 GB** | Nginx cache files, DB data files, PHP files all live here — this is *not* "wasted" |
-| **Total committed** | **~15 GB** | Leaves ~17 GB headroom / page cache. No swap dependency. |
+| OS + page cache | **~13 GB** | Nginx cache files, DB data files, PHP files all live here — this is *not* "wasted" |
+| **Total committed** | **~19 GB** | Leaves ~13 GB headroom / page cache. No swap dependency. |
 
 Rules:
 - Keep committed memory under ~60 % of RAM. The page cache is what makes the disk-backed
@@ -42,21 +42,34 @@ WordPress with a typical news theme: **60–120 MB per child** (measure with
 `ps -ylC php-fpm8.3 --sort:rss`). Plan for 120 MB with Newspaper.
 
 ```ini
-; /etc/php/8.3/fpm/pool.d/www.conf
+; /etc/php/8.3/fpm/pool.d/www.conf  — anonymous cache misses
 pm = dynamic
-pm.max_children = 20          ; override with PHP_MAX_CHILDREN
-pm.start_servers = 4
-pm.min_spare_servers = 2
-pm.max_spare_servers = 8
-pm.max_requests = 500
+pm.max_children = 48          ; override with PHP_MAX_CHILDREN
+pm.start_servers = 16
+pm.min_spare_servers = 8
+pm.max_spare_servers = 24
+listen.backlog = 256          ; full queue -> nginx serves STALE instead of waiting
 request_terminate_timeout = 60s
 listen = /run/php/php8.3-fpm.sock
-php_admin_value[memory_limit] = 512M
+
+; /etc/php/8.3/fpm/pool.d/editors.conf — logged-in, /wp-admin/, /wp-login.php
+pm.max_children = 16          ; override with PHP_EDITOR_CHILDREN
+listen.backlog = 512
+request_terminate_timeout = 300s
+listen = /run/php/php8.3-fpm-editors.sock
 ```
 
-One pool serves cache misses *and* editors. 20 children at ~200 ms/render ≈ **100 renders/s**
-theoretical. Our target is < 20/s. Raise `PHP_MAX_CHILDREN` only if a purge-storm listen
-queue is sustained ([Load test](../06-load-test.md)).
+Two pools. Crawlers walking unique tag / article URLs can only fill `www`; the
+newsroom's requests go to `editors` through nginx (`$php_upstream` map on the
+login cookie, plus dedicated `/wp-admin/` and `/wp-login.php` locations).
+
+Why 48 and not 20: renders are 50–300 ms, so children are I/O-bound, not
+CPU-bound; a child waiting on the aggregator or MariaDB costs memory, not a
+core. 48 × ~100 MB fits easily. What *did* make 20 children feel full was not
+load but three things fixed together with the split: PHP-FPM children parked
+on idle nginx keep-alive connections (no `keepalive` on the upstream any more),
+a 4096-deep listen queue with a 300 s read timeout (now 256 / 90 s), and
+render-time aggregator calls with 8 s timeouts (now 2 s with a 60 s back-off).
 
 `pm = dynamic` keeps idle memory small. Cache hits never fork a child.
 
@@ -70,7 +83,7 @@ innodb_flush_log_at_trx_commit = 2    # news site: 1 s of durability risk is acc
 innodb_flush_method            = O_DIRECT
 innodb_io_capacity             = 2000 # NVMe
 innodb_io_capacity_max         = 4000
-max_connections                = 80   # FPM children + cron + slack
+max_connections                = 200  # 48 + 16 FPM children + cron + slack
 table_open_cache               = 4000
 tmp_table_size                 = 256M
 max_heap_table_size            = 256M
@@ -118,7 +131,7 @@ Say normal is 30 HTML req/s and a story goes viral: 300 req/s HTML + ~3 000 req/
 
 1. Cloudflare serves ~99 % of static and ~85 % of HTML at the edge. Origin sees ~45 HTML req/s.
 2. Nginx serves ~95 % of those from FastCGI cache. PHP sees **~2–3 renders/s**.
-3. 20 PHP children are barely utilised. MariaDB barely notices.
+3. 48 public PHP children are barely utilised. MariaDB barely notices.
 
 Even if Cloudflare HTML caching were completely disabled, 300 req/s at Nginx with a 95 % hit
 ratio = 15 renders/s — still well inside capacity. The architecture has roughly **two orders of

@@ -139,19 +139,29 @@ function tr724_ticker_instruments(): array|WP_Error {
 		return $cached;
 	}
 
+	// This block is in the site header, so it runs on every cache miss.
+	// After one failure, skip the call for a minute and serve the last copy.
+	if ( tr724_remote_backing_off( 'fx_rates' ) ) {
+		$stale = get_transient( 'tr724_fx_rates_last_v2' );
+		if ( is_array( $stale ) ) {
+			return $stale;
+		}
+		return new WP_Error( 'tr724_exchange_rates', __( 'Exchange rates are unavailable.', 'tr724-news' ), [ 'status' => 503 ] );
+	}
+
 	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
 		$response = \News\Aggregator\request(
 			'GET',
 			'/api/v1/exchange-rates',
 			[
-				'timeout' => 8,
+				'timeout' => TR724_REMOTE_TIMEOUT,
 			]
 		);
 	} else {
 		$response = wp_remote_get(
 			tr724_ticker_endpoint(),
 			[
-				'timeout' => 8,
+				'timeout' => TR724_REMOTE_TIMEOUT,
 				'headers' => tr724_aggregator_headers(),
 			]
 		);
@@ -170,6 +180,7 @@ function tr724_ticker_instruments(): array|WP_Error {
 	}
 
 	if ( null === $instruments ) {
+		tr724_remote_mark_failed( 'fx_rates' );
 		$stale = get_transient( 'tr724_fx_rates_last_v2' );
 		if ( is_array( $stale ) ) {
 			return $stale;

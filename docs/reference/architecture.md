@@ -14,7 +14,7 @@ flowchart TB
 
     subgraph VPS[Single VPS - 8 vCPU / 32 GB - Ubuntu 24.04 LTS]
         NG[Nginx<br/>TLS origin cert, HTTP/2<br/>FastCGI full-page cache<br/>gzip, rate limits]
-        FPM[PHP-FPM 8.3<br/>OPcache, one pool]
+        FPM[PHP-FPM 8.3<br/>OPcache, two pools:<br/>www for misses, editors for wp-admin]
         DB[(MariaDB<br/>InnoDB, tuned buffer pool)]
         CRON[System cron<br/>wp-cron via WP-CLI]
         MON[Monitoring<br/>Netdata + logs]

@@ -119,19 +119,28 @@ function tr724_popular_lists(): array|WP_Error {
 		return $cached;
 	}
 
+	// One failure stops render-time calls for a minute (functions.php).
+	if ( tr724_remote_backing_off( 'popular_posts' ) ) {
+		$stale = get_transient( 'tr724_popular_posts_last' );
+		if ( is_array( $stale ) ) {
+			return $stale;
+		}
+		return new WP_Error( 'tr724_popular_posts', __( 'Popular posts are unavailable.', 'tr724-news' ) );
+	}
+
 	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
 		$response = \News\Aggregator\request(
 			'GET',
 			'/api/v1/popular-posts',
 			[
-				'timeout' => 8,
+				'timeout' => TR724_REMOTE_TIMEOUT,
 			]
 		);
 	} else {
 		$response = wp_remote_get(
 			tr724_popular_endpoint(),
 			[
-				'timeout' => 8,
+				'timeout' => TR724_REMOTE_TIMEOUT,
 				'headers' => tr724_aggregator_headers(),
 			]
 		);
@@ -150,6 +159,7 @@ function tr724_popular_lists(): array|WP_Error {
 	}
 
 	if ( null === $lists ) {
+		tr724_remote_mark_failed( 'popular_posts' );
 		$stale = get_transient( 'tr724_popular_posts_last' );
 		if ( is_array( $stale ) ) {
 			return $stale;

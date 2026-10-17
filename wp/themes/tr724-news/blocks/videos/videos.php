@@ -102,12 +102,23 @@ function tr724_youtube_videos(): array|WP_Error {
 		return $cached;
 	}
 
+	// One failure stops render-time calls for a minute (functions.php).
+	// The last good list is kept 12 h so the block still renders meanwhile.
+	$last_key = $cache_key . '_last';
+	if ( tr724_remote_backing_off( 'youtube_videos' ) ) {
+		$stale = get_transient( $last_key );
+		if ( is_array( $stale ) ) {
+			return $stale;
+		}
+		return new WP_Error( 'tr724_youtube_http', __( 'Videos are unavailable.', 'tr724-news' ) );
+	}
+
 	if ( function_exists( 'News\\Aggregator\\uses_vps' ) && \News\Aggregator\uses_vps() ) {
 		$response = \News\Aggregator\request(
 			'GET',
 			'/api/v1/youtube/videos',
 			[
-				'timeout' => 8,
+				'timeout' => TR724_REMOTE_TIMEOUT,
 				'query'   => [
 					'YOUTUBE_API_KEY'    => YOUTUBE_API_KEY,
 					'YOUTUBE_CHANNEL_ID' => YOUTUBE_CHANNEL_ID,
@@ -126,19 +137,20 @@ function tr724_youtube_videos(): array|WP_Error {
 		$response = wp_remote_get(
 			$endpoint,
 			[
-				'timeout' => 8,
+				'timeout' => TR724_REMOTE_TIMEOUT,
 				'headers' => tr724_aggregator_headers(),
 			]
 		);
 	}
 
-	if ( is_wp_error( $response ) ) {
-		return new WP_Error( 'tr724_youtube_http', __( 'Videos are unavailable.', 'tr724-news' ) );
-	}
-
-	$code = (int) wp_remote_retrieve_response_code( $response );
-	$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+	$code = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+	$data = is_wp_error( $response ) ? null : json_decode( (string) wp_remote_retrieve_body( $response ), true );
 	if ( $code < 200 || $code >= 300 || ! is_array( $data ) || ! isset( $data['videos'] ) || ! is_array( $data['videos'] ) ) {
+		tr724_remote_mark_failed( 'youtube_videos' );
+		$stale = get_transient( $last_key );
+		if ( is_array( $stale ) ) {
+			return $stale;
+		}
 		return new WP_Error( 'tr724_youtube_http', __( 'Videos are unavailable.', 'tr724-news' ) );
 	}
 
@@ -155,6 +167,7 @@ function tr724_youtube_videos(): array|WP_Error {
 	}
 
 	set_transient( $cache_key, $videos, 10 * MINUTE_IN_SECONDS );
+	set_transient( $last_key, $videos, 12 * HOUR_IN_SECONDS );
 
 	return $videos;
 }

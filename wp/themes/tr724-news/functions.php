@@ -25,6 +25,35 @@ function tr724_aggregator_headers(): array {
 	return $headers;
 }
 
+/**
+ * Timeout for aggregator reads that run inside a page render (ticker,
+ * popular, videos). Every public cache miss pays this when the service is
+ * down, so it has to be short: 2 s × ~1 miss/s is two busy PHP-FPM children,
+ * the previous 8 s was eight. Blocks fall back to their *_last transient.
+ */
+const TR724_REMOTE_TIMEOUT = 2;
+
+/**
+ * Seconds to stop calling an aggregator endpoint after one failure. Within
+ * this window blocks serve stale data without any HTTP call.
+ */
+const TR724_REMOTE_BACKOFF = 60;
+
+/**
+ * True while $key is in its failure window. Check before any render-time call.
+ */
+function tr724_remote_backing_off( string $key ): bool {
+	return false !== get_transient( 'tr724_backoff_' . $key );
+}
+
+/**
+ * Open the failure window for $key. One failed render protects every render
+ * for the next TR724_REMOTE_BACKOFF seconds.
+ */
+function tr724_remote_mark_failed( string $key ): void {
+	set_transient( 'tr724_backoff_' . $key, time(), TR724_REMOTE_BACKOFF );
+}
+
 require_once get_template_directory() . '/inc/ads.php';
 require_once get_template_directory() . '/inc/additional-image.php';
 require_once get_template_directory() . '/inc/category-carousel.php';

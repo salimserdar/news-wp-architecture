@@ -36,14 +36,21 @@ fi
 
 echo
 echo "== PHP-FPM =="
-if command -v cgi-fcgi >/dev/null && [[ -S /run/php/php8.3-fpm.sock ]]; then
-  SCRIPT_NAME='/-/fpm-status' SCRIPT_FILENAME='/-/fpm-status' \
-  QUERY_STRING='json' REQUEST_METHOD='GET' \
-  cgi-fcgi -bind -connect /run/php/php8.3-fpm.sock 2>/dev/null \
-    | awk '/"active processes"/ || /"idle processes"/ || /"listen queue"/ { print }'
-else
-  echo "  processes: $(ps -C php-fpm8.3 --no-headers 2>/dev/null | wc -l | tr -d ' ')"
-fi
+fpm_status() { # <label> <socket> <status_path>
+  local label="$1" sock="$2" path="$3"
+  if command -v cgi-fcgi >/dev/null && [[ -S "$sock" ]]; then
+    echo "  [$label]"
+    SCRIPT_NAME="$path" SCRIPT_FILENAME="$path" \
+    QUERY_STRING='json' REQUEST_METHOD='GET' \
+    cgi-fcgi -bind -connect "$sock" 2>/dev/null \
+      | awk '/"active processes"/ || /"idle processes"/ || /"listen queue"/ || /"max children reached"/ { print "   " $0 }'
+  else
+    echo "  [$label] (no socket $sock)"
+  fi
+}
+fpm_status www     /run/php/php8.3-fpm.sock         /-/fpm-status
+fpm_status editors /run/php/php8.3-fpm-editors.sock /-/fpm-status-editors
+echo "  processes: $(ps -C php-fpm8.3 --no-headers 2>/dev/null | wc -l | tr -d ' ')"
 echo "  RSS: $(ps -C php-fpm8.3 -o rss= 2>/dev/null | awk '{ t += $1 } END { printf "%.0f MB\n", t / 1024 }')"
 
 echo

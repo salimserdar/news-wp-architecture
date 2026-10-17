@@ -14,7 +14,10 @@ INTERVAL="${INTERVAL:-2}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT="${OUT:-loadtest/results/observe-${STAMP}.csv}"
 LOG="${NGINX_ACCESS_LOG}"
+# Public pool by default. Editors pool:
+#   SOCK=/run/php/php8.3-fpm-editors.sock STATUS_PATH=/-/fpm-status-editors
 SOCK="${SOCK:-/run/php/php8.3-fpm.sock}"
+STATUS_PATH="${STATUS_PATH:-/-/fpm-status}"
 
 mkdir -p "$(dirname "$OUT")"
 
@@ -84,7 +87,7 @@ fpm_line() {
     echo ",,"
     return
   fi
-  SCRIPT_NAME='/-/fpm-status' SCRIPT_FILENAME='/-/fpm-status' \
+  SCRIPT_NAME="$STATUS_PATH" SCRIPT_FILENAME="$STATUS_PATH" \
   QUERY_STRING='json' REQUEST_METHOD='GET' \
   cgi-fcgi -bind -connect "$SOCK" 2>/dev/null | awk '
     /"active processes"/ { gsub(/[^0-9]/,"",$NF); a=$NF }

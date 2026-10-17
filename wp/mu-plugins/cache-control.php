@@ -21,7 +21,13 @@ namespace News\CacheControl;
 
 defined( 'ABSPATH' ) || exit;
 
-const TTL_PAGE   = 600;  // regular articles / archives; purge-on-publish keeps them fresh
+const TTL_PAGE   = 600;  // regular articles and the home page; purge-on-publish keeps them fresh
+// Tag / category / author / date archives and their /page/N/. Crawlers walk
+// tens of thousands of these (34k tag MISSes in one day) and readers rarely
+// do, so a 10-minute TTL meant almost every crawler hit was a render. Publish
+// purges the term and author archives of the post (cache-purge.php), so a
+// long TTL only delays pages that nothing changed on.
+const TTL_ARCHIVE = 6 * HOUR_IN_SECONDS;
 const TTL_SEARCH = 10;   // microcache: collapses bursts of identical searches
 const TTL_FEED   = 300;
 const TTL_REST   = 10;
@@ -104,6 +110,10 @@ add_action( 'template_redirect', function (): void {
 	}
 	if ( is_404() ) {
 		send( TTL_404, TTL_404 );
+		return;
+	}
+	if ( is_archive() && ! is_front_page() ) {
+		send( TTL_ARCHIVE, 300 );
 		return;
 	}
 	send( TTL_PAGE, 120 );

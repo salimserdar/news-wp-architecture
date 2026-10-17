@@ -69,7 +69,7 @@ Fill in `.env`:
 - `DB_TABLE_PREFIX` **exactly as in the old `wp-config.php`**
 - `CF_ZONE_ID` and `CF_API_TOKEN`
 
-Leave `PHP_MAX_CHILDREN` and `DB_BUFFER_POOL` at the defaults unless the box is
+Leave `PHP_MAX_CHILDREN`, `PHP_EDITOR_CHILDREN` and `DB_BUFFER_POOL` at the defaults unless the box is
 smaller than 8 vCPU / 32 GB ([01](01-provision-vps.md),
 [Resource allocation](reference/resources.md)).
 

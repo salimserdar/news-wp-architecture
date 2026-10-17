@@ -153,7 +153,8 @@ tree or as the MariaDB datadir.
 | GoAccess | `make log-goaccess` · `make log-goaccess ARGS="html"` · `make log-goaccess ARGS="live"` |
 | Origin load test | [06](06-load-test.md) · `make loadtest-urls` · `make loadtest-observe` |
 | Reload nginx after config edits | `make reload-nginx` (as root) |
-| Apply PHP / pool config edits | re-run `scripts/setup-vps.sh` or `systemctl reload php8.3-fpm` |
+| Apply PHP / pool config edits | `make reload-php` (as root; both pools, `php-fpm8.3 -t`, graceful reload) or re-run `scripts/setup-vps.sh` |
+| PHP-FPM queue per pool | `make stats` → `[www]` / `[editors]` `listen queue`; or `curl -s http://127.0.0.1/-/fpm-status` and `/-/fpm-status-editors` |
 | WordPress core / plugin updates | wp-admin as usual, or `scripts/wp.sh core update && scripts/wp.sh plugin update --all` |
 | Backup now | `make backup` |
 | Restore DB | `scripts/r2-db-backup.sh restore YYYYMMDD FILE.sql.zst`, then `zstd -dc` into mysql |
@@ -166,7 +167,11 @@ tree or as the MariaDB datadir.
 | Which URLs are purged on publish | `urls_for_post()` in `wp/mu-plugins/cache-purge.php`, or hook `news_cache_purge_urls` |
 | Cookie / path bypass rules | `map` blocks in `config/nginx/http.conf` |
 | Which bot User-Agents get 403 | `map $http_user_agent $bad_bot` in `config/nginx/http.conf` |
-| PHP workers | `config/php/pool-www.conf` (`pm.max_children`) or `.env` `PHP_MAX_CHILDREN` |
+| PHP workers, public pool | `config/php/pool-www.conf` (`pm.max_children`) or `.env` `PHP_MAX_CHILDREN` |
+| PHP workers, editors pool | `config/php/pool-editors.conf` or `.env` `PHP_EDITOR_CHILDREN` |
+| Which requests go to the editors pool | `map $http_cookie $php_upstream` in `config/nginx/http.conf`; `/wp-admin/` and `/wp-login.php` locations in `site.conf` |
+| Crawler rate limit on PHP | `map $http_user_agent $crawler_key` + `limit_req_zone crawlers` in `config/nginx/http.conf` |
+| Archive TTL (tag / category / author) | `TTL_ARCHIVE` in `wp/mu-plugins/cache-control.php` |
 | DB memory | `.env` → `DB_BUFFER_POOL` |
 | Upload size limit | `client_max_body_size` (`config/nginx/http.conf`) and `upload_max_filesize` (`config/php/conf.d/zz-wp.ini`) |
 
@@ -185,6 +190,16 @@ tree or as the MariaDB datadir.
   (`opcache.revalidate_freq = 60`). To force it: `systemctl reload php8.3-fpm`.
 - **Newspaper / tagDiv + PHP JIT** hangs `wp-admin/load-styles.php`. JIT is
   disabled in the pool config.
+- **Never add `keepalive` to the PHP-FPM upstreams or `fastcgi_keep_conn on`.**
+  An FPM child bound to one nginx worker's idle connection cannot serve another
+  worker's request; those sat in the listen queue for up to 60 s while children
+  were idle. Reproduced in a container with 2 children: exactly 60.05 s waits.
+- **`listen.backlog` on the public pool is small (256) on purpose.** A full
+  queue makes nginx fail the connect at once and serve `STALE`. Raising it
+  back to 4096 brings back minute-long waits for everyone, editors included.
+- **`setup-vps.sh` reloads, it does not restart.** MariaDB restarts only when
+  `config/mariadb/*.cnf` changed (or `DB_RESTART=1`); otherwise
+  `max_connections` is applied live with `SET GLOBAL`.
 - **Loopback to the public hostname.** Setup adds `127.0.0.1 SITE_DOMAIN` to
   `/etc/hosts` so wp-cron and Site Health do not hairpin out through Cloudflare.
 
@@ -193,12 +208,28 @@ tree or as the MariaDB datadir.
 ```
 git push → on the VPS:
   1. git pull in this repo
-  2. sudo bash scripts/setup-vps.sh     (refreshes nginx/PHP/mu-plugins; does not wipe the DB)
+  2. sudo bash scripts/setup-vps.sh     (refreshes nginx/PHP/mu-plugins; reload only, does not wipe the DB)
   3. wp core/plugin/theme verify-checksums
-  4. systemctl reload php8.3-fpm        (clears OPcache, zero dropped requests)
+  4. sudo bash scripts/deploy-theme.sh  (rsync + systemctl reload php8.3-fpm: OPcache, zero dropped requests)
   5. purge nginx + Cloudflare cache for changed theme assets (or purge everything, off-peak)
   6. smoke test: curl -skI -H "Host: $SITE_DOMAIN" https://127.0.0.1/ | grep -iE 'HTTP|x-fastcgi-cache'
 ```
+
+Config-only deploys without the full script, in this order (each step is
+graceful and reversible on its own; nginx must reload *after* FPM so the
+`php_fpm_editors` socket exists):
+
+```
+sudo make reload-php        # pool.d/www.conf + editors.conf, php-fpm8.3 -t, systemctl reload
+sudo make reload-nginx      # http.conf + site.conf, nginx -t, nginx -s reload
+sudo mysql -e "SET GLOBAL max_connections = 200;"   # cnf is picked up at the next planned restart
+make stats                  # both pools: listen queue must stay 0
+tail -f /var/log/php8.3-fpm-slow.log /var/log/php8.3-fpm-editors-slow.log
+```
+
+`process_control_timeout = 10s` in `/etc/php/8.3/fpm/php-fpm.conf` (set by
+`setup-vps.sh`) is what makes `systemctl reload php8.3-fpm` wait for in-flight
+requests. Ubuntu ships it at 0; without it a reload drops editors' uploads.
 
 ## Runbooks
 
