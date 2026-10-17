@@ -159,16 +159,27 @@ nginx hâlâ eski config'le eski socket'e konuşuyor; kesinti yok.
 ### Adım 3 — nginx (FPM'den SONRA; editör socket'i var olmalı)
 
 ```bash
-sudo make reload-nginx          # http.conf + site.conf kopyala, nginx -t, reload
+sudo make reload-nginx          # http.conf + site.conf kopyala, AGGREGATOR_IP yerleştir, nginx -t, reload
 # Snippet'ler repoya symlink; git pull ile zaten güncellendi, reload ile devreye girdi.
 
 # Doğrula
+nginx -t
+nginx -T 2>/dev/null | grep -E 'keepalive [0-9]|php_fpm_editors|server [0-9]+\.[0-9]+'
 curl -skI -H "Host: www.tr724.com" https://127.0.0.1/ | grep -iE '^HTTP|x-fastcgi-cache'
 curl -s http://127.0.0.1/-/fpm-status | grep -E '^pool|listen queue:|active'
 curl -s http://127.0.0.1/-/fpm-status-editors | grep -E '^pool|listen queue:|active'
 ```
 
-`nginx -t` geçmezse reload olmaz, eski config çalışmaya devam eder.
+`nginx -t` geçmezse reload olmaz, eski in-memory config çalışmaya devam eder.
+Diskteki dosyalar yine de kopyalanmış olabilir; `host not found in upstream "AGGREGATOR_IP:443"`
+görürsen `make reload-nginx` placeholder'ı doldurmadan kopyalamış demektir (eski Makefile).
+Geçici düzeltme, IP'yi aggregator.env'den yazıp reload:
+
+```bash
+AGG_IP=$(awk -F= '$1=="AGGREGATOR_IP" { sub(/^[^=]*=/,""); print; exit }' /etc/news-wp/aggregator.env)
+sudo sed -i "s/server AGGREGATOR_IP:443;/server ${AGG_IP}:443;/" /etc/nginx/conf.d/00-news-wp.conf
+sudo nginx -t && sudo nginx -s reload
+```
 
 ### Adım 4 — Tema ve mu-plugin
 

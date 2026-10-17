@@ -29,9 +29,16 @@ pull-gcs:      ## download DB + wp-content from gs://tr724-backup into import/
 	scripts/pull-gcs-backup.sh
 post-import:   ## after importing DB + wp-content
 	scripts/post-import.sh
-reload-nginx:  ## install http/site conf, test, reload without dropping connections
+reload-nginx:  ## install http/site conf, pin aggregator IP, test, reload
 	cp -a config/nginx/http.conf /etc/nginx/conf.d/00-news-wp.conf
 	cp -a config/nginx/site.conf /etc/nginx/sites-available/wordpress
+	@AGG_IP=$$(awk -F= '$$1=="AGGREGATOR_IP" { sub(/^[^=]*=/,""); gsub(/\r/,""); print; exit }' /etc/news-wp/aggregator.env 2>/dev/null); \
+	if echo "$$AGG_IP" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$$' && [ -s /etc/nginx/ssl/site-aggregator.crt ]; then \
+	  sed -i "s/server AGGREGATOR_IP:443;/server $$AGG_IP:443;/" /etc/nginx/conf.d/00-news-wp.conf; \
+	else \
+	  sed -i '/# BEGIN site_aggregator$$/,/# END site_aggregator$$/d' /etc/nginx/conf.d/00-news-wp.conf; \
+	  sed -i '/# BEGIN site_aggregator_search$$/,/# END site_aggregator_search$$/d' /etc/nginx/sites-available/wordpress; \
+	fi
 	nginx -t && nginx -s reload
 reload-php:    ## install both pool files, test, graceful reload (PHP_MAX_CHILDREN / PHP_EDITOR_CHILDREN)
 	sed -E "s/^pm.max_children = .*/pm.max_children = $(PHP_MAX_CHILDREN)/" config/php/pool-www.conf > /etc/php/8.3/fpm/pool.d/www.conf
