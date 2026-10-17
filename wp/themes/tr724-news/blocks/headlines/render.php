@@ -2,12 +2,76 @@
 /**
  * Günün manşetleri. Latest posts from the Manşet category as a card carousel.
  *
+ * The query is the same on every newsroom single (single.php:493) except the
+ * current post is excluded. Caching per excludeId would miss on every URL.
+ * Cache one list per category (count+1 rows) and drop the current id here.
+ *
  * @var array    $attributes
  * @var string   $content
  * @var WP_Block $block
  */
 
 defined( 'ABSPATH' ) || exit;
+
+if ( ! function_exists( 'tr724_headlines_cache_key' ) ) {
+	function tr724_headlines_cache_key( int $category_id ): string {
+		return 'tr724_hl_' . $category_id;
+	}
+
+	/**
+	 * @return array<int, array{id: int, url: string, title: string, kicker: string, datetime: string, clock: string, thumb_id: int}>
+	 */
+	function tr724_headlines_items( int $category_id ): array {
+		$key    = tr724_headlines_cache_key( $category_id );
+		$cached = get_transient( $key );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		$query_args = [
+			'post_type'           => 'post',
+			'post_status'         => 'publish',
+			'posts_per_page'      => 21,
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		];
+		if ( $category_id > 0 ) {
+			$query_args['cat'] = $category_id;
+		}
+
+		$query = new WP_Query( $query_args );
+		update_post_thumbnail_cache( $query );
+
+		$items = [];
+		foreach ( $query->posts as $post ) {
+			if ( ! $post instanceof WP_Post ) {
+				continue;
+			}
+			$post_id  = (int) $post->ID;
+			$kicker   = '';
+			$cats     = get_the_category( $post_id );
+			if ( $cats ) {
+				$kicker = function_exists( 'tr724_archive_upper' )
+					? tr724_archive_upper( $cats[0]->name )
+					: $cats[0]->name;
+			}
+			$published = (int) get_post_timestamp( $post_id );
+			$items[]   = [
+				'id'       => $post_id,
+				'url'      => get_permalink( $post ),
+				'title'    => get_the_title( $post ),
+				'kicker'   => $kicker,
+				'datetime' => $published ? (string) get_post_time( DATE_W3C, true, $post ) : '',
+				'clock'    => $published ? wp_date( 'H:i', $published ) : '',
+				'thumb_id' => (int) get_post_thumbnail_id( $post_id ),
+			];
+		}
+		wp_reset_postdata();
+
+		set_transient( $key, $items, 5 * MINUTE_IN_SECONDS );
+		return $items;
+	}
+}
 
 $count = isset( $attributes['postsToShow'] ) ? (int) $attributes['postsToShow'] : 15;
 $count = max( 4, min( 20, $count ) );
@@ -19,23 +83,18 @@ if ( $exclude_id <= 0 && is_singular( 'post' ) ) {
 	$exclude_id = (int) get_queried_object_id();
 }
 
-$query_args = [
-	'post_type'           => 'post',
-	'post_status'         => 'publish',
-	'posts_per_page'      => $count,
-	'ignore_sticky_posts' => true,
-	'no_found_rows'       => true,
-];
-if ( $category_id > 0 ) {
-	$query_args['cat'] = $category_id;
-}
+$items = tr724_headlines_items( $category_id );
 if ( $exclude_id > 0 ) {
-	$query_args['post__not_in'] = [ $exclude_id ];
+	$items = array_values(
+		array_filter(
+			$items,
+			static fn( array $item ): bool => $item['id'] !== $exclude_id
+		)
+	);
 }
+$items = array_slice( $items, 0, $count );
 
-$query = new WP_Query( $query_args );
-
-if ( ! $query->have_posts() ) {
+if ( [] === $items ) {
 	if ( function_exists( 'tr724_category_is_editor_preview' ) && tr724_category_is_editor_preview() ) {
 		echo '<section ' . get_block_wrapper_attributes(
 			[
@@ -45,17 +104,14 @@ if ( ! $query->have_posts() ) {
 		echo '<p class="headlines__empty">' . esc_html__( 'No posts found.', 'tr724-news' ) . '</p>';
 		echo '</section>';
 	}
-	wp_reset_postdata();
 	return;
 }
-
-update_post_thumbnail_cache( $query );
 
 $title    = function_exists( 'tr724_archive_upper' )
 	? tr724_archive_upper( __( 'Günün manşetleri', 'tr724-news' ) )
 	: __( 'Günün manşetleri', 'tr724-news' );
 $title_id = wp_unique_id( 'headlines-title-' );
-$total    = count( $query->posts );
+$total    = count( $items );
 $prev     = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" /></svg>';
 $next     = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5 15 12l-5.5 5.5" /></svg>';
 
@@ -81,51 +137,34 @@ echo '<div class="swiper headlines-swiper">';
 echo '<div class="swiper-wrapper">';
 
 $index = 0;
-while ( $query->have_posts() ) {
-	$query->the_post();
-	$post_id   = (int) get_the_ID();
-	$thumb_id  = (int) get_post_thumbnail_id( $post_id );
-	$image     = '';
-	if ( $thumb_id > 0 ) {
+foreach ( $items as $item ) {
+	$image = '';
+	if ( $item['thumb_id'] > 0 ) {
 		$image = tr724_story_card_image(
-			$thumb_id,
+			$item['thumb_id'],
 			'',
 			$index < 2 ? 'eager' : 'lazy'
 		);
 	}
 
-	$kicker = '';
-	$categories = get_the_category( $post_id );
-	if ( $categories ) {
-		$kicker = function_exists( 'tr724_archive_upper' )
-			? tr724_archive_upper( $categories[0]->name )
-			: $categories[0]->name;
-	}
-
-	$published = (int) get_post_timestamp( $post_id );
-	$datetime  = $published ? (string) get_post_time( DATE_W3C, true, $post_id ) : '';
-	$clock     = $published ? wp_date( 'H:i', $published ) : '';
-
 	echo '<div class="swiper-slide">';
 	echo '<article class="headlines-card">';
-	echo '<a href="' . esc_url( get_permalink( $post_id ) ) . '">';
+	echo '<a href="' . esc_url( $item['url'] ) . '">';
 	echo '<div class="headlines-card__media">';
 	echo $image;
 	echo '</div>';
 	echo '<p class="headlines-card__meta">';
-	if ( '' !== $kicker ) {
-		echo '<span class="headlines-card__kicker">' . esc_html( $kicker ) . '</span>';
+	if ( '' !== $item['kicker'] ) {
+		echo '<span class="headlines-card__kicker">' . esc_html( $item['kicker'] ) . '</span>';
 	}
-	if ( '' !== $clock ) {
-		echo '<time datetime="' . esc_attr( $datetime ) . '">' . esc_html( $clock ) . '</time>';
+	if ( '' !== $item['clock'] ) {
+		echo '<time datetime="' . esc_attr( $item['datetime'] ) . '">' . esc_html( $item['clock'] ) . '</time>';
 	}
 	echo '</p>';
-	echo '<h3 class="headlines-card__title">' . esc_html( get_the_title( $post_id ) ) . '</h3>';
+	echo '<h3 class="headlines-card__title">' . esc_html( $item['title'] ) . '</h3>';
 	echo '</a></article></div>';
 	++$index;
 }
 
 echo '</div></div>';
 echo '</section>';
-
-wp_reset_postdata();

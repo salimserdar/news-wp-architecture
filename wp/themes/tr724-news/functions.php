@@ -64,6 +64,16 @@ require_once get_template_directory() . '/blocks/ticker/rates.php';
 require_once get_template_directory() . '/blocks/site-header/search.php';
 require_once get_template_directory() . '/blocks/related-news/posts.php';
 
+// Headlines carousel on every newsroom single. Query is cached in
+// blocks/headlines/render.php; drop it when a post is saved so a new manset
+// is not stuck for 5 minutes. Default category id matches single.php.
+add_action( 'save_post_post', static function (): void {
+	delete_transient( 'tr724_hl_13694' );
+} );
+add_action( 'deleted_post', static function (): void {
+	delete_transient( 'tr724_hl_13694' );
+} );
+
 /**
  * Exchange sidebar is limited to one category archive when a category is chosen.
  *
