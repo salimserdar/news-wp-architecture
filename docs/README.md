@@ -24,6 +24,7 @@ Reader ──> Cloudflare (edge cache, WAF, TLS)
 | 5 | [**05 — Operations**](05-operations.md) — security, monitoring, R2 database backups, deploys |
 | 6 | [**06 — Load test**](06-load-test.md) — origin k6 runbook and empty results tables |
 | 7 | [**07 — R2 media offload**](07-media-offload.md) — later, when `uploads/` outgrows the disk |
+| 8 | [**08 — PHP-FPM pool split**](08-fpm-pool-split.md) — Oct 2026 incident: why editors stalled, what changed, zero-downtime deploy runbook |
 
 ## Reference
 

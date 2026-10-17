@@ -11,7 +11,9 @@
 #   SITE_DOMAIN=www.example.com
 #   DB_NAME / DB_USER / DB_PASSWORD / DB_TABLE_PREFIX
 #   DB_BUFFER_POOL=8G          # default scales with RAM
-#   PHP_MAX_CHILDREN=20
+#   PHP_MAX_CHILDREN=48        # public pool (anonymous cache misses)
+#   PHP_EDITOR_CHILDREN=16     # editors pool (logged-in, wp-admin, wp-login)
+#   DB_RESTART=0               # 1 = restart MariaDB even if its config did not change
 #   WEB_OPEN=1                 # 1 = 80/443 from anywhere (default, first boot)
 #                              # 0 = Cloudflare IP ranges only
 #   WP_ROOT=/var/www/html
@@ -36,7 +38,9 @@ WEB_OPEN="${WEB_OPEN:-1}"
 DB_NAME="${DB_NAME:-wordpress}"
 DB_USER="${DB_USER:-wordpress}"
 DB_TABLE_PREFIX="${DB_TABLE_PREFIX:-wp_}"
-PHP_MAX_CHILDREN="${PHP_MAX_CHILDREN:-20}"
+PHP_MAX_CHILDREN="${PHP_MAX_CHILDREN:-48}"
+PHP_EDITOR_CHILDREN="${PHP_EDITOR_CHILDREN:-16}"
+DB_RESTART="${DB_RESTART:-0}"
 SITE_DOMAIN="${SITE_DOMAIN:-}"
 CRED_FILE="/root/news-wp-credentials"
 if [[ ! -f "${CRED_FILE}" && -f /root/news-wp-native-credentials ]]; then
@@ -174,13 +178,26 @@ cat > /etc/cron.d/news-wp-backup <<EOF
 30 3 * * * root cd ${REPO_DIR} && nice -n 10 ionice -c3 bash scripts/backup.sh >> ${REPO_DIR}/logs/backup.log 2>&1
 EOF
 
-echo "==> PHP-FPM pool + ini"
-if [[ -f /etc/php/8.3/fpm/pool.d/www.conf && ! -L /etc/php/8.3/fpm/pool.d/www.conf ]]; then
+echo "==> PHP-FPM pools + ini"
+if [[ -f /etc/php/8.3/fpm/pool.d/www.conf && ! -L /etc/php/8.3/fpm/pool.d/www.conf \
+      && ! -f /etc/php/8.3/fpm/pool.d/www.conf.dist ]]; then
   mv /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/pool.d/www.conf.dist
 fi
 sed -E "s/^pm.max_children = .*/pm.max_children = ${PHP_MAX_CHILDREN}/" \
   "${REPO_DIR}/config/php/pool-www.conf" \
   > /etc/php/8.3/fpm/pool.d/www.conf
+sed -E "s/^pm.max_children = .*/pm.max_children = ${PHP_EDITOR_CHILDREN}/" \
+  "${REPO_DIR}/config/php/pool-editors.conf" \
+  > /etc/php/8.3/fpm/pool.d/editors.conf
+# `systemctl reload php8.3-fpm` is only graceful if the master waits for
+# children to finish their current request. Ubuntu ships this at 0.
+if grep -qE '^;?\s*process_control_timeout\s*=' /etc/php/8.3/fpm/php-fpm.conf; then
+  sed -i -E 's/^;?\s*process_control_timeout\s*=.*/process_control_timeout = 10s/' /etc/php/8.3/fpm/php-fpm.conf
+else
+  printf '\nprocess_control_timeout = 10s\n' >> /etc/php/8.3/fpm/php-fpm.conf
+fi
+touch /var/log/php8.3-fpm-editors-slow.log
+chown www-data:www-data /var/log/php8.3-fpm-editors-slow.log
 # JIT is off: it hangs/kills wp-admin/load-styles.php with Newspaper.
 grep -v -E '^[[:space:]]*opcache\.jit' "${REPO_DIR}/config/php/conf.d/zz-wp.ini" \
   > /etc/php/8.3/fpm/conf.d/99-wp.ini
@@ -195,16 +212,35 @@ chown www-data:www-data /var/log/php8.3-fpm-slow.log
 
 echo "==> MariaDB database + tuning"
 systemctl enable --now mariadb
+# A restart empties the buffer pool (minutes of slow queries on a live site),
+# so only restart when the config actually changed or DB_RESTART=1.
+db_cnf_changed=0
+if ! cmp -s "${REPO_DIR}/config/mariadb/zz-tuning.cnf" /etc/mysql/mariadb.conf.d/zz-tuning.cnf; then
+  db_cnf_changed=1
+fi
+if ! grep -qs "innodb_buffer_pool_size = ${DB_BUFFER_POOL}\$" /etc/mysql/mariadb.conf.d/zz-buffer-pool.cnf; then
+  db_cnf_changed=1
+fi
 install -m 0644 "${REPO_DIR}/config/mariadb/zz-tuning.cnf" \
   /etc/mysql/mariadb.conf.d/zz-tuning.cnf
 cat > /etc/mysql/mariadb.conf.d/zz-buffer-pool.cnf <<EOF
 [mysqld]
 innodb_buffer_pool_size = ${DB_BUFFER_POOL}
 EOF
-if ! systemctl restart mariadb; then
-  echo "    MariaDB rejected the tuning file — starting with distro defaults"
-  rm -f /etc/mysql/mariadb.conf.d/zz-tuning.cnf /etc/mysql/mariadb.conf.d/zz-buffer-pool.cnf
-  systemctl restart mariadb
+if [[ "${db_cnf_changed}" == 1 || "${DB_RESTART}" == 1 ]]; then
+  if ! systemctl restart mariadb; then
+    echo "    MariaDB rejected the tuning file — starting with distro defaults"
+    rm -f /etc/mysql/mariadb.conf.d/zz-tuning.cnf /etc/mysql/mariadb.conf.d/zz-buffer-pool.cnf
+    systemctl restart mariadb
+  fi
+else
+  # Dynamic variables that matter for the FPM pools; the rest waits for the
+  # next planned restart.
+  want_conn="$(awk -F= '/^max_connections/ { gsub(/[^0-9]/,"",$2); print $2 }' "${REPO_DIR}/config/mariadb/zz-tuning.cnf")"
+  if [[ -n "${want_conn}" ]]; then
+    mysql -e "SET GLOBAL max_connections = ${want_conn};" 2>/dev/null \
+      && echo "    MariaDB running; max_connections = ${want_conn} applied live (no restart)"
+  fi
 fi
 mysql -e "DELETE FROM mysql.user WHERE User=''; DROP DATABASE IF EXISTS test; DELETE FROM mysql.db WHERE Db='test' OR Db='test\\\\_%'; FLUSH PRIVILEGES;" || true
 PASS_ESC="${DB_PASSWORD//\'/\'\'}"
@@ -495,11 +531,20 @@ cat > /etc/cron.d/wordpress <<EOF
 EOF
 chmod 644 /etc/cron.d/wordpress
 
-echo "==> Enable services"
+echo "==> Enable services (reload, not restart: in-flight requests finish)"
 systemctl enable --now php8.3-fpm nginx
-systemctl restart php8.3-fpm
+php-fpm8.3 -t
+# Reload re-reads pool files, opens the new editors socket and replaces
+# children after process_control_timeout. nginx must reload after FPM so the
+# php_fpm_editors upstream socket already exists.
+systemctl reload php8.3-fpm
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [[ -S /run/php/php8.3-fpm-editors.sock ]] && break
+  sleep 1
+done
+[[ -S /run/php/php8.3-fpm-editors.sock ]] || { echo "    ERROR: editors socket missing; check: journalctl -u php8.3-fpm"; exit 1; }
 nginx -t
-systemctl restart nginx
+systemctl reload nginx
 
 echo "==> Verify"
 if [[ ! -f "${WP_ROOT}/index.php" ]]; then

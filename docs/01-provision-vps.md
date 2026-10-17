@@ -13,7 +13,7 @@ children, page cache). Why those numbers look like this:
 | vCPU | RAM | Disk | Use |
 |-----:|----:|------|-----|
 | 2 | 16 GB | NVMe, ≥ 100 GB | Production origin with FastCGI cache |
-| 2 | 8 GB | NVMe, ≥ 100 GB | Staging or modest traffic. Set `DB_BUFFER_POOL=1G` and `PHP_MAX_CHILDREN=6` in `.env` |
+| 2 | 8 GB | NVMe, ≥ 100 GB | Staging or modest traffic. Set `DB_BUFFER_POOL=1G`, `PHP_MAX_CHILDREN=8` and `PHP_EDITOR_CHILDREN=4` in `.env` |
 | 8 | 32 GB | NVMe, ≥ 200 GB | Headroom for the traffic targets in [Requirements](reference/requirements.md) |
 
 Uploads are the part that grows. If the existing media tree is already large,

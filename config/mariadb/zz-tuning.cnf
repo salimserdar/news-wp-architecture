@@ -14,8 +14,10 @@ innodb_read_io_threads         = 4
 innodb_write_io_threads        = 4
 innodb_stats_on_metadata       = 0
 
-# --- Connections: FPM children + cron + cli + headroom ---
-max_connections        = 80
+# --- Connections: www pool (48) + editors pool (16) + cron + cli + headroom ---
+# Each FPM child holds at most one connection. Raise this before raising
+# PHP_MAX_CHILDREN / PHP_EDITOR_CHILDREN. Live:  SET GLOBAL max_connections = 200;
+max_connections        = 200
 thread_cache_size      = 64
 wait_timeout           = 120
 interactive_timeout    = 120
