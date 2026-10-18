@@ -59,7 +59,7 @@ if ( ! function_exists( 'tr724_editorial_manset_admin_rows' ) ) {
 
 if ( ! function_exists( 'tr724_editorial_render_manset_row' ) ) {
 	/**
-	 * One selected post. Search adds rows by cloning #tr724-ms-template.
+	 * One selected post. Lookup adds rows by cloning #tr724-ms-template.
 	 *
 	 * @param array{id: int, title: string, date: string, thumb: string} $row
 	 * @param int                                                        $index 1-based position.
@@ -138,11 +138,18 @@ if ( ! function_exists( 'tr724_editorial_render_manset_page' ) ) {
 				<?php wp_nonce_field( 'tr724_save_manset' ); ?>
 				<input type="hidden" name="tr724_manset_order" id="tr724-ms-order" value="<?php echo esc_attr( $order ); ?>">
 
+				<div class="tr724-ms-toolbar">
+					<?php submit_button( tr724_editorial_ui( 'save' ), 'primary', 'submit', false ); ?>
+				</div>
+
 				<div class="tr724-ms-add">
-					<label for="tr724-ms-search"><?php echo esc_html( tr724_editorial_ui( 'manset_add' ) ); ?></label>
-					<input type="search" class="regular-text" id="tr724-ms-search" placeholder="<?php echo esc_attr( tr724_editorial_ui( 'manset_search' ) ); ?>" autocomplete="off">
+					<label for="tr724-ms-ref"><?php echo esc_html( tr724_editorial_ui( 'manset_add' ) ); ?></label>
+					<div class="tr724-ms-add-row">
+						<input type="text" class="regular-text" id="tr724-ms-ref" placeholder="<?php echo esc_attr( tr724_editorial_ui( 'manset_lookup_placeholder' ) ); ?>" autocomplete="off" spellcheck="false">
+						<button type="button" class="button button-secondary" id="tr724-ms-lookup"><?php echo esc_html( tr724_editorial_ui( 'add' ) ); ?></button>
+					</div>
+					<p class="description"><?php echo esc_html( tr724_editorial_ui( 'manset_lookup_help' ) ); ?></p>
 					<p class="tr724-ms-status" id="tr724-ms-status" aria-live="polite"></p>
-					<ul class="tr724-ms-results" id="tr724-ms-results" hidden></ul>
 				</div>
 
 				<p class="tr724-ms-empty" id="tr724-ms-empty" <?php echo $rows ? 'hidden' : ''; ?>>
@@ -207,16 +214,15 @@ if ( ! function_exists( 'tr724_editorial_enqueue_manset_assets' ) ) {
 			'tr724-editorial-manset',
 			'tr724Manset',
 			[
-				'restPosts' => esc_url_raw( rest_url( 'wp/v2/posts' ) ),
-				'nonce'     => wp_create_nonce( 'wp_rest' ),
-				'max'       => tr724_editorial_manset_max(),
-				'i18n'      => [
-					'searching' => tr724_editorial_ui( 'searching' ),
-					'none'      => tr724_editorial_ui( 'manset_none' ),
-					'error'     => tr724_editorial_ui( 'manset_search_error' ),
-					'add'       => tr724_editorial_ui( 'add' ),
-					'added'     => tr724_editorial_ui( 'added' ),
-					'limit'     => sprintf(
+				'ajax'  => admin_url( 'admin-ajax.php' ),
+				'nonce' => wp_create_nonce( 'tr724_manset_lookup' ),
+				'max'   => tr724_editorial_manset_max(),
+				'i18n'  => [
+					'looking' => tr724_editorial_ui( 'searching' ),
+					'none'    => tr724_editorial_ui( 'manset_none' ),
+					'error'   => tr724_editorial_ui( 'manset_lookup_error' ),
+					'already' => tr724_editorial_ui( 'manset_already' ),
+					'limit'   => sprintf(
 						tr724_editorial_ui( 'manset_limit' ),
 						tr724_editorial_manset_max()
 					),

@@ -433,6 +433,99 @@ if ( ! function_exists( 'tr724_editorial_manset_sync_post' ) ) {
 	}
 }
 
+if ( ! function_exists( 'tr724_editorial_manset_usable_post' ) ) {
+	function tr724_editorial_manset_usable_post( $post ): ?WP_Post {
+		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+			return null;
+		}
+		if ( 'publish' !== $post->post_status ) {
+			return null;
+		}
+		return $post;
+	}
+}
+
+if ( ! function_exists( 'tr724_editorial_manset_extract_slug' ) ) {
+	function tr724_editorial_manset_extract_slug( string $raw ): string {
+		$raw = trim( $raw );
+		if ( '' === $raw ) {
+			return '';
+		}
+
+		$path = $raw;
+		if ( preg_match( '#^https?://#i', $raw ) || str_starts_with( $raw, '/' ) ) {
+			$parsed = wp_parse_url( $raw, PHP_URL_PATH );
+			$path   = is_string( $parsed ) ? $parsed : '';
+		} else {
+			$path = strtok( $raw, '?#' ) ?: $raw;
+		}
+
+		$path = trim( (string) $path, '/' );
+		if ( '' === $path ) {
+			return '';
+		}
+
+		$parts = explode( '/', $path );
+		$last  = (string) end( $parts );
+		return rawurldecode( $last );
+	}
+}
+
+if ( ! function_exists( 'tr724_editorial_manset_resolve_post' ) ) {
+	/**
+	 * Resolve a pasted ID, permalink, admin edit URL, or slug. Exact lookup only.
+	 */
+	function tr724_editorial_manset_resolve_post( string $raw ): ?WP_Post {
+		$raw = trim( wp_unslash( $raw ) );
+		if ( '' === $raw ) {
+			return null;
+		}
+
+		if ( preg_match( '/(?:^|[?&])post=(\d+)/', $raw, $matches ) ) {
+			$found = tr724_editorial_manset_usable_post( get_post( (int) $matches[1] ) );
+			if ( $found ) {
+				return $found;
+			}
+		}
+
+		if ( preg_match( '/^\d+$/', $raw ) ) {
+			$found = tr724_editorial_manset_usable_post( get_post( (int) $raw ) );
+			if ( $found ) {
+				return $found;
+			}
+		}
+
+		if ( preg_match( '#^https?://#i', $raw ) || str_starts_with( $raw, '/' ) ) {
+			$id = url_to_postid( $raw );
+			if ( $id > 0 ) {
+				$found = tr724_editorial_manset_usable_post( get_post( $id ) );
+				if ( $found ) {
+					return $found;
+				}
+			}
+		}
+
+		$slug = tr724_editorial_manset_extract_slug( $raw );
+		if ( '' === $slug ) {
+			return null;
+		}
+
+		$query = new WP_Query(
+			[
+				'name'                => $slug,
+				'post_type'           => 'post',
+				'post_status'         => 'publish',
+				'posts_per_page'      => 1,
+				'no_found_rows'       => true,
+				'ignore_sticky_posts' => true,
+			]
+		);
+
+		$post = $query->posts[0] ?? null;
+		return tr724_editorial_manset_usable_post( $post );
+	}
+}
+
 if ( ! function_exists( 'tr724_editorial_manset_drop_id' ) ) {
 	function tr724_editorial_manset_drop_id( int $post_id ): void {
 		if ( $post_id <= 0 ) {
@@ -516,6 +609,31 @@ add_action(
 	'deleted_post',
 	static function ( $post_id ): void {
 		tr724_editorial_manset_drop_id( (int) $post_id );
+	}
+);
+
+add_action(
+	'wp_ajax_tr724_manset_lookup',
+	static function (): void {
+		if ( ! current_user_can( tr724_editorial_capability() ) ) {
+			wp_send_json_error( [ 'message' => tr724_editorial_ui( 'no_permission' ) ], 403 );
+		}
+
+		check_ajax_referer( 'tr724_manset_lookup', 'nonce' );
+
+		$raw  = isset( $_POST['ref'] ) ? (string) wp_unslash( $_POST['ref'] ) : '';
+		$post = tr724_editorial_manset_resolve_post( $raw );
+		if ( ! $post instanceof WP_Post ) {
+			wp_send_json_error( [ 'message' => tr724_editorial_ui( 'manset_none' ) ], 404 );
+		}
+
+		wp_send_json_success(
+			[
+				'id'    => (int) $post->ID,
+				'title' => get_the_title( $post ),
+				'date'  => get_the_date( 'Y-m-d H:i', $post ),
+			]
+		);
 	}
 );
 

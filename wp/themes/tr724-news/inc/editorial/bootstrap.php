@@ -226,13 +226,21 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'en' => 'Add a post',
 				'tr' => 'Haber ekle',
 			],
-			'manset_search'          => [
-				'en' => 'Search posts',
-				'tr' => 'Haber ara',
+			'manset_lookup_placeholder' => [
+				'en' => 'Paste a slug, post ID, or story URL',
+				'tr' => 'Slug, haber ID veya URL yapıştırın',
+			],
+			'manset_lookup_help'     => [
+				'en' => 'Paste the permalink or the last slug segment. Example: story-title or https://www.tr724.com/story-title/',
+				'tr' => 'Haberin tam adresini veya slug’ını yapıştırın. Örnek: haber-basligi veya https://www.tr724.com/haber-basligi/',
 			],
 			'manset_empty'           => [
-				'en' => 'No headlines selected yet. Search for a post and add it, or assign the Manşet category to a published post.',
-				'tr' => 'Henüz manşet seçilmedi. Bir haber arayıp ekleyin veya yayınlanmış bir habere Manşet kategorisi verin.',
+				'en' => 'No headlines selected yet. Paste a slug or URL, or assign the Manşet category to a published post.',
+				'tr' => 'Henüz manşet seçilmedi. Slug veya URL yapıştırın, ya da yayınlanmış bir habere Manşet kategorisi verin.',
+			],
+			'manset_already'         => [
+				'en' => 'That post is already in the list.',
+				'tr' => 'Bu haber zaten listede.',
 			],
 			'manset_saved'           => [
 				'en' => 'Headline order saved.',
@@ -243,12 +251,12 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'tr' => 'Bazı haberler artık var olmadığı veya liste dolduğu için atlandı.',
 			],
 			'manset_none'            => [
-				'en' => 'No matching posts.',
-				'tr' => 'Eşleşen haber yok.',
+				'en' => 'No published post matches that slug, ID, or URL.',
+				'tr' => 'Bu slug, ID veya adrese ait yayınlanmış haber yok.',
 			],
-			'manset_search_error'    => [
-				'en' => 'Post search is unavailable.',
-				'tr' => 'Haber araması kullanılamıyor.',
+			'manset_lookup_error'    => [
+				'en' => 'Lookup is unavailable.',
+				'tr' => 'Haber bulunamadı; tekrar deneyin.',
 			],
 			'manset_limit'           => [
 				'en' => 'You can feature up to %d posts.',
