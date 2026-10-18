@@ -34,6 +34,12 @@
 				} );
 			} );
 
+			var adminUrl = window.tr724MansetAdmin || "";
+			var ui = window.tr724MansetUi || {};
+			var mansetId = parseInt( window.tr724MansetCategoryId, 10 ) || 0;
+			var categoryId = parseInt( attributes.categoryId, 10 ) || 0;
+			var usesQueue = categoryId === 0 || ( mansetId > 0 && categoryId === mansetId );
+
 			return el(
 				Fragment,
 				null,
@@ -43,6 +49,28 @@
 					el(
 						PanelBody,
 						{ title: __( "Spotlight", "tr724-news" ), initialOpen: true },
+						usesQueue
+							? el(
+								"p",
+								null,
+								ui.help || __( "Order comes from Editorial → Headlines. This block cannot override it.", "tr724-news" )
+							)
+							: null,
+						usesQueue && adminUrl
+							? el(
+								"p",
+								null,
+								el(
+									"a",
+									{
+										href: adminUrl,
+										target: "_blank",
+										rel: "noopener noreferrer",
+									},
+									ui.edit || __( "Edit headline order", "tr724-news" )
+								)
+							)
+							: null,
 						el( SelectControl, {
 							label: __( "Category", "tr724-news" ),
 							value: String( attributes.categoryId || 0 ),

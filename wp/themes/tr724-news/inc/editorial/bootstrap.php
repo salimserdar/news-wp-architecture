@@ -12,6 +12,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+require_once __DIR__ . '/manset.php';
+require_once __DIR__ . '/manset-page.php';
 require_once __DIR__ . '/featured-topics.php';
 require_once __DIR__ . '/featured-topics-page.php';
 require_once __DIR__ . '/links.php';
@@ -47,6 +49,15 @@ if ( ! function_exists( 'tr724_editorial_pages' ) ) {
 		$registered = apply_filters(
 			'tr724_editorial_pages',
 			[
+				[
+					'id'         => 'manset',
+					'slug'       => 'tr724-editorial-manset',
+					'label_key'  => 'manset',
+					'title'      => 'Manşet',
+					'menu_title' => 'Manşet',
+					'callback'   => 'tr724_editorial_render_manset_page',
+					'enqueue'    => 'tr724_editorial_enqueue_manset_assets',
+				],
 				[
 					'id'         => 'featured-topics',
 					'slug'       => 'tr724-editorial-featured-topics',
@@ -198,6 +209,58 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 			'editorial'              => [
 				'en' => 'Editorial',
 				'tr' => 'Editöryal',
+			],
+			'manset'                 => [
+				'en' => 'Headlines',
+				'tr' => 'Manşet',
+			],
+			'manset_description'     => [
+				'en' => 'Choose the posts shown in Spotlight and Günün manşetleri. Drag to set the order. Removing a post here only takes it off those blocks.',
+				'tr' => 'Spotlight ve Günün manşetleri bloklarında gösterilecek haberleri seçin. Sırayı sürükleyerek belirleyin. Buradan kaldırmak haberi yalnızca bu bloklardan düşürür.',
+			],
+			'manset_auto_help'       => [
+				'en' => 'A newly published post in the Manşet category is added at the top. Saving a post that is already in the list does not change its place. Changing the publish date no longer changes the order.',
+				'tr' => 'Manşet kategorisine alınan yeni haber listenin başına eklenir. Listedeki bir haberi kaydetmek yerini değiştirmez. Yayın tarihini değiştirmek artık sırayı etkilemez.',
+			],
+			'manset_add'             => [
+				'en' => 'Add a post',
+				'tr' => 'Haber ekle',
+			],
+			'manset_search'          => [
+				'en' => 'Search posts',
+				'tr' => 'Haber ara',
+			],
+			'manset_empty'           => [
+				'en' => 'No headlines selected yet. Search for a post and add it, or assign the Manşet category to a published post.',
+				'tr' => 'Henüz manşet seçilmedi. Bir haber arayıp ekleyin veya yayınlanmış bir habere Manşet kategorisi verin.',
+			],
+			'manset_saved'           => [
+				'en' => 'Headline order saved.',
+				'tr' => 'Manşet sırası kaydedildi.',
+			],
+			'manset_dropped'         => [
+				'en' => 'Some posts were skipped because they no longer exist or the list is full.',
+				'tr' => 'Bazı haberler artık var olmadığı veya liste dolduğu için atlandı.',
+			],
+			'manset_none'            => [
+				'en' => 'No matching posts.',
+				'tr' => 'Eşleşen haber yok.',
+			],
+			'manset_search_error'    => [
+				'en' => 'Post search is unavailable.',
+				'tr' => 'Haber araması kullanılamıyor.',
+			],
+			'manset_limit'           => [
+				'en' => 'You can feature up to %d posts.',
+				'tr' => 'En fazla %d haber seçebilirsiniz.',
+			],
+			'manset_block_help'      => [
+				'en' => 'Order comes from Editorial → Headlines. This block cannot override it.',
+				'tr' => 'Sıra Editöryal → Manşet bölümünden gelir. Bu blok onu değiştiremez.',
+			],
+			'manset_edit'            => [
+				'en' => 'Edit headline order',
+				'tr' => 'Manşet sırasını düzenle',
 			],
 			'featured_topics'        => [
 				'en' => 'Featured Topics',
@@ -505,7 +568,7 @@ add_action( 'admin_menu', static function (): void {
 
 	// The first real screen makes WordPress insert a copy of the parent.
 	// Drop that copy. The screen slug stays different from the parent, so
-	// the submenu remains even while Featured Topics is the only screen.
+	// the submenu remains even while only one screen exists.
 	remove_submenu_page( $parent, $parent );
 } );
 

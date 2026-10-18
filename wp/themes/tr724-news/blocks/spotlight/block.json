@@ -4,7 +4,7 @@
 	"name": "tr724/spotlight",
 	"title": "Spotlight",
 	"category": "theme",
-	"description": "Manşet carousel. Shows the latest posts, optionally from one category.",
+	"description": "Manşet carousel. Order comes from Editorial → Manşet when the category is Manşet or All.",
 	"keywords": [ "carousel", "swiper", "headline", "manset" ],
 	"textdomain": "tr724-news",
 	"attributes": {

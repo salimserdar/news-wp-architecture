@@ -11,6 +11,8 @@
 	blocks.registerBlockType( "tr724/headlines", {
 		edit: function ( props ) {
 			var attributes = props.attributes;
+			var adminUrl = window.tr724MansetAdmin || "";
+			var ui = window.tr724MansetUi || {};
 
 			return el(
 				Fragment,
@@ -20,7 +22,27 @@
 					null,
 					el(
 						PanelBody,
-						{ title: __( "Günün Manşetleri", "tr724-news" ), initialOpen: true },
+						{ title: ui.title || __( "Günün Manşetleri", "tr724-news" ), initialOpen: true },
+						el(
+							"p",
+							null,
+							ui.help || __( "Order comes from Editorial → Headlines. This block cannot override it.", "tr724-news" )
+						),
+						adminUrl
+							? el(
+								"p",
+								null,
+								el(
+									"a",
+									{
+										href: adminUrl,
+										target: "_blank",
+										rel: "noopener noreferrer",
+									},
+									ui.edit || __( "Edit headline order", "tr724-news" )
+								)
+							)
+							: null,
 						el( RangeControl, {
 							label: __( "Posts", "tr724-news" ),
 							value: attributes.postsToShow || 15,

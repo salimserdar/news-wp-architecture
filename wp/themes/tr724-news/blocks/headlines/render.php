@@ -1,10 +1,10 @@
 <?php
 /**
- * Günün manşetleri. Latest posts from the Manşet category as a card carousel.
+ * Günün manşetleri. Ordered posts from Editorial → Manşet as a card carousel.
  *
- * The query is the same on every newsroom single (single.php:493) except the
- * current post is excluded. Caching per excludeId would miss on every URL.
- * Cache one list per category (count+1 rows) and drop the current id here.
+ * The list is the same on every newsroom single except the current post is
+ * excluded. Caching per excludeId would miss on every URL. Cache one hydrated
+ * list and drop the current id here.
  *
  * @var array    $attributes
  * @var string   $content
@@ -13,77 +13,17 @@
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! function_exists( 'tr724_headlines_cache_key' ) ) {
-	function tr724_headlines_cache_key( int $category_id ): string {
-		return 'tr724_hl_' . $category_id;
-	}
-
-	/**
-	 * @return array<int, array{id: int, url: string, title: string, kicker: string, datetime: string, clock: string, thumb_id: int}>
-	 */
-	function tr724_headlines_items( int $category_id ): array {
-		$key    = tr724_headlines_cache_key( $category_id );
-		$cached = get_transient( $key );
-		if ( is_array( $cached ) ) {
-			return $cached;
-		}
-
-		$query_args = [
-			'post_type'           => 'post',
-			'post_status'         => 'publish',
-			'posts_per_page'      => 21,
-			'ignore_sticky_posts' => true,
-			'no_found_rows'       => true,
-		];
-		if ( $category_id > 0 ) {
-			$query_args['cat'] = $category_id;
-		}
-
-		$query = new WP_Query( $query_args );
-		update_post_thumbnail_cache( $query );
-
-		$items = [];
-		foreach ( $query->posts as $post ) {
-			if ( ! $post instanceof WP_Post ) {
-				continue;
-			}
-			$post_id  = (int) $post->ID;
-			$kicker   = '';
-			$cats     = get_the_category( $post_id );
-			if ( $cats ) {
-				$kicker = function_exists( 'tr724_archive_upper' )
-					? tr724_archive_upper( $cats[0]->name )
-					: $cats[0]->name;
-			}
-			$published = (int) get_post_timestamp( $post_id );
-			$items[]   = [
-				'id'       => $post_id,
-				'url'      => get_permalink( $post ),
-				'title'    => get_the_title( $post ),
-				'kicker'   => $kicker,
-				'datetime' => $published ? (string) get_post_time( DATE_W3C, true, $post ) : '',
-				'clock'    => $published ? wp_date( 'H:i', $published ) : '',
-				'thumb_id' => (int) get_post_thumbnail_id( $post_id ),
-			];
-		}
-		wp_reset_postdata();
-
-		set_transient( $key, $items, 5 * MINUTE_IN_SECONDS );
-		return $items;
-	}
-}
-
 $count = isset( $attributes['postsToShow'] ) ? (int) $attributes['postsToShow'] : 15;
 $count = max( 4, min( 20, $count ) );
-
-$category_id = isset( $attributes['categoryId'] ) ? (int) $attributes['categoryId'] : 13694;
 
 $exclude_id = isset( $attributes['excludeId'] ) ? (int) $attributes['excludeId'] : 0;
 if ( $exclude_id <= 0 && is_singular( 'post' ) ) {
 	$exclude_id = (int) get_queried_object_id();
 }
 
-$items = tr724_headlines_items( $category_id );
+$items = function_exists( 'tr724_editorial_manset_headline_items' )
+	? tr724_editorial_manset_headline_items()
+	: [];
 if ( $exclude_id > 0 ) {
 	$items = array_values(
 		array_filter(

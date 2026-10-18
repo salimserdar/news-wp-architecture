@@ -495,7 +495,6 @@ if ( have_posts() ) {
 								'blockName'    => 'tr724/headlines',
 								'attrs'        => [
 									'excludeId'   => $post_id,
-									'categoryId'  => 13694,
 									'postsToShow' => 15,
 								],
 								'innerBlocks'  => [],

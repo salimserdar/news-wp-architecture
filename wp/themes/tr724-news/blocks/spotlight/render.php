@@ -1,6 +1,9 @@
 <?php
 /**
- * Spotlight carousel. Latest posts, filtered by the block's category.
+ * Spotlight carousel.
+ *
+ * Manşet (and "all categories") read the editorial queue. Other categories
+ * still query latest posts by date.
  *
  * @var array    $attributes
  * @var string   $content
@@ -14,21 +17,29 @@ $count = max( 1, min( 30, $count ) );
 
 $category_id = isset( $attributes['categoryId'] ) ? (int) $attributes['categoryId'] : 0;
 
-$query_args = [
-	'post_type'           => 'post',
-	'post_status'         => 'publish',
-	'posts_per_page'      => $count,
-	'ignore_sticky_posts' => true,
-	'no_found_rows'       => true,
-];
+$use_queue = function_exists( 'tr724_editorial_manset_is_source_category' )
+	&& tr724_editorial_manset_is_source_category( $category_id )
+	&& function_exists( 'tr724_editorial_get_manset' );
 
-if ( $category_id > 0 ) {
-	$query_args['cat'] = $category_id;
+$posts = [];
+if ( $use_queue ) {
+	$posts = array_slice( tr724_editorial_get_manset(), 0, $count );
+} else {
+	$query_args = [
+		'post_type'           => 'post',
+		'post_status'         => 'publish',
+		'posts_per_page'      => $count,
+		'ignore_sticky_posts' => true,
+		'no_found_rows'       => true,
+	];
+	if ( $category_id > 0 ) {
+		$query_args['cat'] = $category_id;
+	}
+	$query = new WP_Query( $query_args );
+	$posts = $query->posts;
 }
 
-$query = new WP_Query( $query_args );
-
-if ( ! $query->have_posts() ) {
+if ( ! $posts ) {
 	echo '<section ' . get_block_wrapper_attributes(
 		[
 			'class' => 'spotlight spotlight--empty',
@@ -36,21 +47,33 @@ if ( ! $query->have_posts() ) {
 	) . '>';
 	echo '<p class="spotlight__empty">' . esc_html__( 'No posts found.', 'tr724-news' ) . '</p>';
 	echo '</section>';
-	wp_reset_postdata();
 	return;
 }
 
-update_post_thumbnail_cache( $query );
-
-$extra_ids = [];
-foreach ( $query->posts as $spotlight_post ) {
-	$extra_id = tr724_additional_image_id( (int) $spotlight_post->ID );
-	if ( $extra_id > 0 ) {
-		$extra_ids[] = $extra_id;
+$post_ids = [];
+foreach ( $posts as $spotlight_post ) {
+	if ( $spotlight_post instanceof WP_Post ) {
+		$post_ids[] = (int) $spotlight_post->ID;
 	}
 }
-if ( $extra_ids ) {
-	_prime_post_caches( $extra_ids, false, true );
+if ( $post_ids ) {
+	_prime_post_caches( $post_ids, true, true );
+}
+
+$image_ids = [];
+foreach ( $post_ids as $spotlight_id ) {
+	$thumb_id = (int) get_post_thumbnail_id( $spotlight_id );
+	if ( $thumb_id > 0 ) {
+		$image_ids[] = $thumb_id;
+	}
+	$extra_id = tr724_additional_image_id( $spotlight_id );
+	if ( $extra_id > 0 ) {
+		$image_ids[] = $extra_id;
+	}
+}
+$image_ids = array_values( array_unique( $image_ids ) );
+if ( $image_ids ) {
+	_prime_post_caches( $image_ids, false, true );
 }
 
 $prev_icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" /></svg>';
@@ -68,9 +91,11 @@ echo '<div class="swiper news-swiper">';
 echo '<div class="swiper-wrapper">';
 
 $index = 0;
-while ( $query->have_posts() ) {
-	$query->the_post();
-	$post_id = get_the_ID();
+foreach ( $posts as $spotlight_post ) {
+	if ( ! $spotlight_post instanceof WP_Post ) {
+		continue;
+	}
+	$post_id = (int) $spotlight_post->ID;
 
 	$thumb_id = tr724_additional_image_id( $post_id );
 	if ( $thumb_id <= 0 ) {
@@ -78,7 +103,7 @@ while ( $query->have_posts() ) {
 	}
 	$extra_title = tr724_additional_title( $post_id );
 	$upper_title = tr724_upper_title( $post_id );
-	$slide_title = '' !== $extra_title ? $extra_title : get_the_title( $post_id );
+	$slide_title = '' !== $extra_title ? $extra_title : get_the_title( $spotlight_post );
 	$hide_title  = tr724_hide_title( $post_id );
 	$slide_label = ( ! $hide_title && '' !== $upper_title ) ? $upper_title . ' ' . $slide_title : $slide_title;
 	$image       = '';
@@ -95,7 +120,7 @@ while ( $query->have_posts() ) {
 	}
 
 	echo '<div class="swiper-slide">';
-	echo '<a class="news-slide" href="' . esc_url( get_permalink( $post_id ) ) . '" aria-label="' . esc_attr( $slide_label ) . '">';
+	echo '<a class="news-slide" href="' . esc_url( get_permalink( $spotlight_post ) ) . '" aria-label="' . esc_attr( $slide_label ) . '">';
 	echo $image;
 	if ( ! $hide_title ) {
 		echo '<span class="news-slide__shade" aria-hidden="true"></span>';
@@ -127,5 +152,3 @@ echo '<span class="news-pager__more-label">' . esc_html__( 'Devamı', 'tr724-new
 echo $more_icon;
 echo '' !== $more_url ? '</a>' : '</button>';
 echo '</div></section>';
-
-wp_reset_postdata();

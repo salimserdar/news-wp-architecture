@@ -60,4 +60,8 @@ mysqladmin status 2>/dev/null | sed 's/^/  /' || echo "  (mysqladmin not availab
 echo
 echo "== Host =="
 uptime | sed 's/^/  /'
-free -h | sed 's/^/  /'
+if command -v free >/dev/null 2>&1; then
+  free -h | sed 's/^/  /'
+else
+  echo "  (free not available — run make stats on the VPS)"
+fi

@@ -4,7 +4,7 @@
 	"name": "tr724/headlines",
 	"title": "Günün Manşetleri",
 	"category": "theme",
-	"description": "Today's headlines as a swipeable carousel. Shown under the patron box on editor and administrator posts.",
+	"description": "Today's headlines as a swipeable carousel. Order comes from Editorial → Manşet.",
 	"keywords": [ "carousel", "swiper", "headline", "manset", "günün" ],
 	"textdomain": "tr724-news",
 	"attributes": {
