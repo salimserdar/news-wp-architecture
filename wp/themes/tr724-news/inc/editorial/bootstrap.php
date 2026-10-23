@@ -219,8 +219,8 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'tr' => 'Spotlight ve Günün manşetleri bloklarında gösterilecek haberleri seçin. Sırayı sürükleyerek belirleyin. Buradan kaldırmak haberi yalnızca bu bloklardan düşürür.',
 			],
 			'manset_auto_help'       => [
-				'en' => 'A newly published post in the Manşet category is added at the top. Saving a post that is already in the list does not change its place. Changing the publish date no longer changes the order.',
-				'tr' => 'Manşet kategorisine alınan yeni haber listenin başına eklenir. Listedeki bir haberi kaydetmek yerini değiştirmez. Yayın tarihini değiştirmek artık sırayı etkilemez.',
+				'en' => 'Only a post published for the first time, while it is in the Manşet category, is added at the top. Saving a post that is already published does not change the order, even if the Manşet category is assigned later. Add an older story from this screen.',
+				'tr' => 'Başa yalnızca ilk kez yayınlanan ve o anda Manşet kategorisinde olan haber eklenir. Yayındaki bir haberi kaydetmek, sonradan Manşet kategorisi verilse bile sırayı değiştirmez. Eski haberi bu ekrandan ekleyin.',
 			],
 			'manset_add'             => [
 				'en' => 'Add a post',
@@ -235,8 +235,8 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'tr' => 'Haberin tam adresini veya slug’ını yapıştırın. Örnek: haber-basligi veya https://www.tr724.com/haber-basligi/',
 			],
 			'manset_empty'           => [
-				'en' => 'No headlines selected yet. Paste a slug or URL, or assign the Manşet category to a published post.',
-				'tr' => 'Henüz manşet seçilmedi. Slug veya URL yapıştırın, ya da yayınlanmış bir habere Manşet kategorisi verin.',
+				'en' => 'No headlines selected yet. Paste a slug or URL, or publish a new post in the Manşet category.',
+				'tr' => 'Henüz manşet seçilmedi. Slug veya URL yapıştırın, ya da Manşet kategorisindeki bir haberi ilk kez yayınlayın.',
 			],
 			'manset_already'         => [
 				'en' => 'That post is already in the list.',

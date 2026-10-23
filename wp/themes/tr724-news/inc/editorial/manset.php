@@ -377,10 +377,30 @@ if ( ! function_exists( 'tr724_editorial_manset_should_skip_sync' ) ) {
 	}
 }
 
+if ( ! function_exists( 'tr724_editorial_manset_just_published' ) ) {
+	/**
+	 * True when this request moved the post into publish from another status.
+	 * The mark survives until set_object_terms, which often runs after save_post.
+	 */
+	function tr724_editorial_manset_just_published( int $post_id, bool $mark = false ): bool {
+		static $ids = [];
+
+		if ( $post_id <= 0 ) {
+			return false;
+		}
+		if ( $mark ) {
+			$ids[ $post_id ] = true;
+		}
+
+		return ! empty( $ids[ $post_id ] );
+	}
+}
+
 if ( ! function_exists( 'tr724_editorial_manset_sync_post' ) ) {
 	/**
 	 * Keep the queue in sync with Manşet membership and publish status.
-	 * New members go to the top. Existing members keep their place.
+	 * Only a first publish in this request is prepended. An update keeps its place
+	 * and is not inserted just because it still has the Manşet category.
 	 *
 	 * @param bool $terms_changed True when categories were just written, so leaving Manşet drops the post.
 	 */
@@ -412,9 +432,11 @@ if ( ! function_exists( 'tr724_editorial_manset_sync_post' ) ) {
 		}
 
 		if ( $in_manset && ! $was_in ) {
-			array_unshift( $ids, $post_id );
-			$ids = array_slice( $ids, 0, tr724_editorial_manset_max() );
-			tr724_editorial_manset_save_ids( $ids );
+			if ( tr724_editorial_manset_just_published( $post_id ) ) {
+				array_unshift( $ids, $post_id );
+				$ids = array_slice( $ids, 0, tr724_editorial_manset_max() );
+				tr724_editorial_manset_save_ids( $ids );
+			}
 			unset( $busy[ $post_id ] );
 			return;
 		}
@@ -584,6 +606,21 @@ add_action(
 
 add_action( 'add_option_' . tr724_editorial_manset_option(), 'tr724_editorial_purge_manset_cache' );
 add_action( 'update_option_' . tr724_editorial_manset_option(), 'tr724_editorial_purge_manset_cache' );
+
+add_action(
+	'transition_post_status',
+	static function ( $new_status, $old_status, $post ): void {
+		if ( 'publish' !== (string) $new_status || 'publish' === (string) $old_status ) {
+			return;
+		}
+		if ( ! $post instanceof WP_Post || 'post' !== $post->post_type ) {
+			return;
+		}
+		tr724_editorial_manset_just_published( (int) $post->ID, true );
+	},
+	10,
+	3
+);
 
 add_action(
 	'save_post_post',
