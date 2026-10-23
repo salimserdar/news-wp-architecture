@@ -34,10 +34,12 @@ reload-nginx:  ## install http/site conf, test, reload without dropping connecti
 	cp -a config/nginx/site.conf /etc/nginx/sites-available/wordpress
 	nginx -t && nginx -s reload
 reload-php:    ## install both pool files, test, graceful reload (PHP_MAX_CHILDREN / PHP_EDITOR_CHILDREN)
+	@case "$(PHP_MAX_CHILDREN)" in [1-9]|[1-9][0-9]*) ;; *) echo "PHP_MAX_CHILDREN must be a positive integer (got '$(PHP_MAX_CHILDREN)')"; exit 1 ;; esac
+	@case "$(PHP_EDITOR_CHILDREN)" in [1-9]|[1-9][0-9]*) ;; *) echo "PHP_EDITOR_CHILDREN must be a positive integer (got '$(PHP_EDITOR_CHILDREN)')"; exit 1 ;; esac
 	sed -E "s/^pm.max_children = .*/pm.max_children = $(PHP_MAX_CHILDREN)/" config/php/pool-www.conf > /etc/php/8.3/fpm/pool.d/www.conf
 	sed -E "s/^pm.max_children = .*/pm.max_children = $(PHP_EDITOR_CHILDREN)/" config/php/pool-editors.conf > /etc/php/8.3/fpm/pool.d/editors.conf
 	touch /var/log/php8.3-fpm-editors-slow.log && chown www-data:www-data /var/log/php8.3-fpm-editors-slow.log
-	php-fpm8.3 -t && systemctl reload php8.3-fpm
+	bash scripts/reload-php-fpm.sh
 	@sleep 2; ls -l /run/php/php8.3-fpm.sock /run/php/php8.3-fpm-editors.sock
 loadtest-urls: ## permalinks → loadtest/urls.json  (ARGS="--create-draft")
 	scripts/loadtest-urls.sh $(ARGS)

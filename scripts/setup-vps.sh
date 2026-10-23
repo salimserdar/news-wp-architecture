@@ -179,6 +179,14 @@ cat > /etc/cron.d/news-wp-backup <<EOF
 EOF
 
 echo "==> PHP-FPM pools + ini"
+if [[ ! "${PHP_MAX_CHILDREN}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "PHP_MAX_CHILDREN must be a positive integer, got '${PHP_MAX_CHILDREN}'" >&2
+  exit 1
+fi
+if [[ ! "${PHP_EDITOR_CHILDREN}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "PHP_EDITOR_CHILDREN must be a positive integer, got '${PHP_EDITOR_CHILDREN}'" >&2
+  exit 1
+fi
 if [[ -f /etc/php/8.3/fpm/pool.d/www.conf && ! -L /etc/php/8.3/fpm/pool.d/www.conf \
       && ! -f /etc/php/8.3/fpm/pool.d/www.conf.dist ]]; then
   mv /etc/php/8.3/fpm/pool.d/www.conf /etc/php/8.3/fpm/pool.d/www.conf.dist
@@ -533,11 +541,10 @@ chmod 644 /etc/cron.d/wordpress
 
 echo "==> Enable services (reload, not restart: in-flight requests finish)"
 systemctl enable --now php8.3-fpm nginx
-php-fpm8.3 -t
 # Reload re-reads pool files, opens the new editors socket and replaces
 # children after process_control_timeout. nginx must reload after FPM so the
-# php_fpm_editors upstream socket already exists.
-systemctl reload php8.3-fpm
+# php_fpm_editors upstream socket already exists. A failed test does not reload.
+bash "${REPO_DIR}/scripts/reload-php-fpm.sh"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   [[ -S /run/php/php8.3-fpm-editors.sock ]] && break
   sleep 1
