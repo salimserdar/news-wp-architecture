@@ -44,7 +44,12 @@ need_curl() { command -v curl >/dev/null || die "curl is required"; }
 
 need_rclone() {
   command -v rclone >/dev/null || die "rclone not found. On the VPS: curl -fsSL https://rclone.org/install.sh | sudo bash"
-  rclone help backend s3 2>/dev/null | grep -q 'Cloudflare' || die "rclone has no Cloudflare provider (need 1.61+). curl -fsSL https://rclone.org/install.sh | sudo bash"
+  # Do not use `grep -q` here. The script runs under pipefail; grep -q closes
+  # the pipe at the first match, rclone 1.7x then dies with SIGPIPE (141), and
+  # a binary that does have the Cloudflare provider is reported as too old.
+  local help
+  help="$(rclone help backend s3 2>&1 || true)"
+  [[ "$help" == *Cloudflare* ]] || die "rclone has no Cloudflare provider (need 1.61+). curl -fsSL https://rclone.org/install.sh | sudo bash"
 }
 
 writer_env_ok() {

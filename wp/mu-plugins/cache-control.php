@@ -82,12 +82,17 @@ function send( int $nginx_ttl, int $edge_ttl ): void {
 		}
 		return;
 	}
-	// max-age=0: browsers always revalidate with the edge (a stale page in a
-	// reader's browser is worse than a 20 ms round-trip to Cloudflare).
-	header( sprintf(
-		'Cache-Control: public, max-age=0, s-maxage=%d, stale-while-revalidate=60, stale-if-error=86400',
+	// Browsers must revalidate. Chrome and Firefox honour stale-while-revalidate
+	// on Cache-Control, so a reload can keep showing the previous HTML for 60s
+	// (incognito looks fresh because it has no disk cache). Keep SWR on the
+	// CDN-only headers; nginx ignores Cache-Control and uses X-Accel-Expires.
+	header( 'Cache-Control: public, max-age=0, must-revalidate' );
+	$cdn = sprintf(
+		'public, max-age=0, s-maxage=%d, stale-while-revalidate=60, stale-if-error=86400',
 		$edge_ttl
-	) );
+	);
+	header( 'CDN-Cache-Control: ' . $cdn );
+	header( 'Cloudflare-CDN-Cache-Control: ' . $cdn );
 }
 
 // Front-end pages. template_redirect runs after the main query, so conditional
