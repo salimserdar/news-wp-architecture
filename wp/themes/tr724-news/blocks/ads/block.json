@@ -1,0 +1,57 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tr724/ads",
+	"title": "Ads",
+	"category": "theme",
+	"icon": "megaphone",
+	"description": "Static image, Google AdSense, or custom ad code. Same ad as the Ads widget.",
+	"keywords": [ "ad", "ads", "reklam", "adsense", "widget" ],
+	"textdomain": "tr724-news",
+	"attributes": {
+		"adMode": {
+			"type": "string",
+			"default": "none"
+		},
+		"adImageId": {
+			"type": "number",
+			"default": 0
+		},
+		"adUrl": {
+			"type": "string",
+			"default": ""
+		},
+		"adLabel": {
+			"type": "string",
+			"default": "reklam"
+		},
+		"adClient": {
+			"type": "string",
+			"default": ""
+		},
+		"adSlot": {
+			"type": "string",
+			"default": ""
+		},
+		"adFormat": {
+			"type": "string",
+			"default": "auto"
+		},
+		"adHtml": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": false,
+		"color": false,
+		"typography": false,
+		"spacing": false,
+		"multiple": true
+	},
+	"render": "file:./render.php",
+	"style": [ "tr724-news-inter", "file:./style.css" ],
+	"editorStyle": "file:./editor.css",
+	"editorScript": "file:./edit.js"
+}
