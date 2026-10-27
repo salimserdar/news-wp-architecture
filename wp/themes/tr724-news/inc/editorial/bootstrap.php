@@ -219,8 +219,8 @@ if ( ! function_exists( 'tr724_editorial_ui' ) ) {
 				'tr' => 'Spotlight ve Günün manşetleri bloklarında gösterilecek haberleri seçin. Sırayı sürükleyerek belirleyin. Buradan kaldırmak haberi yalnızca bu bloklardan düşürür.',
 			],
 			'manset_auto_help'       => [
-				'en' => 'Only a post published for the first time, while it is in the Manşet category, is added at the top. Saving a post that is already published does not change the order, even if the Manşet category is assigned later. Add an older story from this screen.',
-				'tr' => 'Başa yalnızca ilk kez yayınlanan ve o anda Manşet kategorisinde olan haber eklenir. Yayındaki bir haberi kaydetmek, sonradan Manşet kategorisi verilse bile sırayı değiştirmez. Eski haberi bu ekrandan ekleyin.',
+				'en' => 'A post is added at the top when it is first published in the Manşet category, or when Manşet is assigned later to a post that is already published. Saving without a category change leaves the order as it is.',
+				'tr' => 'Haber, Manşet kategorisinde ilk kez yayınlandığında veya yayındaki bir habere sonradan Manşet verildiğinde listenin başına eklenir. Kategori değişmeden kaydetmek sırayı değiştirmez.',
 			],
 			'manset_add'             => [
 				'en' => 'Add a post',

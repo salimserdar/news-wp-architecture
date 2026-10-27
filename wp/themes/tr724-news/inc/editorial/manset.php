@@ -396,15 +396,51 @@ if ( ! function_exists( 'tr724_editorial_manset_just_published' ) ) {
 	}
 }
 
+if ( ! function_exists( 'tr724_editorial_manset_term_taxonomy_id' ) ) {
+	/**
+	 * term_taxonomy_id for Manşet. set_object_terms compares these, not term IDs.
+	 */
+	function tr724_editorial_manset_term_taxonomy_id(): int {
+		$term = get_term( tr724_manset_category_id(), 'category' );
+		if ( ! $term instanceof WP_Term ) {
+			return 0;
+		}
+
+		return (int) $term->term_taxonomy_id;
+	}
+}
+
+if ( ! function_exists( 'tr724_editorial_manset_category_gained' ) ) {
+	/**
+	 * True when this category write newly includes Manşet.
+	 * Sending the same categories again does not count.
+	 *
+	 * @param mixed $tt_ids     Term taxonomy IDs written by this call.
+	 * @param mixed $old_tt_ids Term taxonomy IDs the post had before this call.
+	 */
+	function tr724_editorial_manset_category_gained( $tt_ids, $old_tt_ids ): bool {
+		$manset_tt = tr724_editorial_manset_term_taxonomy_id();
+		if ( $manset_tt <= 0 || ! is_array( $tt_ids ) || ! is_array( $old_tt_ids ) ) {
+			return false;
+		}
+
+		$new = array_map( 'intval', $tt_ids );
+		$old = array_map( 'intval', $old_tt_ids );
+
+		return in_array( $manset_tt, $new, true ) && ! in_array( $manset_tt, $old, true );
+	}
+}
+
 if ( ! function_exists( 'tr724_editorial_manset_sync_post' ) ) {
 	/**
 	 * Keep the queue in sync with Manşet membership and publish status.
-	 * Only a first publish in this request is prepended. An update keeps its place
-	 * and is not inserted just because it still has the Manşet category.
+	 * A first publish in this request, or an update that newly assigns Manşet, is prepended.
+	 * An update that already had Manşet keeps its place.
 	 *
 	 * @param bool $terms_changed True when categories were just written, so leaving Manşet drops the post.
+	 * @param bool $manset_gained True when this write added the Manşet category.
 	 */
-	function tr724_editorial_manset_sync_post( int $post_id, bool $terms_changed = false ): void {
+	function tr724_editorial_manset_sync_post( int $post_id, bool $terms_changed = false, bool $manset_gained = false ): void {
 		static $busy = [];
 
 		if ( isset( $busy[ $post_id ] ) || tr724_editorial_manset_should_skip_sync( $post_id ) ) {
@@ -432,7 +468,7 @@ if ( ! function_exists( 'tr724_editorial_manset_sync_post' ) ) {
 		}
 
 		if ( $in_manset && ! $was_in ) {
-			if ( tr724_editorial_manset_just_published( $post_id ) ) {
+			if ( tr724_editorial_manset_just_published( $post_id ) || $manset_gained ) {
 				array_unshift( $ids, $post_id );
 				$ids = array_slice( $ids, 0, tr724_editorial_manset_max() );
 				tr724_editorial_manset_save_ids( $ids );
@@ -632,14 +668,15 @@ add_action(
 
 add_action(
 	'set_object_terms',
-	static function ( $object_id, $terms, $tt_ids, $taxonomy ): void {
+	static function ( $object_id, $terms, $tt_ids, $taxonomy, $append, $old_tt_ids ): void {
 		if ( 'category' !== (string) $taxonomy ) {
 			return;
 		}
-		tr724_editorial_manset_sync_post( (int) $object_id, true );
+		$gained = tr724_editorial_manset_category_gained( $tt_ids, $old_tt_ids );
+		tr724_editorial_manset_sync_post( (int) $object_id, true, $gained );
 	},
 	20,
-	4
+	6
 );
 
 add_action(
