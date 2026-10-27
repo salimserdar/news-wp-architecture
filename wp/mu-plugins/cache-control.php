@@ -13,8 +13,10 @@
  * cache key that drops the query string can: `/?s=` HTML or a `/?p=` 302 to
  * media.tr724.com is then served for the homepage until s-maxage expires.
  * template_redirect priority 0 runs before redirect_canonical, so a 302 was
- * inheriting the page TTL. Same-host redirects (apex ↔ www, trailing slash)
- * stay in the nginx cache. Off-site targets are not cached anywhere.
+ * inheriting the page TTL. Cloudflare prefers Cloudflare-CDN-Cache-Control
+ * over the other two cache headers, so a redirect must clear that header too.
+ * Same-host redirects (apex ↔ www, trailing slash) stay in the nginx cache.
+ * Off-site targets are not cached anywhere.
  */
 
 namespace News\CacheControl;
@@ -44,6 +46,8 @@ function bypass_edge( bool $replace = false ): void {
 	}
 	header( 'Cache-Control: private, no-store', $replace );
 	header( 'CDN-Cache-Control: no-store', $replace );
+	// Wins over CDN-Cache-Control. template_redirect already set s-maxage on it.
+	header( 'Cloudflare-CDN-Cache-Control: no-store', $replace );
 }
 
 /**
