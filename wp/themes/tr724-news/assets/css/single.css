@@ -335,6 +335,10 @@
 	margin-top: 12px;
 }
 
+.post-layout__main > .post__follow {
+	margin: 16px 0;
+}
+
 .post__follow-link {
 	display: flex;
 	align-items: center;
@@ -353,7 +357,6 @@
 }
 
 .post__follow-link--whatsapp {
-	margin-top: 28px;
 	background: linear-gradient(to right, #25d366, #128c7e);
 }
 
