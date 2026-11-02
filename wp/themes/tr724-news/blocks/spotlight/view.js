@@ -12,6 +12,8 @@
 
 		root.dataset.tr724Ready = "1";
 
+		var desktopNav = window.matchMedia( "(min-width: 721px)" );
+
 		var newsSwiper = new Swiper( swiperEl, {
 			slidesPerView: 1,
 			speed: 450,
@@ -25,6 +27,7 @@
 			navigation: {
 				nextEl: root.querySelector( ".news-swiper__next" ),
 				prevEl: root.querySelector( ".news-swiper__prev" ),
+				enabled: desktopNav.matches,
 			},
 			pagination: {
 				el: pagerNumbers,
@@ -48,6 +51,20 @@
 
 		root.tr724Swiper = newsSwiper;
 
+		function syncNav( event ) {
+			var on = event.matches;
+			if ( newsSwiper.params.navigation ) {
+				newsSwiper.params.navigation.enabled = on;
+			}
+			if ( ! newsSwiper.navigation ) return;
+			if ( on ) newsSwiper.navigation.enable();
+			else newsSwiper.navigation.disable();
+		}
+
+		desktopNav.addEventListener( "change", syncNav );
+		root.tr724NavMedia = desktopNav;
+		root.tr724NavSync = syncNav;
+
 		pagerNumbers.addEventListener( "mouseover", function ( event ) {
 			var bullet = event.target.closest( ".swiper-pagination-bullet" );
 			if ( ! bullet || ! newsSwiper.pagination ) return;
@@ -65,7 +82,13 @@
 	}
 
 	function destroySpotlight( root ) {
-		if ( root && root.tr724Swiper && root.tr724Swiper.destroy ) {
+		if ( ! root ) return;
+		if ( root.tr724NavMedia && root.tr724NavSync ) {
+			root.tr724NavMedia.removeEventListener( "change", root.tr724NavSync );
+			root.tr724NavMedia = null;
+			root.tr724NavSync = null;
+		}
+		if ( root.tr724Swiper && root.tr724Swiper.destroy ) {
 			root.tr724Swiper.destroy( true, true );
 			root.tr724Swiper = null;
 		}

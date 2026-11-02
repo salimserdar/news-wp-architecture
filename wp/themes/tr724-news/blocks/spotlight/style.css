@@ -269,14 +269,20 @@
 	.news-slide__title {
 		font-size: 18px;
 	}
-
-	.news-swiper__nav {
-		width: 34px;
-		height: 34px;
-	}
 }
 
 @media (max-width: 720px) {
+	.news-swiper__nav,
+	.news-swiper:hover .news-swiper__nav,
+	.news-swiper:focus-within .news-swiper__nav,
+	.news-swiper:hover .news-swiper__nav.swiper-button-disabled,
+	.news-swiper:focus-within .news-swiper__nav.swiper-button-disabled {
+		display: none;
+		opacity: 0;
+		pointer-events: none;
+		visibility: hidden;
+	}
+
 	.spotlight {
 		width: calc(100% + 40px);
 		margin-inline: -20px;

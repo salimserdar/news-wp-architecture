@@ -338,6 +338,8 @@
     var pagerMore = document.querySelector(".news-pager__more");
     if (!newsRoot || !pagerNumbers || !pagerMore) return;
 
+    var desktopNav = window.matchMedia("(min-width: 721px)");
+
     var newsSwiper = new Swiper(".news-swiper", {
       slidesPerView: 1,
       speed: 450,
@@ -351,6 +353,7 @@
       navigation: {
         nextEl: ".news-swiper__next",
         prevEl: ".news-swiper__prev",
+        enabled: desktopNav.matches,
       },
       pagination: {
         el: ".news-pager__numbers",
@@ -370,6 +373,16 @@
         nextSlideMessage: "Sonraki haber",
         paginationBulletMessage: "{{index}}. habere git",
       },
+    });
+
+    desktopNav.addEventListener("change", function (event) {
+      var on = event.matches;
+      if (newsSwiper.params.navigation) {
+        newsSwiper.params.navigation.enabled = on;
+      }
+      if (!newsSwiper.navigation) return;
+      if (on) newsSwiper.navigation.enable();
+      else newsSwiper.navigation.disable();
     });
 
     pagerNumbers.addEventListener("mouseover", function (event) {
