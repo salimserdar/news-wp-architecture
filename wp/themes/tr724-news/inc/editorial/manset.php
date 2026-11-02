@@ -26,7 +26,7 @@ if ( ! function_exists( 'tr724_editorial_manset_option' ) ) {
 
 if ( ! function_exists( 'tr724_editorial_manset_items_cache_key' ) ) {
 	function tr724_editorial_manset_items_cache_key(): string {
-		return 'tr724_manset_headline_items_v2';
+		return 'tr724_manset_headline_items';
 	}
 }
 
@@ -216,7 +216,7 @@ if ( ! function_exists( 'tr724_editorial_manset_headline_items' ) ) {
 	/**
 	 * Hydrated cards for Headlines. Cached until the queue or a listed post changes.
 	 *
-	 * @return array<int, array{id: int, url: string, title: string, kicker: string, label: string, datetime: string, clock: string, thumb_id: int}>
+	 * @return array<int, array{id: int, url: string, title: string, kicker: string, datetime: string, clock: string, thumb_id: int}>
 	 */
 	function tr724_editorial_manset_headline_items(): array {
 		$key    = tr724_editorial_manset_items_cache_key();
@@ -259,7 +259,6 @@ if ( ! function_exists( 'tr724_editorial_manset_headline_items' ) ) {
 				'url'      => get_permalink( $post ),
 				'title'    => get_the_title( $post ),
 				'kicker'   => $kicker,
-				'label'    => function_exists( 'tr724_post_label' ) ? tr724_post_label( $post_id ) : '',
 				'datetime' => $published ? (string) get_post_time( DATE_W3C, true, $post ) : '',
 				'clock'    => $published ? wp_date( 'H:i', $published ) : '',
 				'thumb_id' => (int) get_post_thumbnail_id( $post_id ),
