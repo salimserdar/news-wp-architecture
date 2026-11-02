@@ -353,6 +353,7 @@
 }
 
 .post__follow-link--whatsapp {
+	margin-top: 28px;
 	background: linear-gradient(to right, #25d366, #128c7e);
 }
 
