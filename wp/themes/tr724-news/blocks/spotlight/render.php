@@ -103,9 +103,21 @@ foreach ( $posts as $spotlight_post ) {
 	}
 	$extra_title = tr724_additional_title( $post_id );
 	$upper_title = tr724_upper_title( $post_id );
+	$post_label  = tr724_post_label( $post_id );
 	$slide_title = '' !== $extra_title ? $extra_title : get_the_title( $spotlight_post );
 	$hide_title  = tr724_hide_title( $post_id );
-	$slide_label = ( ! $hide_title && '' !== $upper_title ) ? $upper_title . ' ' . $slide_title : $slide_title;
+	$slide_label = $slide_title;
+	if ( ! $hide_title ) {
+		$slide_parts = [];
+		if ( '' !== $post_label ) {
+			$slide_parts[] = $post_label;
+		}
+		if ( '' !== $upper_title ) {
+			$slide_parts[] = $upper_title;
+		}
+		$slide_parts[] = $slide_title;
+		$slide_label   = implode( ' ', $slide_parts );
+	}
 	$image       = '';
 	if ( $thumb_id ) {
 		$image = tr724_story_card_image(
@@ -125,6 +137,9 @@ foreach ( $posts as $spotlight_post ) {
 	if ( ! $hide_title ) {
 		echo '<span class="news-slide__shade" aria-hidden="true"></span>';
 		echo '<span class="news-slide__copy">';
+		if ( '' !== $post_label ) {
+			echo '<span class="news-slide__label">' . esc_html( $post_label ) . '</span>';
+		}
 		if ( '' !== $upper_title ) {
 			echo '<span class="news-slide__eyebrow">' . esc_html( $upper_title ) . '</span>';
 		}

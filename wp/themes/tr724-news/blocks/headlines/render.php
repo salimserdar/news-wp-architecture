@@ -101,6 +101,10 @@ foreach ( $items as $item ) {
 		echo '<time datetime="' . esc_attr( $item['datetime'] ) . '">' . esc_html( $item['clock'] ) . '</time>';
 	}
 	echo '</p>';
+	$card_label = isset( $item['label'] ) ? trim( (string) $item['label'] ) : '';
+	if ( '' !== $card_label ) {
+		echo '<span class="headlines-card__label">' . esc_html( $card_label ) . '</span>';
+	}
 	echo '<h3 class="headlines-card__title">' . esc_html( $item['title'] ) . '</h3>';
 	echo '</a></article></div>';
 	++$index;

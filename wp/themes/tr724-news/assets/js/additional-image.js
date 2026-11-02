@@ -35,6 +35,7 @@
 		var imageId = parseInt( meta.tr724_additional_image, 10 ) || 0;
 		var additionalTitle = meta.tr724_additional_title || "";
 		var upperTitle = meta.tr724_upper_title || "";
+		var postLabel = meta.tr724_label || "";
 		var hideTitle = !!meta.tr724_hide_title;
 		var media = useSelect(
 			function ( select ) {
@@ -106,6 +107,14 @@
 			) );
 		}
 
+		fields.push( el( TextControl, {
+			label: __( "Label", "tr724-news" ),
+			help: __( "Örnek: Haber Yorum, Analiz. Boşsa rozet çıkmaz.", "tr724-news" ),
+			value: postLabel,
+			onChange: function ( value ) {
+				setMeta( { tr724_label: value } );
+			},
+		} ) );
 		fields.push( el( TextControl, {
 			label: __( "Üst Başlık", "tr724-news" ),
 			value: upperTitle,

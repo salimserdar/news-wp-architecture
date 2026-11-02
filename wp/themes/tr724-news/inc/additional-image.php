@@ -42,7 +42,7 @@ if ( ! function_exists( 'tr724_additional_meta_auth' ) ) {
 	 * Only someone who can edit the post may change the extra Spotlight fields.
 	 */
 	function tr724_additional_meta_auth( bool $allowed, string $meta_key, int $post_id ): bool {
-		$keys = [ 'tr724_additional_image', 'tr724_additional_title', 'tr724_upper_title', 'tr724_hide_title', 'tr724_youtube_url' ];
+		$keys = [ 'tr724_additional_image', 'tr724_additional_title', 'tr724_upper_title', 'tr724_label', 'tr724_hide_title', 'tr724_youtube_url' ];
 		if ( ! in_array( $meta_key, $keys, true ) ) {
 			return $allowed;
 		}
@@ -77,6 +77,34 @@ if ( ! function_exists( 'tr724_additional_title' ) ) {
 			return '';
 		}
 		return trim( (string) get_post_meta( $post_id, 'tr724_additional_title', true ) );
+	}
+}
+
+if ( ! function_exists( 'tr724_sanitize_label' ) ) {
+	/**
+	 * Short badge text. Empty stays empty. Longer values are cut at 40 characters.
+	 */
+	function tr724_sanitize_label( mixed $value ): string {
+		$label = sanitize_text_field( (string) $value );
+		if ( function_exists( 'mb_substr' ) ) {
+			return mb_substr( $label, 0, 40 );
+		}
+		return substr( $label, 0, 40 );
+	}
+}
+
+if ( ! function_exists( 'tr724_post_label' ) ) {
+	/**
+	 * Badge shown above the Spotlight and Manşet title, or an empty string when none is set.
+	 */
+	function tr724_post_label( int $post_id = 0 ): string {
+		if ( $post_id <= 0 ) {
+			$post_id = (int) get_the_ID();
+		}
+		if ( $post_id <= 0 ) {
+			return '';
+		}
+		return trim( (string) get_post_meta( $post_id, 'tr724_label', true ) );
 	}
 }
 
@@ -224,6 +252,18 @@ add_action(
 				'default'           => '',
 				'show_in_rest'      => true,
 				'sanitize_callback' => 'sanitize_text_field',
+				'auth_callback'     => 'tr724_additional_meta_auth',
+			]
+		);
+		register_post_meta(
+			'post',
+			'tr724_label',
+			[
+				'type'              => 'string',
+				'single'            => true,
+				'default'           => '',
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'tr724_sanitize_label',
 				'auth_callback'     => 'tr724_additional_meta_auth',
 			]
 		);
