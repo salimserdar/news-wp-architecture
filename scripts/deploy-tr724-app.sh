@@ -12,6 +12,8 @@ echo "Deploying tr724-app..."
 
 sudo mkdir -p "$TARGET"
 sudo rsync -av --delete "$SOURCE" "$TARGET"
+# A previous deploy copied the API contract into the public plugin directory.
+sudo rm -f "${TARGET}openapi.yaml"
 
 echo "Fixing ownership..."
 sudo chown -R www-data:www-data "$TARGET"
