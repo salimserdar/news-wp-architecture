@@ -26,9 +26,46 @@ if ( ! function_exists( 'tr724_yazarlar_href' ) ) {
 	}
 }
 
+if ( ! function_exists( 'tr724_author_photo_meta_key' ) ) {
+	/**
+	 * User meta that stores the profile photo attachment ID.
+	 */
+	function tr724_author_photo_meta_key(): string {
+		return 'tr724_author_photo';
+	}
+}
+
+if ( ! function_exists( 'tr724_author_photo_id' ) ) {
+	/**
+	 * Profile photo, then the older avatar fields. Zero when none resolve to a file.
+	 */
+	function tr724_author_photo_id( int $user_id ): int {
+		$keys = [
+			tr724_author_photo_meta_key(),
+			'wp_user_avatar',
+			'yazar_resim',
+			'yazar_photo',
+		];
+		foreach ( $keys as $meta_key ) {
+			$attachment_id = (int) get_user_meta( $user_id, $meta_key, true );
+			if ( $attachment_id <= 0 ) {
+				continue;
+			}
+			$url = wp_get_original_image_url( $attachment_id );
+			if ( ! is_string( $url ) || '' === $url ) {
+				$url = (string) wp_get_attachment_url( $attachment_id );
+			}
+			if ( '' !== $url ) {
+				return $attachment_id;
+			}
+		}
+		return 0;
+	}
+}
+
 if ( ! function_exists( 'tr724_yazarlar_avatar' ) ) {
 	/**
-	 * Author photo from the custom avatar fields, then the WordPress avatar.
+	 * Author photo from the profile field, then older avatar fields, then the WordPress avatar.
 	 *
 	 * Custom photos use the original file only. No srcset or intermediate sizes.
 	 *
@@ -43,13 +80,7 @@ if ( ! function_exists( 'tr724_yazarlar_avatar' ) ) {
 		$alt   = isset( $args['alt'] ) ? (string) $args['alt'] : '';
 		$size  = isset( $args['size'] ) ? max( 1, (int) $args['size'] ) : 96;
 
-		$attachment_id = (int) get_user_meta( $user_id, 'wp_user_avatar', true );
-		if ( $attachment_id <= 0 ) {
-			$attachment_id = (int) get_user_meta( $user_id, 'yazar_resim', true );
-		}
-		if ( $attachment_id <= 0 ) {
-			$attachment_id = (int) get_user_meta( $user_id, 'yazar_photo', true );
-		}
+		$attachment_id = tr724_author_photo_id( $user_id );
 
 		if ( $attachment_id > 0 ) {
 			$url = wp_get_original_image_url( $attachment_id );
@@ -199,3 +230,123 @@ add_filter(
 	10,
 	3
 );
+
+add_action(
+	'init',
+	static function (): void {
+		register_meta(
+			'user',
+			tr724_author_photo_meta_key(),
+			[
+				'type'              => 'integer',
+				'single'            => true,
+				'default'           => 0,
+				'description'       => 'Profile photo attachment ID.',
+				'sanitize_callback' => static function ( $value ): int {
+					$attachment_id = absint( $value );
+					if ( $attachment_id <= 0 || ! wp_attachment_is_image( $attachment_id ) ) {
+						return 0;
+					}
+					return $attachment_id;
+				},
+				'auth_callback'     => static function ( $allowed, $meta_key, $user_id ): bool {
+					unset( $allowed, $meta_key );
+					return current_user_can( 'edit_user', (int) $user_id );
+				},
+				'show_in_rest'      => [
+					'schema' => [
+						'type'    => 'integer',
+						'context' => [ 'edit' ],
+					],
+				],
+			]
+		);
+	}
+);
+
+add_action(
+	'admin_enqueue_scripts',
+	static function ( string $hook ): void {
+		if ( ! in_array( $hook, [ 'profile.php', 'user-edit.php' ], true ) ) {
+			return;
+		}
+
+		wp_enqueue_media();
+
+		$path = get_template_directory() . '/assets/js/author-photo.js';
+		wp_enqueue_script(
+			'tr724-author-photo',
+			get_template_directory_uri() . '/assets/js/author-photo.js',
+			[ 'media-editor' ],
+			is_readable( $path ) ? (string) filemtime( $path ) : null,
+			true
+		);
+	}
+);
+
+/**
+ * Profile photo picker on the user edit screen.
+ */
+function tr724_author_photo_field( WP_User $user ): void {
+	if ( ! current_user_can( 'edit_user', $user->ID ) ) {
+		return;
+	}
+
+	$attachment_id = (int) get_user_meta( $user->ID, tr724_author_photo_meta_key(), true );
+	$preview       = $attachment_id > 0 ? (string) wp_get_attachment_image_url( $attachment_id, 'thumbnail' ) : '';
+	if ( '' === $preview && $attachment_id > 0 ) {
+		$preview = (string) wp_get_attachment_url( $attachment_id );
+	}
+	?>
+	<h2><?php esc_html_e( 'Yazar fotoğrafı', 'tr724-news' ); ?></h2>
+	<table class="form-table" role="presentation">
+		<tr class="tr724-author-photo">
+			<th scope="row"><?php esc_html_e( 'Fotoğraf', 'tr724-news' ); ?></th>
+			<td>
+				<?php wp_nonce_field( 'tr724_author_photo_' . $user->ID, 'tr724_author_photo_nonce' ); ?>
+				<input type="hidden" class="tr724-author-photo-id" name="tr724_author_photo" value="<?php echo esc_attr( (string) $attachment_id ); ?>">
+				<div class="tr724-author-photo-preview">
+					<?php if ( '' !== $preview ) : ?>
+						<img src="<?php echo esc_url( $preview ); ?>" alt="" style="display:block;max-width:96px;height:auto">
+					<?php endif; ?>
+				</div>
+				<p>
+					<button type="button" class="button tr724-author-photo-select" data-select="<?php esc_attr_e( 'Fotoğraf seç', 'tr724-news' ); ?>" data-replace="<?php esc_attr_e( 'Fotoğrafı değiştir', 'tr724-news' ); ?>">
+						<?php echo esc_html( $attachment_id > 0 ? __( 'Fotoğrafı değiştir', 'tr724-news' ) : __( 'Fotoğraf seç', 'tr724-news' ) ); ?>
+					</button>
+					<button type="button" class="button tr724-author-photo-remove" <?php echo $attachment_id > 0 ? '' : 'hidden'; ?>>
+						<?php esc_html_e( 'Kaldır', 'tr724-news' ); ?>
+					</button>
+				</p>
+				<p class="description"><?php esc_html_e( 'Yazar listesinde ve haber detayında kullanılan fotoğraf.', 'tr724-news' ); ?></p>
+			</td>
+		</tr>
+	</table>
+	<?php
+}
+
+add_action( 'show_user_profile', 'tr724_author_photo_field' );
+add_action( 'edit_user_profile', 'tr724_author_photo_field' );
+
+/**
+ * Save the profile photo. A missing nonce leaves the stored photo alone.
+ */
+function tr724_save_author_photo( int $user_id ): void {
+	if ( ! current_user_can( 'edit_user', $user_id ) ) {
+		return;
+	}
+	$nonce = isset( $_POST['tr724_author_photo_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['tr724_author_photo_nonce'] ) ) : '';
+	if ( '' === $nonce || ! wp_verify_nonce( $nonce, 'tr724_author_photo_' . $user_id ) ) {
+		return;
+	}
+
+	$attachment_id = isset( $_POST['tr724_author_photo'] ) ? absint( wp_unslash( $_POST['tr724_author_photo'] ) ) : 0;
+	if ( $attachment_id > 0 && wp_attachment_is_image( $attachment_id ) ) {
+		update_user_meta( $user_id, tr724_author_photo_meta_key(), $attachment_id );
+		return;
+	}
+	delete_user_meta( $user_id, tr724_author_photo_meta_key() );
+}
+
+add_action( 'personal_options_update', 'tr724_save_author_photo' );
+add_action( 'edit_user_profile_update', 'tr724_save_author_photo' );

@@ -1,0 +1,549 @@
+openapi: 3.0.3
+info:
+  title: TR724 App API
+  version: 0.1.0
+  description: |
+    Unlisted JSON for the TR724 mobile app. The namespace is the
+    TR724_APP_ROUTE_KEY constant. These routes are omitted from the
+    WordPress REST index, and the namespace index itself is a 404.
+servers:
+  - url: /wp-json/{routeKey}
+    variables:
+      routeKey:
+        default: 624bdbc5fbfb0a03edba3cb4ec4d0757
+        description: Value of TR724_APP_ROUTE_KEY.
+paths:
+  /d/{id}:
+    get:
+      operationId: getPostDetailById
+      summary: Published post detail by ID.
+      parameters:
+        - $ref: '#/components/parameters/postId'
+      responses:
+        '200':
+          $ref: '#/components/responses/PostDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /d:
+    get:
+      operationId: getPostDetailByPath
+      summary: Published post detail by site path or canonical URL.
+      parameters:
+        - $ref: '#/components/parameters/postPath'
+      responses:
+        '200':
+          $ref: '#/components/responses/PostDetail'
+        '400':
+          description: The path query parameter is missing or blank.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: rest_missing_callback_param
+                message: 'Missing parameter(s): path'
+                data:
+                  status: 400
+                  params:
+                    - path
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /w:
+    get:
+      operationId: listAuthors
+      summary: Authors shown on the yazarlar grid.
+      description: |
+        Users with the Author role, ordered by display name. Editors and
+        archive authors are omitted. An empty list is still a 200.
+      responses:
+        '200':
+          description: Author cards.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorList'
+              example:
+                authors:
+                  - id: 18
+                    slug: necip-bahadir
+                    name: Necip Bahadır
+                    url: https://www.tr724.com/author/necip-bahadir/
+                    avatar: https://media.tr724.com/wp-content/uploads/2024/03/necip.jpg
+                    email: necip@tr724.com
+                    kind: author
+                    social:
+                      facebook: ''
+                      x: https://twitter.com/necipbahadir
+                      youtube: ''
+  /p:
+    get:
+      operationId: listPostsByRole
+      summary: Latest published posts by a user role.
+      parameters:
+        - $ref: '#/components/parameters/postRole'
+        - $ref: '#/components/parameters/postCount'
+      responses:
+        '200':
+          description: Latest posts for the role. Fewer than count when not enough exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePosts'
+              example:
+                role: author
+                count: 8
+                posts:
+                  - id: 4821
+                    slug: merkez-bankasi-faiz-karari
+                    url: https://www.tr724.com/2026/11/07/merkez-bankasi-faiz-karari/
+                    title: Merkez Bankası faiz kararını açıkladı
+                    excerpt: ''
+                    published_at: '2026-11-07T14:30:00+03:00'
+                    image:
+                      url: https://media.tr724.com/wp-content/uploads/2026/11/faiz.jpg
+                      alt: Merkez Bankası binası
+                    author:
+                      id: 18
+                      name: Necip Bahadır
+                      url: https://www.tr724.com/author/necip-bahadir/
+                      avatar: https://media.tr724.com/wp-content/uploads/2024/03/necip.jpg
+                      kind: author
+        '400':
+          description: The role is unknown, or count is outside 1 through 20.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                role:
+                  value:
+                    code: tr724_app_bad_role
+                    message: Unknown role.
+                    data:
+                      status: 400
+                count:
+                  value:
+                    code: tr724_app_bad_count
+                    message: Count must be between 1 and 20.
+                    data:
+                      status: 400
+  /m:
+    get:
+      operationId: listMansetSpotlight
+      summary: Manşet spotlight in editorial order.
+      description: |
+        Published posts from Editorial → Manşet, in the saved order.
+        The same queue feeds the Spotlight block. The slide title and image
+        prefer the extra spotlight fields over the post title and featured image.
+      responses:
+        '200':
+          description: Spotlight slides. Empty when the queue has no published posts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MansetSpotlight'
+              example:
+                posts:
+                  - id: 4821
+                    slug: merkez-bankasi-faiz-karari
+                    url: https://www.tr724.com/2026/11/07/merkez-bankasi-faiz-karari/
+                    title: Faiz kararı
+                    label: SON DAKİKA
+                    upper_title: EKONOMİ
+                    hide_title: false
+                    image:
+                      url: https://media.tr724.com/wp-content/uploads/2026/11/faiz.jpg
+                      alt: Faiz kararı
+components:
+  parameters:
+    postId:
+      name: id
+      in: path
+      required: true
+      description: Published post ID. Drafts, other post types, and unknown IDs are a 404.
+      schema:
+        type: integer
+        minimum: 1
+    postPath:
+      name: path
+      in: query
+      required: true
+      description: |
+        Site-relative path, such as /2026/11/07/slug/, or an absolute URL
+        whose host is this site. Any other host is a 404.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 2048
+    postRole:
+      name: role
+      in: query
+      required: false
+      description: WordPress role slug. Defaults to author.
+      schema:
+        type: string
+        default: author
+    postCount:
+      name: count
+      in: query
+      required: false
+      description: Number of posts to return. Defaults to 8. Maximum 20.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 20
+        default: 8
+  responses:
+    PostDetail:
+      description: Published post, shaped like the article page.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PostDetail'
+          example:
+            id: 4821
+            slug: merkez-bankasi-faiz-karari
+            url: https://www.tr724.com/2026/11/07/merkez-bankasi-faiz-karari/
+            title: Merkez Bankası faiz kararını açıkladı
+            excerpt: Banka politika faizini sabit tuttu.
+            published_at: '2026-11-07T14:30:00+03:00'
+            modified_at: '2026-11-07T15:10:00+03:00'
+            author:
+              id: 12
+              name: Haber Merkezi
+              url: https://www.tr724.com/author/haber-merkezi/
+              avatar: https://media.tr724.com/wp-content/uploads/2024/01/haber-merkezi.jpg
+              kind: editor
+            breadcrumb:
+              - id: 0
+                name: Ana Sayfa
+                slug: ''
+                url: https://www.tr724.com/
+              - id: 4
+                name: Ekonomi
+                slug: ekonomi
+                url: https://www.tr724.com/kategori/ekonomi/
+            categories:
+              - id: 4
+                name: Ekonomi
+                slug: ekonomi
+                url: https://www.tr724.com/kategori/ekonomi/
+            tags:
+              - id: 88
+                name: faiz
+                slug: faiz
+                url: https://www.tr724.com/etiket/faiz/
+            hero:
+              type: image
+              image:
+                url: https://media.tr724.com/wp-content/uploads/2026/11/faiz.jpg
+                alt: Merkez Bankası binası
+                caption: Ankara
+            gallery: []
+            content_html: <p>Banka politika faizini yüzde 50'de sabit tuttu.</p>
+    NotFound:
+      description: No published post matches. Drafts use the same response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: tr724_app_not_found
+            message: Not found.
+            data:
+              status: 404
+  schemas:
+    PostDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - slug
+        - url
+        - title
+        - excerpt
+        - published_at
+        - modified_at
+        - author
+        - breadcrumb
+        - categories
+        - tags
+        - hero
+        - gallery
+        - content_html
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        excerpt:
+          type: string
+          description: Manual excerpt stored on the post. Empty when the editor did not enter one.
+        published_at:
+          type: string
+          description: ISO 8601. Empty when WordPress has no publication time.
+        modified_at:
+          type: string
+          description: ISO 8601. Empty when WordPress has no modification time.
+        author:
+          $ref: '#/components/schemas/Author'
+        breadcrumb:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+        hero:
+          $ref: '#/components/schemas/Hero'
+        gallery:
+          type: array
+          description: Images from the first gallery block, in editor order.
+          items:
+            $ref: '#/components/schemas/GalleryImage'
+        content_html:
+          type: string
+          description: the_content HTML. The first gallery block is omitted when gallery is not empty.
+    Author:
+      type: object
+      additionalProperties: false
+      required: [id, name, url, avatar, kind]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        url:
+          type: string
+        avatar:
+          type: string
+          description: Profile photo field, then older avatar fields, otherwise the WordPress avatar URL.
+        kind:
+          type: string
+          description: WordPress role slug, such as author, editor, administrator, contributor, or archive_author. Empty when the user has no role.
+    Link:
+      type: object
+      additionalProperties: false
+      required: [id, name, slug, url]
+      properties:
+        id:
+          type: integer
+          description: Zero for the home crumb.
+        name:
+          type: string
+        slug:
+          type: string
+        url:
+          type: string
+    Hero:
+      oneOf:
+        - $ref: '#/components/schemas/VideoHero'
+        - $ref: '#/components/schemas/ImageHero'
+        - $ref: '#/components/schemas/EmptyHero'
+    VideoHero:
+      type: object
+      additionalProperties: false
+      required: [type, video]
+      properties:
+        type:
+          type: string
+          enum: [video]
+        video:
+          type: object
+          additionalProperties: false
+          required: [youtube_id, url, embed_url]
+          properties:
+            youtube_id:
+              type: string
+            url:
+              type: string
+            embed_url:
+              type: string
+    ImageHero:
+      type: object
+      additionalProperties: false
+      required: [type, image]
+      properties:
+        type:
+          type: string
+          enum: [image]
+        image:
+          type: object
+          additionalProperties: false
+          required: [url, alt, caption]
+          properties:
+            url:
+              type: string
+            alt:
+              type: string
+            caption:
+              type: string
+    EmptyHero:
+      type: object
+      additionalProperties: false
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [none]
+    GalleryImage:
+      type: object
+      additionalProperties: false
+      required: [src, thumb, alt]
+      properties:
+        src:
+          type: string
+          description: Large size, or the original file when large is missing.
+        thumb:
+          type: string
+        alt:
+          type: string
+    AuthorList:
+      type: object
+      additionalProperties: false
+      required: [authors]
+      properties:
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Writer'
+    Writer:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name, url, avatar, email, kind, social]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        avatar:
+          type: string
+          description: Profile photo field, then older avatar fields, otherwise the WordPress avatar URL.
+        email:
+          type: string
+        kind:
+          type: string
+          description: WordPress role slug, such as author, editor, administrator, contributor, or archive_author. Empty when the user has no role.
+        social:
+          type: object
+          additionalProperties: false
+          required: [facebook, x, youtube]
+          properties:
+            facebook:
+              type: string
+            x:
+              type: string
+            youtube:
+              type: string
+          description: Stored profile links. Empty when the author has none.
+    RolePosts:
+      type: object
+      additionalProperties: false
+      required: [role, count, posts]
+      properties:
+        role:
+          type: string
+        count:
+          type: integer
+          minimum: 1
+          maximum: 20
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolePost'
+    RolePost:
+      type: object
+      additionalProperties: false
+      required: [id, slug, url, title, excerpt, published_at, image, author]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        excerpt:
+          type: string
+          description: Manual excerpt stored on the post. Empty when the editor did not enter one.
+        published_at:
+          type: string
+        image:
+          type: object
+          additionalProperties: false
+          required: [url, alt]
+          properties:
+            url:
+              type: string
+              description: Large featured image. Empty when the post has none.
+            alt:
+              type: string
+        author:
+          $ref: '#/components/schemas/Author'
+    MansetSpotlight:
+      type: object
+      additionalProperties: false
+      required: [posts]
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/MansetSlide'
+    MansetSlide:
+      type: object
+      additionalProperties: false
+      required: [id, slug, url, title, label, upper_title, hide_title, image]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+          description: Extra spotlight title when set, otherwise the post title.
+        label:
+          type: string
+        upper_title:
+          type: string
+        hide_title:
+          type: boolean
+        image:
+          type: object
+          additionalProperties: false
+          required: [url, alt]
+          properties:
+            url:
+              type: string
+              description: Extra spotlight image when set, otherwise the featured image.
+            alt:
+              type: string
+    Error:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            status:
+              type: integer
