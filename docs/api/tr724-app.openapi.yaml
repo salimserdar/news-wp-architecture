@@ -75,6 +75,100 @@ paths:
                       facebook: ''
                       x: https://twitter.com/necipbahadir
                       youtube: ''
+  /a:
+    get:
+      operationId: listPostsByAuthor
+      summary: One author's profile and published posts.
+      description: |
+        Profile fields for the author screen, plus that user's published
+        posts, newest first. Send a slug or an id. When both are sent, id
+        is used. per_page defaults to 10 and may be 1 through 20. page
+        defaults to 1. A page past the end is still 200, with an empty
+        posts array. Any existing user matches, including editors. An
+        existing user with no posts is 200 with total 0. Unknown users
+        are a 404.
+      parameters:
+        - $ref: '#/components/parameters/authorSlug'
+        - $ref: '#/components/parameters/authorId'
+        - $ref: '#/components/parameters/termPage'
+        - $ref: '#/components/parameters/termPerPage'
+      responses:
+        '200':
+          description: Author profile and one page of posts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorPosts'
+              example:
+                author:
+                  id: 18
+                  slug: necip-bahadir
+                  name: Necip Bahadır
+                  url: https://www.tr724.com/author/necip-bahadir/
+                  avatar: https://media.tr724.com/wp-content/uploads/2024/03/necip.jpg
+                  email: necip@tr724.com
+                  kind: author
+                  social:
+                    facebook: ''
+                    x: https://twitter.com/necipbahadir
+                    youtube: ''
+                  bio: Gazeteci ve yazar.
+                page: 1
+                per_page: 10
+                total: 128
+                total_pages: 13
+                posts:
+                  - id: 4821
+                    slug: merkez-bankasi-faiz-karari
+                    url: https://www.tr724.com/2026/11/07/merkez-bankasi-faiz-karari/
+                    title: Merkez Bankası faiz kararını açıkladı
+                    excerpt: ''
+                    published_at: '2026-11-07T14:30:00+03:00'
+                    image:
+                      url: https://media.tr724.com/wp-content/uploads/2026/11/faiz.jpg
+                      alt: Merkez Bankası binası
+                    author:
+                      id: 18
+                      name: Necip Bahadır
+                      url: https://www.tr724.com/author/necip-bahadir/
+                      avatar: https://media.tr724.com/wp-content/uploads/2024/03/necip.jpg
+                      kind: author
+        '400':
+          description: The author identifier, page, or per_page is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                author:
+                  value:
+                    code: tr724_app_bad_author
+                    message: Provide a slug or id.
+                    data:
+                      status: 400
+                page:
+                  value:
+                    code: tr724_app_bad_page
+                    message: Page must be 1 or greater.
+                    data:
+                      status: 400
+                perPage:
+                  value:
+                    code: tr724_app_bad_per_page
+                    message: per_page must be between 1 and 20.
+                    data:
+                      status: 400
+        '404':
+          description: No user matches the slug or id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: tr724_app_not_found
+                message: Not found.
+                data:
+                  status: 404
   /p:
     get:
       operationId: listPostsByRole
@@ -247,6 +341,72 @@ paths:
                     image:
                       url: https://media.tr724.com/wp-content/uploads/2026/11/faiz.jpg
                       alt: Faiz kararı
+  /c:
+    get:
+      operationId: listExchangeRates
+      summary: Market rates from the theme ticker cache.
+      description: |
+        The same instruments as the header ticker and the Piyasalar box.
+        Labels such as DOLAR, EURO, STERLİN, ALTIN, and BIST come from the
+        theme. Order is freeMarket, centralBank, parities, gold, then bist.
+        The Piyasalar box features GLDGR and XU100, then every freeMarket
+        row. The ticker defaults to USDTRY, EURTRY, GBPTRY, XU100, and GLDGR.
+        A fresh copy lasts about 5 minutes. When the upstream service fails,
+        the last good copy may be returned for up to 12 hours. price and
+        change are signed numbers; the site prints them with two decimals,
+        a comma decimal mark, and no sign. direction carries the sign.
+      responses:
+        '200':
+          description: Cached market rates. Empty only when every instrument was dropped.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRates'
+              example:
+                rates:
+                  - symbol: USDTRY
+                    name: Amerikan Doları
+                    label: DOLAR
+                    group: freeMarket
+                    price: 34.52
+                    change: 0.12
+                    change_percent: 0.35
+                    direction: up
+                  - symbol: EURTRY
+                    name: Euro
+                    label: EURO
+                    group: freeMarket
+                    price: 37.18
+                    change: -0.08
+                    change_percent: -0.21
+                    direction: down
+                  - symbol: GLDGR
+                    name: Gram Altın
+                    label: ALTIN
+                    group: gold
+                    price: 3120.4
+                    change: 14.2
+                    change_percent: 0.46
+                    direction: up
+                  - symbol: XU100
+                    name: BIST 100
+                    label: BIST
+                    group: bist
+                    price: 9840.15
+                    change: 0
+                    change_percent: 0
+                    direction: flat
+        '503':
+          description: The upstream service failed and no cached copy remains.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: tr724_app_exchange_rates
+                message: Exchange rates are unavailable.
+                data:
+                  status: 503
 components:
   parameters:
     postId:
@@ -286,6 +446,22 @@ components:
         minimum: 1
         maximum: 20
         default: 8
+    authorSlug:
+      name: slug
+      in: query
+      required: false
+      description: User nicename, as in /author/{slug}/. Used when id is omitted or 0. One of slug or id is required.
+      schema:
+        type: string
+    authorId:
+      name: id
+      in: query
+      required: false
+      description: User ID. Used instead of slug when both are sent and id is greater than 0.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
     termTaxonomy:
       name: taxonomy
       in: query
@@ -586,6 +762,67 @@ components:
             youtube:
               type: string
           description: Stored profile links. Empty when the author has none.
+    AuthorProfile:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name, url, avatar, email, kind, social, bio]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        avatar:
+          type: string
+          description: Profile photo field, then older avatar fields, otherwise the WordPress avatar URL.
+        email:
+          type: string
+        kind:
+          type: string
+          description: WordPress role slug, such as author, editor, administrator, contributor, or archive_author. Empty when the user has no role.
+        social:
+          type: object
+          additionalProperties: false
+          required: [facebook, x, youtube]
+          properties:
+            facebook:
+              type: string
+            x:
+              type: string
+            youtube:
+              type: string
+          description: Stored profile links. Empty when the author has none.
+        bio:
+          type: string
+          description: User description shown on the profile page. Empty when none is set.
+    AuthorPosts:
+      type: object
+      additionalProperties: false
+      required: [author, page, per_page, total, total_pages, posts]
+      properties:
+        author:
+          $ref: '#/components/schemas/AuthorProfile'
+        page:
+          type: integer
+          minimum: 1
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 20
+        total:
+          type: integer
+          minimum: 0
+          description: Published posts by this user.
+        total_pages:
+          type: integer
+          minimum: 0
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolePost'
     TermPosts:
       type: object
       additionalProperties: false
@@ -698,6 +935,45 @@ components:
               description: Extra spotlight image when set, otherwise the featured image.
             alt:
               type: string
+    ExchangeRates:
+      type: object
+      additionalProperties: false
+      required: [rates]
+      properties:
+        rates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExchangeRate'
+    ExchangeRate:
+      type: object
+      additionalProperties: false
+      required: [symbol, name, label, group, price, change, change_percent, direction]
+      properties:
+        symbol:
+          type: string
+          description: Upstream symbol, such as USDTRY or XU100.
+        name:
+          type: string
+        label:
+          type: string
+          description: Theme label. Known symbols use DOLAR, EURO, STERLİN, BIST, and ALTIN.
+        group:
+          type: string
+          description: freeMarket, centralBank, parities, gold, or bist.
+          enum: [freeMarket, centralBank, parities, gold, bist]
+        price:
+          type: number
+        change:
+          type: number
+          nullable: true
+          description: Signed move. Null when the upstream payload has neither change nor previousClose.
+        change_percent:
+          type: number
+          description: Signed percent. Zero when the upstream payload has none.
+        direction:
+          type: string
+          enum: [up, down, flat]
+          description: up or down from the percent, otherwise from change. flat when both are zero.
     Error:
       type: object
       required: [code, message, data]

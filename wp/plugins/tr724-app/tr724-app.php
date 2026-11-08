@@ -21,13 +21,17 @@ if ( ! defined( 'TR724_APP_ROUTE_KEY' ) ) {
 require_once __DIR__ . '/includes/post-detail.php';
 require_once __DIR__ . '/includes/authors.php';
 require_once __DIR__ . '/includes/role-posts.php';
+require_once __DIR__ . '/includes/author-posts.php';
 require_once __DIR__ . '/includes/term-posts.php';
 require_once __DIR__ . '/includes/manset.php';
+require_once __DIR__ . '/includes/exchange-rates.php';
 require_once __DIR__ . '/includes/cache.php';
 
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_routes' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_author_routes' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_author_post_routes' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_role_post_routes' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_term_post_routes' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_manset_routes' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_exchange_rate_routes' );
 register_cache();

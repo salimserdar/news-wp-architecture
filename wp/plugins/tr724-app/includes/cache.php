@@ -7,8 +7,11 @@
  * Detail is purged with the article. The author list is purged when a user
  * account changes. The role list is purged for that author's roles. The manset
  * list is purged when the editorial queue or a listed post changes. The
- * category and tag list stays on the 10-second microcache: page and per_page
- * combinations are too many to purge when a post is published.
+ * category, tag, and author-profile lists stay on the 10-second microcache:
+ * page and per_page combinations are too many to purge when a post is published.
+ * The exchange-rate list stays there too. The theme already holds the upstream
+ * response for 5 minutes, and a long edge TTL would keep the previous copy
+ * after that refresh.
  */
 
 namespace Tr724\App;
