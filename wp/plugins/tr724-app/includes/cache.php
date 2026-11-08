@@ -6,7 +6,9 @@
  * Article detail, the author list, and the role post list use the page TTL.
  * Detail is purged with the article. The author list is purged when a user
  * account changes. The role list is purged for that author's roles. The manset
- * list is purged when the editorial queue or a listed post changes.
+ * list is purged when the editorial queue or a listed post changes. The
+ * category and tag list stays on the 10-second microcache: page and per_page
+ * combinations are too many to purge when a post is published.
  */
 
 namespace Tr724\App;

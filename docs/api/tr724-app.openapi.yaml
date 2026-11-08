@@ -127,6 +127,99 @@ paths:
                     message: Count must be between 1 and 20.
                     data:
                       status: 400
+  /t:
+    get:
+      operationId: listPostsByTerm
+      summary: Published posts in a category or tag.
+      description: |
+        Newest published posts first. Send taxonomy plus a slug or an id.
+        When both slug and id are sent, id is used. per_page defaults to 10
+        and may be 1 through 20. page defaults to 1. A page past the end is
+        still 200, with an empty posts array. Category results include child
+        categories. Tags match that tag only. An existing term with no posts
+        is 200 with total 0.
+      parameters:
+        - $ref: '#/components/parameters/termTaxonomy'
+        - $ref: '#/components/parameters/termSlug'
+        - $ref: '#/components/parameters/termId'
+        - $ref: '#/components/parameters/termPage'
+        - $ref: '#/components/parameters/termPerPage'
+      responses:
+        '200':
+          description: One page of posts for the term.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermPosts'
+              example:
+                taxonomy: category
+                term:
+                  id: 4
+                  name: Ekonomi
+                  slug: ekonomi
+                  url: https://www.tr724.com/kategori/ekonomi/
+                page: 1
+                per_page: 10
+                total: 128
+                total_pages: 13
+                posts:
+                  - id: 4821
+                    slug: merkez-bankasi-faiz-karari
+                    url: https://www.tr724.com/2026/11/07/merkez-bankasi-faiz-karari/
+                    title: Merkez Bankası faiz kararını açıkladı
+                    excerpt: ''
+                    published_at: '2026-11-07T14:30:00+03:00'
+                    image:
+                      url: https://media.tr724.com/wp-content/uploads/2026/11/faiz.jpg
+                      alt: Merkez Bankası binası
+                    author:
+                      id: 18
+                      name: Necip Bahadır
+                      url: https://www.tr724.com/author/necip-bahadir/
+                      avatar: https://media.tr724.com/wp-content/uploads/2024/03/necip.jpg
+                      kind: author
+        '400':
+          description: Taxonomy, the term identifier, page, or per_page is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                taxonomy:
+                  value:
+                    code: tr724_app_bad_taxonomy
+                    message: Taxonomy must be category or tag.
+                    data:
+                      status: 400
+                term:
+                  value:
+                    code: tr724_app_bad_term
+                    message: Provide a slug or id.
+                    data:
+                      status: 400
+                page:
+                  value:
+                    code: tr724_app_bad_page
+                    message: Page must be 1 or greater.
+                    data:
+                      status: 400
+                perPage:
+                  value:
+                    code: tr724_app_bad_per_page
+                    message: per_page must be between 1 and 20.
+                    data:
+                      status: 400
+        '404':
+          description: No category or tag matches the slug or id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: tr724_app_not_found
+                message: Not found.
+                data:
+                  status: 404
   /m:
     get:
       operationId: listMansetSpotlight
@@ -193,6 +286,49 @@ components:
         minimum: 1
         maximum: 20
         default: 8
+    termTaxonomy:
+      name: taxonomy
+      in: query
+      required: true
+      description: category or tag.
+      schema:
+        type: string
+        enum: [category, tag]
+    termSlug:
+      name: slug
+      in: query
+      required: false
+      description: Term slug. Used when id is omitted or 0. One of slug or id is required.
+      schema:
+        type: string
+    termId:
+      name: id
+      in: query
+      required: false
+      description: Term ID. Used instead of slug when both are sent and id is greater than 0.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    termPage:
+      name: page
+      in: query
+      required: false
+      description: Page number. Defaults to 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    termPerPage:
+      name: per_page
+      in: query
+      required: false
+      description: Posts on this page. Defaults to 10. Maximum 20.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 20
+        default: 10
   responses:
     PostDetail:
       description: Published post, shaped like the article page.
@@ -450,6 +586,34 @@ components:
             youtube:
               type: string
           description: Stored profile links. Empty when the author has none.
+    TermPosts:
+      type: object
+      additionalProperties: false
+      required: [taxonomy, term, page, per_page, total, total_pages, posts]
+      properties:
+        taxonomy:
+          type: string
+          enum: [category, tag]
+        term:
+          $ref: '#/components/schemas/Link'
+        page:
+          type: integer
+          minimum: 1
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 20
+        total:
+          type: integer
+          minimum: 0
+          description: Published posts in the term, including child categories for a category.
+        total_pages:
+          type: integer
+          minimum: 0
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/RolePost'
     RolePosts:
       type: object
       additionalProperties: false
